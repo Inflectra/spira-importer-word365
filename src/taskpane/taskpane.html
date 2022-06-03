@@ -2,7 +2,7 @@
 <!-- This file shows how to design a first-run page that provides a welcome screen to the user about the features of the add-in. -->
 
 <!DOCTYPE html>
-<html>
+<html lang="en">
 
 <head>
     <meta charset="UTF-8" />
@@ -14,41 +14,92 @@
     <script type="text/javascript" src="https://appsforoffice.microsoft.com/lib/1.1/hosted/office.js"></script>
 
     <!-- For more information on Fluent UI, visit https://developer.microsoft.com/fluentui#/. -->
-    <link rel="stylesheet" href="https://static2.sharepointonline.com/files/fabric/office-ui-fabric-core/9.6.1/css/fabric.min.css"/>
-
+    <link rel="stylesheet"
+        href="https://static2.sharepointonline.com/files/fabric/office-ui-fabric-core/9.6.1/css/fabric.min.css" />
+    <!-- For more information on Office UI Fabric, visit https://developer.microsoft.com/fabric. -->
+    <link rel="stylesheet"
+        href="https://static2.sharepointonline.com/files/fabric/office-ui-fabric-js/1.2.0/css/fabric.components.min.css" />
     <!-- Template styles -->
     <link href="taskpane.css" rel="stylesheet" type="text/css" />
 </head>
 
 <body class="ms-font-m ms-welcome ms-Fabric">
-    <header class="ms-welcome__header ms-bgColor-neutralLighter">
-        <img width="90" height="90" src="../../assets/logo-filled.png" alt="Contoso" title="Contoso" />
-        <h1 class="ms-font-su">Welcome</h1>
-    </header>
-    <section id="sideload-msg" class="ms-welcome__main">
-        <h2 class="ms-font-xl">Please sideload your add-in to see app body.</h2>
-    </section>
-    <main id="app-body" class="ms-welcome__main" style="display: none;">
-        <h2 class="ms-font-xl"> Discover what Office Add-ins can do for you today! </h2>
-        <ul class="ms-List ms-welcome__features">
-            <li class="ms-ListItem">
-                <i class="ms-Icon ms-Icon--Ribbon ms-font-xl"></i>
-                <span class="ms-font-m">Achieve more with Office integration</span>
+    <!--auth page-->
+    <div class="panel" id="panel-auth">
+
+        <p class="well">
+            Learn how to use this app via the <a id="lnk-help-login" href="#">mini help</a>, or read our <a
+                target="_blank"
+                href="https://spiradoc.inflectra.com/Unit-Testing-Integration/Using-Test-Runner-For-Excel/">full
+                documentation</a>.
+        </p>
+
+        <h3 class="mt-md mb-0">1. Connect to your Spira app</h3>
+        <h4 id="login-err-message" class="error-message hidden">Your credentials are invalid</h4>
+        <ul class="form">
+            <li class="form-pair">
+                <label class="form-label ms-Label" for="input-url">
+                    Spira URL:
+                </label>
+                <input class="form-input" id="input-url" name="URL" placeholder="https://<your-site-name>.com"
+                    type="text" />
             </li>
-            <li class="ms-ListItem">
-                <i class="ms-Icon ms-Icon--Unlock ms-font-xl"></i>
-                <span class="ms-font-m">Unlock features and functionality</span>
+            <li class="form-pair">
+                <label class="form-label ms-Label" for="input-username">
+                    User Name:
+                </label>
+                <input class="form-input" id="input-username" name="user-name" placeholder="User Name" type="text" />
             </li>
-            <li class="ms-ListItem">
-                <i class="ms-Icon ms-Icon--Design ms-font-xl"></i>
-                <span class="ms-font-m">Create and visualize like a pro</span>
+            <li class="form-pair">
+                <label class="form-label ms-Label" for="input-password">
+                    RSS Token:
+                </label>
+                <input class="form-input" id="input-password" name="password" placeholder="{Your-RSS-Token}"
+                    type="password" />
             </li>
         </ul>
-        <p class="ms-font-l">Modify the source files, then click <b>Run</b>.</p>
-        <div role="button" id="test" class="ms-welcome__action ms-Button ms-Button--hero ms-font-xl">
-            <span class="ms-Button-label">test</span>
+
+        <div class="mt-md">
+            <button class="action ms-Button ms-Button--primary" id="btn-login"
+                title="Login using details filled out above" type="button">
+                Log In
+            </button>
+            <button class="ms-Button ms-Button--default" id="btn-help-login" title="View help screens" type="button">
+                Help
+            </button>
         </div>
-    </main>
+    </div>
+    <!--Main screen-->
+    <div id="main-screen" class="hidden">
+        <header class="ms-welcome__header ms-bgColor-neutralLighter">
+            <img width="90" height="90" src="../../assets/logo-filled.png" alt="Contoso" title="Contoso" />
+            <h1 class="ms-font-su">Welcome</h1>
+        </header>
+        <section id="sideload-msg" class="ms-welcome__main">
+            <h2 class="ms-font-xl">Please sideload your add-in to see app body.</h2>
+        </section>
+        <div id="app-body" class="ms-welcome__main" style="display: none;">
+            <h2 class="ms-font-xl"> Discover what Office Add-ins can do for you today! </h2>
+            <ul class="ms-List ms-welcome__features">
+                <li class="ms-ListItem">
+                    <i class="ms-Icon ms-Icon--Ribbon ms-font-xl"></i>
+                    <span class="ms-font-m">Achieve more with Office integration</span>
+                </li>
+                <li class="ms-ListItem">
+                    <i class="ms-Icon ms-Icon--Unlock ms-font-xl"></i>
+                    <span class="ms-font-m">Unlock features and functionality</span>
+                </li>
+                <li class="ms-ListItem">
+                    <i class="ms-Icon ms-Icon--Design ms-font-xl"></i>
+                    <span class="ms-font-m">Create and visualize like a pro</span>
+                </li>
+            </ul>
+            <p class="ms-font-l">Modify the source files, then click <b>Run</b>.</p>
+            <div role="button" id="test" class="ms-welcome__action ms-Button ms-Button--hero ms-font-xl">
+                <span class="ms-Button-label">test</span>
+            </div>
+        </div>
+    </div>
 </body>
 
 </html>
