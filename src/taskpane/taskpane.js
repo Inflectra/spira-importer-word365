@@ -67,24 +67,30 @@ const loginAttempt = async () => {
 export async function test() {
 
   return Word.run(async (context) => {
-    /*As it stands, this functions only retrieves plain text as
-    a proof of concept. Later down the road, we will hopefully find a solution to select
-    individual lines within either the highlighted portion or the body to then retrieve
-    both text and style  */
     //check for highlighted text
+    //splits the selected areas by enter-based indentation. 
     let selection = context.document.getSelection();
     context.load(selection, 'text');
     await context.sync();
-
-    //if nothing is selected, select the entire body of the document
-    if (!selection.text) {
-      selection = context.document.body;
-      context.load(selection, 'text')
+    if(selection.text){
+      selection = context.document.getSelection().split(['/r'])
+      context.load(selection, ['text', 'styleBuiltIn'])
+      await context.sync();
+    }
+    
+    // if nothing is selected, select the entire body of the document
+    else {
+      selection = context.document.body.getRange().split(['/r']);
+      context.load(selection, ['text', 'styleBuiltIn'])
       await context.sync();
     }
     //try catch block for backend node call to prevent errors crashing the application
+    let lines = []
+    selection.items.forEach((item) =>{
+      lines.push({text: item.text, style: item.styleBuiltIn})
+    })
     try {
-      let call1 = await axios.post("http://localhost:5000/retrieve", { text: selection.text })
+      let call1 = await axios.post("http://localhost:5000/retrieve", { lines: lines })
       // let call = await axios.post("http://localhost:5000/retrieve", { text: selection.value})
     }
     catch (err) {
