@@ -91,20 +91,9 @@ export async function test() {
       lines.push({ text: item.text, style: item.styleBuiltIn })
     })
 
-    // Testing parsing an array of range objects based on style and formatting 
-    // them into requirement objects
-    let requirements = []
-    for (let i = 0; i < lines.length; i++) { 
-      if (lines[i].style === "Heading1") {
-        if (lines[i + 1] && lines[i + 1].style === "Normal") {
-          requirements.push({name: lines[i].text, description: lines[i + 1].text})
-        }
-        else {
-          requirements.push({name: lines[i].text, description: null});
-        }
-      } 
-    }
-    
+    // Tests the parseRequirements Function
+    let requirements = parseRequirements(lines);
+
     //try catch block for backend node call to prevent errors crashing the application
     try {
       let call1 = await axios.post("http://localhost:5000/retrieve", { lines: lines, headings: requirements })
@@ -115,3 +104,25 @@ export async function test() {
     }
   })
 } 
+
+// Parses an array of range objects based on style and turns them into
+// them into requirement objects
+const parseRequirements = (lines) => {
+  let requirements = []
+  for (let i = 0; i < lines.length; i++) { 
+    if (lines[i].style === "Heading1") {
+      if (lines[i + 1] && lines[i + 1].style === "Normal") {
+        requirements.push({name: lines[i].text, description: lines[i + 1].text})
+      }
+      else {
+        requirements.push({name: lines[i].text, description: null});
+      }
+    } 
+  }
+  return requirements;
+}
+
+const pushRequirement = async (name, description, projectId) => {
+  const APICALL = USER_OBJ.url + "/projects/" + projectId + "/requirements";
+
+}
