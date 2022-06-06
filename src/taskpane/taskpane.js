@@ -79,6 +79,8 @@ const loginAttempt = async () => {
 const populateProjects = (projects) => {
   let dropdown = document.getElementById('project-select')
   projects.forEach((project) => {
+    /*creates an option for each project which displays the name
+     and has a value of its ProjectId for use in API calls*/
     let option = document.createElement("option");
     option.text = project.Name
     option.value = project.ProjectId
