@@ -25,6 +25,12 @@ Office.onReady((info) => {
 const setEventListeners = () => {
   document.getElementById('test').onclick = test;
   document.getElementById('btn-login').onclick = () => loginAttempt();
+  document.getElementById('dev-mode').onclick = () => devmode();
+}
+
+const devmode = () => {
+  document.getElementById('panel-auth').classList.add('hidden');
+  document.getElementById('main-screen').classList.remove('hidden');
 }
 
 const loginAttempt = async () => {
@@ -84,7 +90,7 @@ export async function test() {
       context.load(selection, ['text', 'styleBuiltIn'])
       await context.sync();
     }
- 
+
     // Testing parsing lines of text from the selection array and logging it
     let lines = []
     selection.items.forEach((item) => {
@@ -94,17 +100,17 @@ export async function test() {
     // Testing parsing an array of range objects based on style and formatting 
     // them into requirement objects
     let requirements = []
-    for (let i = 0; i < lines.length; i++) { 
+    for (let i = 0; i < lines.length; i++) {
       if (lines[i].style === "Heading1") {
         if (lines[i + 1] && lines[i + 1].style === "Normal") {
-          requirements.push({name: lines[i].text, description: lines[i + 1].text})
+          requirements.push({ name: lines[i].text, description: lines[i + 1].text })
         }
         else {
-          requirements.push({name: lines[i].text, description: null});
+          requirements.push({ name: lines[i].text, description: null });
         }
-      } 
+      }
     }
-    
+
     //try catch block for backend node call to prevent errors crashing the application
     try {
       let call1 = await axios.post("http://localhost:5000/retrieve", { lines: lines, headings: requirements })
