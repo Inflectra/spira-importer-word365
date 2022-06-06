@@ -32,16 +32,20 @@ const loginAttempt = async () => {
   let url = document.getElementById("input-url").value
   let username = document.getElementById("input-username").value
   let rssToken = document.getElementById("input-password").value
-  //testing response to simulate successful/failed attemps
-
+  //allows user to enter URL with trailing slash or not.
+  let slashCheck = "/services/v5_0/RestService.svc/projects"
+  if (url[url.length - 1] == "/") {
+    slashCheck = slashCheck.substring(1)
+  }
+  //formatting the URL as it should be to populate projects / validate user credentials
+  let validatingURL = url + slashCheck + `?username=${username}&api-key=${rssToken}`;
   try {
-    var response = await axios.post("http://localhost:5000/retrieve", {
-      url: url, username: username, password: rssToken
-    })
+    var response = await axios.get(validatingURL)
     if (response.status == 200) {
+      //if successful response, move user to main screen
       document.getElementById('panel-auth').classList.add('hidden');
       document.getElementById('main-screen').classList.remove('hidden');
-      //save user credentials to use in future requests
+      //save user credentials in global object to use in future requests
       USER_OBJ = {
         url: url, username: username, password: rssToken
       }
@@ -57,10 +61,6 @@ const loginAttempt = async () => {
     }, 5 * 1000)
     return
   }
-  //if successful response, move user to main screen
-
-
-
 }
 
 //basic function which uses Word API to extract text as a proof of concept.
