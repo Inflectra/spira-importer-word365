@@ -67,15 +67,13 @@ const loginAttempt = async () => {
 export async function test() {
 
   return Word.run(async (context) => {
-    /*As it stands, these functions only retrieve plain text as
-    a proof of concept. Later down the road, we will use cheerio or
-    a similar solution to map these as HTML elements and create an 
-    artifical DOM which can be navigated to retrieve relevant info
-    while perserving stylization and structure. This will use .getHtml()
-    after getSelection() to replace the context.load function*/
+    /*As it stands, this functions only retrieves plain text as
+    a proof of concept. Later down the road, we will hopefully find a solution to select
+    individual lines within either the highlighted portion or the body to then retrieve
+    both text and style  */
     //check for highlighted text
     let selection = context.document.getSelection();
-    context.load(selection, 'text')
+    context.load(selection, 'text');
     await context.sync();
 
     //if nothing is selected, select the entire body of the document
@@ -84,7 +82,7 @@ export async function test() {
       context.load(selection, 'text')
       await context.sync();
     }
-    //try catch block for backend node call to prevent errors crashing
+    //try catch block for backend node call to prevent errors crashing the application
     try {
       let call1 = await axios.post("http://localhost:5000/retrieve", { text: selection.text })
       // let call = await axios.post("http://localhost:5000/retrieve", { text: selection.value})
