@@ -25,6 +25,12 @@ Office.onReady((info) => {
 const setEventListeners = () => {
   document.getElementById('test').onclick = test;
   document.getElementById('btn-login').onclick = () => loginAttempt();
+  document.getElementById('dev-mode').onclick = () => devmode();
+}
+
+const devmode = () => {
+  document.getElementById('panel-auth').classList.add('hidden');
+  document.getElementById('main-screen').classList.remove('hidden');
 }
 
 const loginAttempt = async () => {
@@ -84,7 +90,7 @@ export async function test() {
       context.load(selection, ['text', 'styleBuiltIn'])
       await context.sync();
     }
- 
+
     // Testing parsing lines of text from the selection array and logging it
     let lines = []
     selection.items.forEach((item) => {
