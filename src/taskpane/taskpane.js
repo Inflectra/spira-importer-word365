@@ -8,9 +8,9 @@
 const axios = require('axios')
 
 //setting a user object to maintain credentials when using other parts of the add-in
-const USER_OBJ = { url: "", username: "", password: "" }
+var USER_OBJ = { url: "", username: "", password: "" }
 //global projects object to maintain the populated projects field throughout the application
-const PROJECTS = []
+var PROJECTS = []
 
 Office.onReady((info) => {
   if (info.host === Office.HostType.Word) {
@@ -51,7 +51,7 @@ const loginAttempt = async () => {
   let validatingURL = finalUrl || url + slashCheck + `?username=${username}&api-key=${rssToken}`;
   try {
     var response = await axios.get(validatingURL)
-    let test = await axios.post('http://localhost:5000/retrieve', { data: response.data })
+    
     if (response.data) {
       
       //if successful response, move user to main screen
@@ -61,7 +61,6 @@ const loginAttempt = async () => {
       USER_OBJ = {
         url: url, username: username, password: rssToken
       }
-      await axios.post('http://localhost:5000/retrieve1', { projects: "out here" })
       populateProjects(response.data)
       return
     }
@@ -78,11 +77,9 @@ const loginAttempt = async () => {
 }
 
 const populateProjects = async (projects) => {
-  await axios.post('http://localhost:5000/retrieve2', { projects: "in here" })
   projects.forEach((project) => {
     PROJECTS.push({ name: project.Name, id: project.ProjectId })
   })
-  await axios.post('http://localhost:5000/retrieve3', { projects: PROJECTS })
 }
 
 //basic function which uses Word API to extract text as a proof of concept.
