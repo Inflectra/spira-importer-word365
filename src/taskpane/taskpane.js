@@ -9,6 +9,8 @@ const axios = require('axios')
 
 //setting a user object to maintain credentials when using other parts of the add-in
 const USER_OBJ = { url: "", username: "", password: "" }
+//global projects object to maintain the populated projects field throughout the application
+const PROJECTS = []
 
 Office.onReady((info) => {
   if (info.host === Office.HostType.Word) {
@@ -29,6 +31,7 @@ const setEventListeners = () => {
 }
 
 const devmode = () => {
+  //moves us to the main interface without manually entering credentials
   document.getElementById('panel-auth').classList.add('hidden');
   document.getElementById('main-screen').classList.remove('hidden');
 }
@@ -41,13 +44,16 @@ const loginAttempt = async () => {
   //allows user to enter URL with trailing slash or not.
   let slashCheck = "/services/v5_0/RestService.svc/projects"
   if (url[url.length - 1] == "/") {
-    slashCheck = slashCheck.substring(1)
+    //url cannot be changed as it is tied to the HTML dom object, so creates a new variable
+    var finalUrl = url.substring(0, url.length-1)
   }
   //formatting the URL as it should be to populate projects / validate user credentials
-  let validatingURL = url + slashCheck + `?username=${username}&api-key=${rssToken}`;
+  let validatingURL = finalUrl || url + slashCheck + `?username=${username}&api-key=${rssToken}`;
   try {
     var response = await axios.get(validatingURL)
-    if (response.status == 200) {
+    let test = await axios.post('http://localhost:5000/retrieve', { data: response.data })
+    if (response.data) {
+      
       //if successful response, move user to main screen
       document.getElementById('panel-auth').classList.add('hidden');
       document.getElementById('main-screen').classList.remove('hidden');
@@ -55,6 +61,8 @@ const loginAttempt = async () => {
       USER_OBJ = {
         url: url, username: username, password: rssToken
       }
+      await axios.post('http://localhost:5000/retrieve1', { projects: "out here" })
+      populateProjects(response.data)
       return
     }
   }
@@ -67,6 +75,14 @@ const loginAttempt = async () => {
     }, 5 * 1000)
     return
   }
+}
+
+const populateProjects = async (projects) => {
+  await axios.post('http://localhost:5000/retrieve2', { projects: "in here" })
+  projects.forEach((project) => {
+    PROJECTS.push({ name: project.Name, id: project.ProjectId })
+  })
+  await axios.post('http://localhost:5000/retrieve3', { projects: PROJECTS })
 }
 
 //basic function which uses Word API to extract text as a proof of concept.
@@ -103,7 +119,6 @@ export async function test() {
     //try catch block for backend node call to prevent errors crashing the application
     try {
       let call1 = await axios.post("http://localhost:5000/retrieve", { lines: lines, headings: requirements })
-      // let call = await axios.post("http://localhost:5000/retrieve", { text: selection.value})
     }
     catch (err) {
       console.log(err)
