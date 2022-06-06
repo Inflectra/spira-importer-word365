@@ -76,10 +76,15 @@ const loginAttempt = async () => {
   }
 }
 
-const populateProjects = async (projects) => {
+const populateProjects = (projects) => {
+  let dropdown = document.getElementById('project-select')
   projects.forEach((project) => {
-    PROJECTS.push({ name: project.Name, id: project.ProjectId })
+    let option = document.createElement("option");
+    option.text = project.Name
+    option.value = project.ProjectId
+    dropdown.add(option)
   })
+  return
 }
 
 //basic function which uses Word API to extract text as a proof of concept.
