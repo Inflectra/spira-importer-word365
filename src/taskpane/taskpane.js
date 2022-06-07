@@ -82,22 +82,22 @@ const loginAttempt = async () => {
   }
 }
 
-const openStyleMappings = () =>{
+const openStyleMappings = () => {
   document.getElementById("main-screen").classList.add("hidden")
   document.getElementById("style-mappings").style.display = 'flex'
   //populates all 5 style mapping boxes
   for (let i = 1; i <= 5; i++) {
-    populateStyles(Object.keys(Word.Style), 'style-select'+i.toString());
+    populateStyles(Object.keys(Word.Style), 'style-select' + i.toString());
   }
 }
 
 //closes the style mapping page taking in a boolean result
 //if result = true, it will save the settings but not done yet
-const closeStyleMappings = (result) =>{
+const closeStyleMappings = (result) => {
   document.getElementById("main-screen").classList.remove("hidden")
   document.getElementById("style-mappings").style.display = 'none'
   for (let i = 1; i <= 5; i++) {
-    clearDropdownElement('style-select'+i.toString());
+    clearDropdownElement('style-select' + i.toString());
   }
 }
 
@@ -248,17 +248,18 @@ const pushRequirements = async () => {
 
   // Tests the pushRequirements Function
   let id = document.getElementById('project-select').value;
-  requirements.forEach(async (item) => {
+  for (let i = 0; i < requirements.length; i++) {
+    let item = requirements[i];
     const apiCall = USER_OBJ.url + "/services/v5_0/RestService.svc/projects/" + id +
       `/requirements?username=${USER_OBJ.username}&api-key=${USER_OBJ.password}`;
     let call = await axios.post("http://localhost:5000/retrieve", {
-      name: item.name, desc: item.description,
+      item: item,
       ID: id, requirementcall: apiCall
     })
 
     // try catch block to stop application crashing
     try {
-      let call = await axios.post(apiCall, { Name: item.name, Description: item.description, RequirementTypeId: 2 });
+      let call = await axios.post(apiCall, { Name: item.Name, Description: item.Description, RequirementTypeId: 2 });
       await axios.post("http://localhost:5000/retrieve", { test: "it tried" });
     }
     catch (err) {
@@ -267,9 +268,7 @@ const pushRequirements = async () => {
       console.log(err);
     }
   }
-  );
-
-} 
+}
 
 const clearDropdownElement = (element_id) => {
   let dropdown = document.getElementById(element_id);
