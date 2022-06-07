@@ -31,6 +31,8 @@ const setEventListeners = () => {
   document.getElementById('send-artifacts').onclick = () => pushRequirements();
   document.getElementById('log-out').onclick = () => logout();
   document.getElementById("style-mappings-button").onclick = () => openStyleMappings();
+  document.getElementById("confirm-style-mappings").onclick = () => closeStyleMappings(true);
+  document.getElementById("cancel-style-mappings").onclick = () => closeStyleMappings(false);
 }
 
 const devmode = () => {
@@ -87,6 +89,17 @@ const openStyleMappings = () =>{
     populateStyles(Object.keys(Word.Style), 'style-select'+i.toString());
   }
 }
+
+//closes the style mapping page taking in a boolean result
+//if result = true, it will save the settings but not done yet
+const closeStyleMappings = (result) =>{
+  document.getElementById("main-screen").classList.remove("hidden")
+  document.getElementById("style-mappings").classList.add("hidden")
+  for (let i = 1; i <= 5; i++) {
+    clearDropdownElement('style-select'+i.toString());
+  }
+}
+
 
 const populateProjects = (projects) => {
   let dropdown = document.getElementById('project-select')
