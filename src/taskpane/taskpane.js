@@ -11,8 +11,6 @@ const axios = require('axios')
 var SELECTION = [];
 //setting a user object to maintain credentials when using other parts of the add-in
 var USER_OBJ = { url: "", username: "", password: "" }
-//global projects object to maintain the populated projects field throughout the application
-var PROJECTS = []
 
 Office.onReady((info) => {
   if (info.host === Office.HostType.Word) {
@@ -30,7 +28,7 @@ const setEventListeners = () => {
   document.getElementById('test').onclick = test;
   document.getElementById('btn-login').onclick = () => loginAttempt();
   document.getElementById('dev-mode').onclick = () => devmode();
-  document.getElementById('send-artifacts').onclick = () => pushRequirement()
+  document.getElementById('send-artifacts').onclick = () => pushRequirements()
 }
 
 const devmode = () => {
@@ -109,12 +107,6 @@ export async function test() {
     // Tests the parseRequirements Function
     let requirements = parseRequirements(lines);
 
-    // Tests the pushRequirements Function
-    let id = document.getElementById('project-select').value;
-    requirements.forEach((item) => {
-      pushRequirement(item.name, item.description, id)
-    })
-
     //try catch block for backend node call to prevent errors crashing the application
     try {
       let call1 = await axios.post("http://localhost:5000/retrieve", { lines: lines, headings: requirements })
@@ -167,7 +159,7 @@ const parseRequirements = (lines) => {
         requirements.push({ name: lines[i].text, description: lines[i + 1].text })
       }
       else {
-        requirements.push({ name: lines[i].text, description: null });
+        requirements.push({ name: lines[i].text, description: "" });
       }
     }
   }
@@ -175,22 +167,31 @@ const parseRequirements = (lines) => {
 }
 
 // Send a requirement to Spira using the API -- WIP
-const pushRequirement = async (name, description, projectId) => {
-  const apiCall = USER_OBJ.url + "/projects/" + projectId +
-    `/requirements?username=${USER_OBJ.username}&api-key=${USER_OBJ.password}`;
-  let call = await axios.post("http://localhost:5000/retrieve", {
-    name: name, desc: description,
-    ID: projectId, requirementcall: apiCall
-  });
+const pushRequirements = async () => {
+  await updateSelectionArray();
+  // Tests the parseRequirements Function
+  let requirements = parseRequirements(SELECTION);
 
+  // Tests the pushRequirements Function
+  let id = document.getElementById('project-select').value;
+  requirements.forEach(async (item) => {
+    const apiCall = USER_OBJ.url + "/services/v5_0/RestService.svc/projects/" + id +
+      `/requirements?username=${USER_OBJ.username}&api-key=${USER_OBJ.password}`;
+    let call = await axios.post("http://localhost:5000/retrieve", {
+      name: item.name, desc: item.description,
+      ID: id, requirementcall: apiCall
+    })
 
-
-  // try catch block to stop application crashing
-  try {
-    let call = await axios.post(apiCall, { Name: name, Description: description, RequirementTypeId: 0 });
-    return call.status;
+    // try catch block to stop application crashing
+    try {
+      let call = await axios.post(apiCall, { Name: item.name, Description: item.description, RequirementTypeId: 2 });
+      await axios.post("http://localhost:5000/retrieve", { test: "it tried" });
+    }
+    catch (err) {
+      await axios.post("http://localhost:5000/retrieve", { test: "it caught" });
+      console.log(err);
+    }
   }
-  catch (err) {
-    console.log(err)
-  }
+  );
+
 } 
