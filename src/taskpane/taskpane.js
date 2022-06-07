@@ -68,7 +68,9 @@ const loginAttempt = async () => {
         url: finalUrl || url, username: username, password: rssToken
       }
       populateProjects(response.data)
-      
+
+      //On successful login, remove error message if its visible
+      document.getElementById("login-err-message").classList.add('hidden')
       return
     }
   }
@@ -76,9 +78,6 @@ const loginAttempt = async () => {
     //if the response throws an error, show an error message for 5 seconds
     //In practice this can be more specific to alert the user to different potential problems
     document.getElementById("login-err-message").classList.remove('hidden');
-    setTimeout(() => {
-      document.getElementById("login-err-message").classList.add('hidden')
-    }, 5 * 1000)
     return
   }
 }
@@ -263,6 +262,7 @@ const pushRequirements = async () => {
       await axios.post("http://localhost:5000/retrieve", { test: "it tried" });
     }
     catch (err) {
+      // To-Do, add error message for error code 500 and 404
       await axios.post("http://localhost:5000/retrieve", { test: "it caught" });
       console.log(err);
     }
