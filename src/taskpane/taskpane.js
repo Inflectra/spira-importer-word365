@@ -64,6 +64,7 @@ const loginAttempt = async () => {
         url: finalUrl || url, username: username, password: rssToken
       }
       populateProjects(response.data)
+      populateStyles(Object.keys(Word.Style), 'style-select');
       return
     }
   }
@@ -89,6 +90,17 @@ const populateProjects = (projects) => {
     dropdown.add(option)
   })
   return
+}
+
+const populateStyles = (styles, element_id) => {
+  let dropdown = document.getElementById(element_id)
+  styles.forEach((style) => {
+    /* Creates an option for each style available */
+    let option = document.createElement("option");
+    option.text = style
+    option.value = style
+    dropdown.add(option);
+  })
 }
 
 //basic function which uses Word API to extract text as a proof of concept.
