@@ -82,18 +82,35 @@ const loginAttempt = async () => {
   }
 }
 
-const openStyleMappings = () => {
+const openStyleMappings = async () => {
   document.getElementById("main-screen").classList.add("hidden")
   document.getElementById("style-mappings").style.display = 'flex'
   //populates all 5 style mapping boxes
+  let settings = []
   for (let i = 1; i <= 5; i++) {
     populateStyles(Object.keys(Word.Style), 'style-select' + i.toString());
+    settings.push(Office.context.document.settings.get('style' + i.toString()));
   }
+  //move selectors to the relevant option
+  settings.forEach((setting, i) =>{
+    document.getElementById("style-select" + (i + 1).toString()).value = setting
+  })
+  //after this, select the relevant box when compared to the users settings
 }
 
 //closes the style mapping page taking in a boolean result
 //if result = true, it will save the settings but not done yet
 const closeStyleMappings = (result) => {
+  if (result) {
+    //saves the users style preferences. this is document bound
+    for (let i = 1; i <= 5; i++) {
+      let setting = document.getElementById("style-select" + i.toString()).value
+      Office.context.document.settings.set('style' + i.toString(), setting);
+    }
+    //this saves the settings
+    Office.context.document.settings.saveAsync()
+  }
+
   document.getElementById("main-screen").classList.remove("hidden")
   document.getElementById("style-mappings").style.display = 'none'
   for (let i = 1; i <= 5; i++) {
