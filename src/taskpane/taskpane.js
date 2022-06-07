@@ -28,7 +28,8 @@ const setEventListeners = () => {
   document.getElementById('test').onclick = test;
   document.getElementById('btn-login').onclick = () => loginAttempt();
   document.getElementById('dev-mode').onclick = () => devmode();
-  document.getElementById('send-artifacts').onclick = () => pushRequirements()
+  document.getElementById('send-artifacts').onclick = () => pushRequirements();
+  document.getElementById('log-out').onclick = () => logout();
 }
 
 const devmode = () => {
@@ -143,7 +144,6 @@ export async function updateSelectionArray() {
     selection.items.forEach((item) => {
       lines.push({ text: item.text, style: item.styleBuiltIn })
     })
-
     SELECTION = lines;
   })
 }
@@ -153,17 +153,54 @@ export async function updateSelectionArray() {
 // them into requirement objects
 const parseRequirements = (lines) => {
   let requirements = []
-  for (let i = 0; i < lines.length; i++) {
-    if (lines[i].style === "Heading1") {
-      if (lines[i + 1] && lines[i + 1].style === "Normal") {
-        requirements.push({ name: lines[i].text, description: lines[i + 1].text })
+  lines.forEach((line, i) => {
+    let requirement = {};
+    //check for style mapping reference here
+    switch (line.style) {
+      case "Normal":
+        //only executes if there is a requirement to add the description to.
+        if (requirements.length > 0) {
+          //if it is description text, add it to Description of the previously added item in requirements. This allows multi line descriptions
+          requirements[requirements.length - 1].Description = requirements[requirements.length - 1].Description + line.text
+        }
+        break
+      //rather than heading 1-5, reference these cases against the style mappings 
+      case "Heading1": {
+        requirement = { Name: line.text, IndentLevel: 0, Description: "" }
+        requirements.push(requirement)
+        break
       }
-      else {
-        requirements.push({ name: lines[i].text, description: "" });
+      case "Heading2": {
+        requirement = { Name: line.text, IndentLevel: 1, Description: "" }
+        requirements.push(requirement)
+        break
       }
+      case "Heading3": {
+        requirement = { Name: line.text, IndentLevel: 2, Description: "" }
+        requirements.push(requirement)
+        break
+      }
+      case "Heading4": {
+        requirement = { Name: line.text, IndentLevel: 3, Description: "" }
+        requirements.push(requirement)
+        break
+      }
+      case "Heading5":
+        requirement = { Name: line.text, IndentLevel: 4, Description: "" }
+        requirements.push(requirement)
+        break
+      //lines not stylized normal or concurrent with style mappings are discarded.
+      default: break
     }
-  }
-  return requirements;
+
+  })
+  return requirements
+}
+//clears the credentials and returns the user to the home page
+const logout = () => {
+  USER_OBJ = {}
+  document.getElementById('panel-auth').classList.remove('hidden');
+  document.getElementById('main-screen').classList.add('hidden');
 }
 
 // Send a requirement to Spira using the API -- WIP
