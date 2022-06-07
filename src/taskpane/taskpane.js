@@ -213,6 +213,8 @@ const logout = () => {
   USER_OBJ = {}
   document.getElementById('panel-auth').classList.remove('hidden');
   document.getElementById('main-screen').classList.add('hidden');
+  clearDropdownElement('project-select');
+  clearDropdownElement('style-select');
 }
 
 // Send a requirement to Spira using the API -- WIP
@@ -244,3 +246,10 @@ const pushRequirements = async () => {
   );
 
 } 
+
+const clearDropdownElement = (element_id) => {
+  let dropdown = document.getElementById(element_id);
+  while (dropdown.length > 0) {
+    dropdown.remove(0);
+  }
+}
