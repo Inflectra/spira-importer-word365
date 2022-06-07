@@ -248,6 +248,7 @@ const pushRequirements = async () => {
       await axios.post("http://localhost:5000/retrieve", { test: "it tried" });
     }
     catch (err) {
+      // To-Do, add error message for error code 500 and 404
       await axios.post("http://localhost:5000/retrieve", { test: "it caught" });
       console.log(err);
     }
