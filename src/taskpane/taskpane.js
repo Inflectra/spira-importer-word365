@@ -16,6 +16,7 @@ Office.onReady((info) => {
   if (info.host === Office.HostType.Word) {
     document.getElementById("sideload-msg").style.display = "none";
     document.getElementById("app-body").style.display = "flex";
+    document.getElementById("style-mappings").style.display = 'none';
     setEventListeners();
 
     document.body.classList.add('ms-office');
@@ -84,7 +85,7 @@ const loginAttempt = async () => {
 
 const openStyleMappings = () =>{
   document.getElementById("main-screen").classList.add("hidden")
-  document.getElementById("style-mappings").classList.remove("hidden")
+  document.getElementById("style-mappings").style.display = 'flex'
   //populates all 5 style mapping boxes
   for (let i = 1; i <= 5; i++) {
     populateStyles(Object.keys(Word.Style), 'style-select'+i.toString());
@@ -95,7 +96,7 @@ const openStyleMappings = () =>{
 //if result = true, it will save the settings but not done yet
 const closeStyleMappings = (result) =>{
   document.getElementById("main-screen").classList.remove("hidden")
-  document.getElementById("style-mappings").classList.add("hidden")
+  document.getElementById("style-mappings").style.display = 'none'
   for (let i = 1; i <= 5; i++) {
     clearDropdownElement('style-select'+i.toString());
   }

@@ -138,6 +138,14 @@ ul {
 .form-input {
     width: 100%;
 }
+.styles-page{
+    align-items:center;
+    justify-content:center;
+    flex-direction: column;
+}
+.style-selector{
+    margin-top: 3em;
+}
 
 /*MS DEFAULT CLASSES*/
 .ms-welcome__header {
