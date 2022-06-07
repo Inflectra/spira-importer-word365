@@ -30,6 +30,7 @@ const setEventListeners = () => {
   document.getElementById('dev-mode').onclick = () => devmode();
   document.getElementById('send-artifacts').onclick = () => pushRequirements();
   document.getElementById('log-out').onclick = () => logout();
+  document.getElementById("style-mappings-button").onclick = () => openStyleMappings();
 }
 
 const devmode = () => {
@@ -64,7 +65,7 @@ const loginAttempt = async () => {
         url: finalUrl || url, username: username, password: rssToken
       }
       populateProjects(response.data)
-      populateStyles(Object.keys(Word.Style), 'style-select');
+      
       return
     }
   }
@@ -76,6 +77,15 @@ const loginAttempt = async () => {
       document.getElementById("login-err-message").classList.add('hidden')
     }, 5 * 1000)
     return
+  }
+}
+
+const openStyleMappings = () =>{
+  document.getElementById("main-screen").classList.add("hidden")
+  document.getElementById("style-mappings").classList.remove("hidden")
+  //populates all 5 style mapping boxes
+  for (let i = 1; i <= 5; i++) {
+    populateStyles(Object.keys(Word.Style), 'style-select'+i.toString());
   }
 }
 
