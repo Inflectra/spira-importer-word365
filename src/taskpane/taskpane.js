@@ -339,7 +339,7 @@ const pushRequirements = async () => {
   /*if someone has selected an area with no properly formatted text, show an error explaining
   that and then return this function to prevent sending an empty request.*/
   if (requirements.length == 0) {
-    document.getElementById("empty-error").innerText = "You currently have no valid text selected. if this isincorrect, check your style mappings and set them as the relevant styles."
+    document.getElementById("empty-error").textContent = "You currently have no valid text selected. if this isincorrect, check your style mappings and set them as the relevant styles."
     document.getElementById("empty-error").style.display = 'flex';
     setTimeout(() => {
       document.getElementById('empty-error').style.display = 'none';
@@ -358,7 +358,7 @@ const pushRequirements = async () => {
     }
     catch (err) {
       //shows the failed requirement to add. This should work if it fails in the middle of sending
-      document.getElementById("empty-error").innerText = `The request to the API has failed on requirement: '${item.Name}'. All, if any previous requirements should be in Spira.`
+      document.getElementById("empty-error").textContent = `The request to the API has failed on requirement: '${item.Name}'. All, if any previous requirements should be in Spira.`
       document.getElementById("empty-error").style.display = "flex";
       setTimeout(() => {
         document.getElementById('empty-error').style.display = 'none';
