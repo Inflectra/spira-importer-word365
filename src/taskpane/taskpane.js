@@ -250,7 +250,7 @@ const parseRequirements = (lines) => {
   }
   lines.forEach((line) => {
     //removes the indentation tags from the text
-    line.text = line.text.replace("\t", "").replace("\r", "")
+    line.text = line.text.replaceAll("\t", "").replaceAll("\r", "")
     let requirement = {};
     //check for style mapping reference here
     switch (line.style.toLowerCase()) {
