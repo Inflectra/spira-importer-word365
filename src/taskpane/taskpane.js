@@ -18,6 +18,7 @@ Office.onReady((info) => {
     document.getElementById("app-body").style.display = "flex";
     document.getElementById("req-style-mappings").style.display = 'none';
     document.getElementById("test-style-mappings").style.display = 'none';
+    document.getElementById("empty-error").style.display = 'none';
     setEventListeners();
 
     document.body.classList.add('ms-office');
@@ -106,8 +107,21 @@ const openStyleMappings = async () => {
   }
   let settings = retrieveStyles(pageTag)
   let customStyles = await scanForCustomStyles();
-  for (let i = 1; i <= 5; i++) {
-    populateStyles(customStyles.concat(Object.keys(Word.Style)), pageTag + 'style-select' + i.toString());
+  //only the top 2 select objects should have all styles. bottom 3 are table based (at least for now).
+  if (pageTag == "test-") {
+    for (let i = 1; i <= 2; i++) {
+      populateStyles(customStyles.concat(Object.keys(Word.Style)), pageTag + 'style-select' + i.toString());
+    }
+    //bottom 3 selectors will be related to tables
+    for (let i = 3; i <= 5; i++) {
+      let tableStyles = ["column1", "column2", "column3", "column4", "column5"]
+      populateStyles(tableStyles, pageTag + 'style-select' + i.toString())
+    }
+  }
+  else {
+    for (let i = 1; i <= 5; i++) {
+      populateStyles(customStyles.concat(Object.keys(Word.Style)), pageTag + 'style-select' + i.toString());
+    }
   }
   //move selectors to the relevant option
   settings.forEach((setting, i) => {
@@ -169,8 +183,13 @@ const retrieveStyles = (pageTag) => {
   let styles = []
   for (let i = 1; i <= 5; i++) {
     let style = Office.context.document.settings.get(pageTag + 'style' + i.toString());
+    //if this is for one of the last 3 test style selectors, choose column1-3 as auto populate settings
+    if (!style && pageTag == "test-" && i >= 3) {
+      Office.context.document.settings.set(pageTag + 'style' + i.toString(), 'column' + (i - 2).toString())
+      style = 'column' + (i - 2).toString()
+    }
     //if there isnt an existing setting, populate with headings
-    if (!style) {
+    else if (!style) {
       Office.context.document.settings.set(pageTag + 'style' + i.toString(), 'heading' + i.toString())
       style = 'heading' + i.toString();
     }
@@ -241,7 +260,6 @@ export async function updateSelectionArray() {
 
 // Parses an array of range objects based on style and turns them into
 // them into requirement objects
-// refactor to use for loop where IndentLevel = styles index rather than a switch statement.
 const parseRequirements = (lines) => {
   let requirements = []
   let page = document.getElementById("artifact-select").value;
@@ -256,7 +274,7 @@ const parseRequirements = (lines) => {
     //removes the indentation tags from the text
     line.text = line.text.replaceAll("\t", "").replaceAll("\r", "")
     let requirement = {};
-    //check for style mapping reference here
+    // TODO: refactor to use for loop where IndentLevel = styles index rather than a switch statement.
     switch (line.style.toLowerCase()) {
       case "normal":
         //only executes if there is a requirement to add the description to.
@@ -319,6 +337,16 @@ const pushRequirements = async () => {
   // Tests the parseRequirements Function
   let requirements = parseRequirements(SELECTION);
   let lastIndent = 0;
+  /*if someone has selected an area with no properly formatted text, show an error explaining
+  that and then return this function to prevent sending an empty request.*/
+  if (requirements.length == 0) {
+    document.getElementById("empty-error").textContent = "You currently have no valid text selected. if this isincorrect, check your style mappings and set them as the relevant styles."
+    document.getElementById("empty-error").style.display = 'flex';
+    setTimeout(() => {
+      document.getElementById('empty-error').style.display = 'none';
+    }, 8000)
+    return
+  }
   // Tests the pushRequirements Function
   let id = document.getElementById('project-select').value;
   for (let i = 0; i < requirements.length; i++) {
@@ -332,10 +360,15 @@ const pushRequirements = async () => {
       lastIndent = item.IndentLevel;
     }
     catch (err) {
-      // To-Do, add error message for error code 500 and 404
-      console.log(err);
+      //shows the failed requirement to add. This should work if it fails in the middle of sending
+      document.getElementById("empty-error").textContent = `The request to the API has failed on requirement: '${item.Name}'. All, if any previous requirements should be in Spira.`
+      document.getElementById("empty-error").style.display = "flex";
+      setTimeout(() => {
+        document.getElementById('empty-error').style.display = 'none';
+      }, 8000)
     }
   }
+  return
 }
 
 const clearDropdownElement = (element_id) => {
