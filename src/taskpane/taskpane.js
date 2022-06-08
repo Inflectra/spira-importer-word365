@@ -147,7 +147,13 @@ const populateStyles = (styles, element_id) => {
 const retrieveStyles = () => {
   let styles = []
   for (let i = 1; i <= 5; i++) {
-    styles.push(Office.context.document.settings.get('style' + i.toString()));
+    let style = Office.context.document.settings.get('style' + i.toString());
+    //if there isnt an existing setting, populate with headings
+    if (!style){
+      Office.context.document.settings.set('style' + i.toString(), 'heading' + i.toString())
+      style = 'heading' + i.toString();
+    }
+    styles.push(style)
   }
   return styles
 }
@@ -225,7 +231,7 @@ const parseRequirements = (lines) => {
           requirements[requirements.length - 1].Description = requirements[requirements.length - 1].Description + line.text
         }
         break
-      //Uses the files styles settings to 
+      //Uses the file styles settings to populate into this function. If none set, uses heading1-5
       case styles[0]: {
         requirement = { Name: line.text, IndentLevel: 0, Description: "" }
         requirements.push(requirement)
