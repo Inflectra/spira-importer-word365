@@ -107,8 +107,21 @@ const openStyleMappings = async () => {
   }
   let settings = retrieveStyles(pageTag)
   let customStyles = await scanForCustomStyles();
-  for (let i = 1; i <= 5; i++) {
-    populateStyles(customStyles.concat(Object.keys(Word.Style)), pageTag + 'style-select' + i.toString());
+  //only the top 2 select objects should have all styles. bottom 3 are table based (at least for now).
+  if (pageTag == "test-") {
+    for (let i = 1; i <= 2; i++) {
+      populateStyles(customStyles.concat(Object.keys(Word.Style)), pageTag + 'style-select' + i.toString());
+    }
+    //bottom 3 selectors will be related to tables
+    for (let i =3; i<=5; i++){
+      let tableStyles = ["column1", "column2", "column3", "column4", "column5"]
+      populateStyles(tableStyles, pageTag + 'style-select' + i.toString())
+    }
+  }
+  else {
+    for (let i = 1; i <= 5; i++) {
+      populateStyles(customStyles.concat(Object.keys(Word.Style)), pageTag + 'style-select' + i.toString());
+    }
   }
   //move selectors to the relevant option
   settings.forEach((setting, i) => {
@@ -170,8 +183,13 @@ const retrieveStyles = (pageTag) => {
   let styles = []
   for (let i = 1; i <= 5; i++) {
     let style = Office.context.document.settings.get(pageTag + 'style' + i.toString());
+    //if this is for one of the last 3 test style selectors, choose column1-3 as auto populate settings
+    if (!style && pageTag == "test-" && i >= 3){
+      Office.context.document.settings.set(pageTag + 'style' + i.toString(), 'column' + (i-2).toString())
+      style = 'column' + (i-2).toString()
+    }
     //if there isnt an existing setting, populate with headings
-    if (!style) {
+    else if (!style) {
       Office.context.document.settings.set(pageTag + 'style' + i.toString(), 'heading' + i.toString())
       style = 'heading' + i.toString();
     }
@@ -231,8 +249,10 @@ export async function updateSelectionArray() {
     // Testing parsing lines of text from the selection array and logging it
     let lines = []
     selection.items.forEach((item) => {
-      lines.push({ text: item.text, style: (item.styleBuiltIn == "Other" ? item.style : item.styleBuiltIn), 
-                   custom: (item.styleBuiltIn == "Other") })
+      lines.push({
+        text: item.text, style: (item.styleBuiltIn == "Other" ? item.style : item.styleBuiltIn),
+        custom: (item.styleBuiltIn == "Other")
+      })
     })
     SELECTION = lines;
   })
@@ -318,9 +338,9 @@ const pushRequirements = async () => {
   let requirements = parseRequirements(SELECTION);
   /*if someone has selected an area with no properly formatted text, show an error explaining
   that and then return this function to prevent sending an empty request.*/
-  if(requirements.length == 0){
+  if (requirements.length == 0) {
     document.getElementById("empty-error").style.display = 'flex';
-    setTimeout(() =>{
+    setTimeout(() => {
       document.getElementById('empty-error').style.display = 'none';
     }, 8000)
     return
