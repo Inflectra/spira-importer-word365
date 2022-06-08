@@ -18,6 +18,7 @@ Office.onReady((info) => {
     document.getElementById("app-body").style.display = "flex";
     document.getElementById("req-style-mappings").style.display = 'none';
     document.getElementById("test-style-mappings").style.display = 'none';
+    document.getElementById("empty-error").style.display = 'none';
     setEventListeners();
 
     document.body.classList.add('ms-office');
@@ -239,7 +240,6 @@ export async function updateSelectionArray() {
 
 // Parses an array of range objects based on style and turns them into
 // them into requirement objects
-// refactor to use for loop where IndentLevel = styles index rather than a switch statement.
 const parseRequirements = (lines) => {
   let requirements = []
   let page = document.getElementById("artifact-select").value;
@@ -254,7 +254,7 @@ const parseRequirements = (lines) => {
     //removes the indentation tags from the text
     line.text = line.text.replaceAll("\t", "").replaceAll("\r", "")
     let requirement = {};
-    //check for style mapping reference here
+    // TODO: refactor to use for loop where IndentLevel = styles index rather than a switch statement.
     switch (line.style.toLowerCase()) {
       case "normal":
         //only executes if there is a requirement to add the description to.
@@ -316,7 +316,15 @@ const pushRequirements = async () => {
   await updateSelectionArray();
   // Tests the parseRequirements Function
   let requirements = parseRequirements(SELECTION);
-
+  /*if someone has selected an area with no properly formatted text, show an error explaining
+  that and then return this function to prevent sending an empty request.*/
+  if(requirements.length == 0){
+    document.getElementById("empty-error").style.display = 'flex';
+    setTimeout(() =>{
+      document.getElementById('empty-error').style.display = 'none';
+    }, 8000)
+    return
+  }
   // Tests the pushRequirements Function
   let id = document.getElementById('project-select').value;
   for (let i = 0; i < requirements.length; i++) {
@@ -328,10 +336,10 @@ const pushRequirements = async () => {
       let call = await axios.post(apiCall, { Name: item.Name, Description: item.Description, RequirementTypeId: 2 });
     }
     catch (err) {
-      // To-Do, add error message for error code 500 and 404
       console.log(err);
     }
   }
+  return
 }
 
 const clearDropdownElement = (element_id) => {
