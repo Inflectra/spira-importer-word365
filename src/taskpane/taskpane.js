@@ -230,8 +230,10 @@ export async function updateSelectionArray() {
     // Testing parsing lines of text from the selection array and logging it
     let lines = []
     selection.items.forEach((item) => {
-      lines.push({ text: item.text, style: (item.styleBuiltIn == "Other" ? item.style : item.styleBuiltIn), 
-                   custom: (item.styleBuiltIn == "Other") })
+      lines.push({
+        text: item.text, style: (item.styleBuiltIn == "Other" ? item.style : item.styleBuiltIn),
+        custom: (item.styleBuiltIn == "Other")
+      })
     })
     SELECTION = lines;
   })
@@ -316,7 +318,7 @@ const pushRequirements = async () => {
   await updateSelectionArray();
   // Tests the parseRequirements Function
   let requirements = parseRequirements(SELECTION);
-
+  let lastIndent = 0;
   // Tests the pushRequirements Function
   let id = document.getElementById('project-select').value;
   for (let i = 0; i < requirements.length; i++) {
@@ -326,6 +328,8 @@ const pushRequirements = async () => {
     // try catch block to stop application crashing if call fails
     try {
       let call = await axios.post(apiCall, { Name: item.Name, Description: item.Description, RequirementTypeId: 2 });
+      await indentRequirement(apiCall, call.data.RequirementId, item.IndentLevel - lastIndent)
+      lastIndent = item.IndentLevel;
     }
     catch (err) {
       // To-Do, add error message for error code 500 and 404
@@ -356,4 +360,29 @@ const scanForCustomStyles = async () => {
     }
   }
   return customStyles;
+}
+
+const indentRequirement = async (apiCall, id, indent) => {
+  if (indent > 0) {
+    //loop for indenting requirement
+    for (let i = 0; i < indent; i++) {
+      try {
+        let call2 = await axios.post(apiCall.replace("requirements", `requirements/${id}/indent`), {});
+      }
+      catch (err) {
+        console.log(err)
+      }
+    }
+  }
+  else {
+    //loop for outdenting requirement
+    for (let i = 0; i > indent; i--) {
+      try {
+        let call2 = await axios.post(apiCall.replace("requirements", `requirements/${id}/outdent`), {});
+      }
+      catch (err) {
+        console.log(err)
+      }
+    }
+  }
 }
