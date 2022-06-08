@@ -280,7 +280,6 @@ const pushRequirements = async () => {
   await updateSelectionArray();
   // Tests the parseRequirements Function
   let requirements = parseRequirements(SELECTION);
-  let testcall = await axios.post("http://localhost:5000/retrieve", {test: "This is testing styles", requirements: requirements})
 
   // Tests the pushRequirements Function
   let id = document.getElementById('project-select').value;
@@ -288,19 +287,12 @@ const pushRequirements = async () => {
     let item = requirements[i];
     const apiCall = USER_OBJ.url + "/services/v5_0/RestService.svc/projects/" + id +
       `/requirements?username=${USER_OBJ.username}&api-key=${USER_OBJ.password}`;
-    let call = await axios.post("http://localhost:5000/retrieve", {
-      item: item,
-      ID: id, requirementcall: apiCall
-    })
-
-    // try catch block to stop application crashing
+    // try catch block to stop application crashing if call fails
     try {
       let call = await axios.post(apiCall, { Name: item.Name, Description: item.Description, RequirementTypeId: 2 });
-      await axios.post("http://localhost:5000/retrieve", { test: "it tried" });
     }
     catch (err) {
       // To-Do, add error message for error code 500 and 404
-      await axios.post("http://localhost:5000/retrieve", { test: "it caught" });
       console.log(err);
     }
   }
@@ -311,4 +303,8 @@ const clearDropdownElement = (element_id) => {
   while (dropdown.length > 0) {
     dropdown.remove(0);
   }
+}
+
+const handleErrors = (error) =>{
+  //find status code in error report, then display a summary message
 }
