@@ -105,12 +105,13 @@ const openStyleMappings = async () => {
     document.getElementById("test-style-mappings").style.display = 'flex'
   }
   let settings = retrieveStyles(pageTag)
+  let customStyles = await scanForCustomStyles();
   for (let i = 1; i <= 5; i++) {
-    populateStyles(Object.keys(Word.Style), pageTag + 'style-select' + i.toString());
+    populateStyles(customStyles.concat(Object.keys(Word.Style)), pageTag + 'style-select' + i.toString());
   }
   //move selectors to the relevant option
   settings.forEach((setting, i) => {
-    document.getElementById(pageTag +"style-select" + (i + 1).toString()).value = setting
+    document.getElementById(pageTag + "style-select" + (i + 1).toString()).value = setting
   })
   //after this, select the relevant box when compared to the users settings
 }
@@ -215,21 +216,22 @@ export async function updateSelectionArray() {
     await context.sync();
     if (selection.text) {
       selection = context.document.getSelection().split(['/r'])
-      context.load(selection, ['text', 'styleBuiltIn'])
+      context.load(selection, ['text', 'styleBuiltIn', 'style'])
       await context.sync();
     }
 
     // if nothing is selected, select the entire body of the document
     else {
       selection = context.document.body.getRange().split(['/r']);
-      context.load(selection, ['text', 'styleBuiltIn'])
+      context.load(selection, ['text', 'styleBuiltIn', 'style'])
       await context.sync();
     }
 
     // Testing parsing lines of text from the selection array and logging it
     let lines = []
     selection.items.forEach((item) => {
-      lines.push({ text: item.text, style: item.styleBuiltIn })
+      lines.push({ text: item.text, style: (item.styleBuiltIn == "Other" ? item.style : item.styleBuiltIn), 
+                   custom: (item.styleBuiltIn == "Other") })
     })
     SELECTION = lines;
   })
@@ -245,7 +247,7 @@ const parseRequirements = (lines) => {
   if (page == 'requirements') {
     styles = retrieveStyles('req-')
   }
-  else{
+  else {
     styles = retrieveStyles('test-')
   }
   lines.forEach((line) => {
@@ -345,14 +347,13 @@ const handleErrors = (error) => {
 
 // Updates selection array and then loops through it and adds any
 // user-created styles found to its array and returns it. WIP
-const scanForCustomStyles = () => {
+const scanForCustomStyles = async () => {
   let customStyles = [];
-  updateSelectionArray();
-  SELECTION.forEach((item) => {
-    axios.post("http://localhost:5000/retrieve", { user_style: item.style })
-    if (item.style && customStyles.indexOf(item.style) < 0) {
-      customStyles.add(item.style);
+  await updateSelectionArray();
+  for (let i = 0; i < SELECTION.length; i++) {
+    if (SELECTION[i].custom && !customStyles.includes(SELECTION[i].style)) {
+      customStyles.push(SELECTION[i].style);
     }
-  });
+  }
   return customStyles;
 }
