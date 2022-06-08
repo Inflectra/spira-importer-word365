@@ -149,7 +149,7 @@ const retrieveStyles = () => {
   for (let i = 1; i <= 5; i++) {
     let style = Office.context.document.settings.get('style' + i.toString());
     //if there isnt an existing setting, populate with headings
-    if (!style){
+    if (!style) {
       Office.context.document.settings.set('style' + i.toString(), 'heading' + i.toString())
       style = 'heading' + i.toString();
     }
@@ -305,6 +305,20 @@ const clearDropdownElement = (element_id) => {
   }
 }
 
-const handleErrors = (error) =>{
+const handleErrors = (error) => {
   //find status code in error report, then display a summary message
+}
+
+// Updates selection array and then loops through it and adds any
+// user-created styles found to its array and returns it. WIP
+const scanForCustomStyles = () => {
+  let customStyles = [];
+  updateSelectionArray();
+  SELECTION.forEach((item) => {
+    axios.post("http://localhost:5000/retrieve", { user_style: item.style })
+    if (item.style && customStyles.indexOf(item.style) < 0) {
+      customStyles.add(item.style);
+    }
+  });
+  return customStyles;
 }
