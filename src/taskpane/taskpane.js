@@ -16,7 +16,8 @@ Office.onReady((info) => {
   if (info.host === Office.HostType.Word) {
     document.getElementById("sideload-msg").style.display = "none";
     document.getElementById("app-body").style.display = "flex";
-    document.getElementById("style-mappings").style.display = 'none';
+    document.getElementById("req-style-mappings").style.display = 'none';
+    document.getElementById("test-style-mappings").style.display = 'none';
     setEventListeners();
 
     document.body.classList.add('ms-office');
@@ -34,6 +35,8 @@ const setEventListeners = () => {
   document.getElementById("style-mappings-button").onclick = () => openStyleMappings();
   document.getElementById("confirm-style-mappings").onclick = () => closeStyleMappings(true);
   document.getElementById("cancel-style-mappings").onclick = () => closeStyleMappings(false);
+  document.getElementById("confirm-test-style-mappings").onclick = () => closeStyleMappings(true);
+  document.getElementById("cancel-test-style-mappings").onclick = () => closeStyleMappings(false);
 }
 
 const devmode = () => {
@@ -83,17 +86,25 @@ const loginAttempt = async () => {
 }
 
 const openStyleMappings = async () => {
-  document.getElementById("main-screen").classList.add("hidden")
-  document.getElementById("style-mappings").style.display = 'flex'
-  //populates all 5 style mapping boxes
-  let settings = retrieveStyles();
-  for (let i = 1; i <= 5; i++) {
-    populateStyles(Object.keys(Word.Style), 'style-select' + i.toString());
+  //opens the requirements style mappings if requirements is the selected artifact type
+  if (document.getElementById("artifact-select").value == "requirements") {
+    document.getElementById("main-screen").classList.add("hidden")
+    document.getElementById("req-style-mappings").style.display = 'flex'
+    //populates all 5 style mapping boxes
+    let settings = retrieveStyles();
+    for (let i = 1; i <= 5; i++) {
+      populateStyles(Object.keys(Word.Style), 'style-select' + i.toString());
+    }
+    //move selectors to the relevant option
+    settings.forEach((setting, i) => {
+      document.getElementById("style-select" + (i + 1).toString()).value = setting
+    })
   }
-  //move selectors to the relevant option
-  settings.forEach((setting, i) => {
-    document.getElementById("style-select" + (i + 1).toString()).value = setting
-  })
+  //opens the test cases style mappings if test mappings is the selected artifact type
+  else{
+    document.getElementById("main-screen").classList.add("hidden")
+    document.getElementById("test-style-mappings").style.display = 'flex'
+  }
   //after this, select the relevant box when compared to the users settings
 }
 
@@ -112,7 +123,8 @@ const closeStyleMappings = (result) => {
   }
 
   document.getElementById("main-screen").classList.remove("hidden")
-  document.getElementById("style-mappings").style.display = 'none'
+  document.getElementById("req-style-mappings").style.display = 'none'
+  document.getElementById("test-style-mappings").style.display = 'none'
   for (let i = 1; i <= 5; i++) {
     clearDropdownElement('style-select' + i.toString());
   }
@@ -217,6 +229,7 @@ export async function updateSelectionArray() {
 
 // Parses an array of range objects based on style and turns them into
 // them into requirement objects
+// refactor to use for loop where IndentLevel = styles index rather than a switch statement.
 const parseRequirements = (lines) => {
   let requirements = []
   let styles = retrieveStyles()
@@ -259,7 +272,11 @@ const parseRequirements = (lines) => {
       //lines not stylized normal or concurrent with style mappings are discarded.
       default: break
     }
-
+    /*if a requirement is populated with an empty name (happens when a line has a style but 
+    no text), remove it from the requirements before moving to the next line*/
+    if (requirement.Name == "") {
+      requirements.pop();
+    }
   })
   return requirements
 }
