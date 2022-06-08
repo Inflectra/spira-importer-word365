@@ -33,10 +33,11 @@ const setEventListeners = () => {
   document.getElementById('send-artifacts').onclick = () => pushRequirements();
   document.getElementById('log-out').onclick = () => logout();
   document.getElementById("style-mappings-button").onclick = () => openStyleMappings();
-  document.getElementById("confirm-style-mappings").onclick = () => closeStyleMappings(true);
-  document.getElementById("cancel-style-mappings").onclick = () => closeStyleMappings(false);
-  document.getElementById("confirm-test-style-mappings").onclick = () => closeStyleMappings(true);
-  document.getElementById("cancel-test-style-mappings").onclick = () => closeStyleMappings(false);
+  //I think theres a way to use classes to reduce this to 2 but unsure
+  document.getElementById("confirm-style-mappings").onclick = () => closeStyleMappings(true, 'req-');
+  document.getElementById("cancel-style-mappings").onclick = () => closeStyleMappings(false, 'req-');
+  document.getElementById("confirm-test-style-mappings").onclick = () => closeStyleMappings(true, 'test-');
+  document.getElementById("cancel-test-style-mappings").onclick = () => closeStyleMappings(false, 'test-');
 }
 
 const devmode = () => {
@@ -87,36 +88,42 @@ const loginAttempt = async () => {
 
 const openStyleMappings = async () => {
   //opens the requirements style mappings if requirements is the selected artifact type
+  let settings = []
+  let pageTag;
+  document.getElementById("main-screen").classList.add("hidden")
+  //checks the current selected artifact type then loads the appropriate menu
   if (document.getElementById("artifact-select").value == "requirements") {
-    document.getElementById("main-screen").classList.add("hidden")
+    pageTag = "req-"
     document.getElementById("req-style-mappings").style.display = 'flex'
     //populates all 5 style mapping boxes
-    let settings = retrieveStyles();
-    for (let i = 1; i <= 5; i++) {
-      populateStyles(Object.keys(Word.Style), 'style-select' + i.toString());
-    }
-    //move selectors to the relevant option
-    settings.forEach((setting, i) => {
-      document.getElementById("style-select" + (i + 1).toString()).value = setting
-    })
+    settings = retrieveStyles("req-");
   }
   //opens the test cases style mappings if test mappings is the selected artifact type
-  else{
-    document.getElementById("main-screen").classList.add("hidden")
+  else {
+    pageTag = "test-"
     document.getElementById("test-style-mappings").style.display = 'flex'
+    settings = retrieveStyles("test-")
   }
+  for (let i = 1; i <= 5; i++) {
+    populateStyles(Object.keys(Word.Style), pageTag + 'style-select' + i.toString());
+  }
+  //move selectors to the relevant option
+  settings.forEach((setting, i) => {
+    document.getElementById(pageTag +"style-select" + (i + 1).toString()).value = setting
+  })
   //after this, select the relevant box when compared to the users settings
 }
 
-//closes the style mapping page taking in a boolean result
+//closes the style mapping page taking in a boolean 'result'
+//pageTag is req or test depending on which page is currently open
 
-const closeStyleMappings = (result) => {
+const closeStyleMappings = (result, pageTag) => {
   //result = true when a user selects confirm to exit the style mappings page
   if (result) {
     //saves the users style preferences. this is document bound
     for (let i = 1; i <= 5; i++) {
-      let setting = document.getElementById("style-select" + i.toString()).value
-      Office.context.document.settings.set('style' + i.toString(), setting);
+      let setting = document.getElementById(pageTag + "style-select" + i.toString()).value
+      Office.context.document.settings.set(pageTag + 'style' + i.toString(), setting);
     }
     //this saves the settings
     Office.context.document.settings.saveAsync()
@@ -144,7 +151,7 @@ const populateProjects = (projects) => {
   return
 }
 
-//Populates a passed in style-selector with the word styles
+//Populates a passed in style-selector with the avaiable word styles
 const populateStyles = (styles, element_id) => {
   let dropdown = document.getElementById(element_id)
   styles.forEach((style) => {
@@ -156,13 +163,13 @@ const populateStyles = (styles, element_id) => {
   })
 }
 
-const retrieveStyles = () => {
+const retrieveStyles = (pageTag) => {
   let styles = []
   for (let i = 1; i <= 5; i++) {
-    let style = Office.context.document.settings.get('style' + i.toString());
+    let style = Office.context.document.settings.get(pageTag + 'style' + i.toString());
     //if there isnt an existing setting, populate with headings
     if (!style) {
-      Office.context.document.settings.set('style' + i.toString(), 'heading' + i.toString())
+      Office.context.document.settings.set(pageTag + 'style' + i.toString(), 'heading' + i.toString())
       style = 'heading' + i.toString();
     }
     styles.push(style)
@@ -232,7 +239,14 @@ export async function updateSelectionArray() {
 // refactor to use for loop where IndentLevel = styles index rather than a switch statement.
 const parseRequirements = (lines) => {
   let requirements = []
-  let styles = retrieveStyles()
+  let page = document.getElementById("artifact-select").value;
+  let styles;
+  if (page == 'requirements') {
+    styles = retrieveStyles('req-')
+  }
+  else{
+    styles = retrieveStyles('test-')
+  }
   lines.forEach((line, i) => {
     let requirement = {};
     //check for style mapping reference here
