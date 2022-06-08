@@ -52,13 +52,13 @@ const loginAttempt = async () => {
   let username = document.getElementById("input-username").value
   let rssToken = document.getElementById("input-password").value
   //allows user to enter URL with trailing slash or not.
-  let slashCheck = "/services/v5_0/RestService.svc/projects"
+  let apiBase = "/services/v5_0/RestService.svc/projects"
   if (url[url.length - 1] == "/") {
     //url cannot be changed as it is tied to the HTML dom object, so creates a new variable
     var finalUrl = url.substring(0, url.length - 1)
   }
   //formatting the URL as it should be to populate projects / validate user credentials
-  let validatingURL = finalUrl || url + slashCheck + `?username=${username}&api-key=${rssToken}`;
+  let validatingURL = finalUrl || url + apiBase + `?username=${username}&api-key=${rssToken}`;
   try {
     var response = await axios.get(validatingURL)
 
@@ -88,7 +88,9 @@ const loginAttempt = async () => {
 
 const openStyleMappings = async () => {
   //opens the requirements style mappings if requirements is the selected artifact type
-  let settings = []
+  /*all id's and internal word settings are now set using a "pageTag". This allows code 
+  to be re-used between testing and requirement style settings. The tags are -req for
+  requirements and test- for test cases.*/
   let pageTag;
   document.getElementById("main-screen").classList.add("hidden")
   //checks the current selected artifact type then loads the appropriate menu
@@ -96,14 +98,13 @@ const openStyleMappings = async () => {
     pageTag = "req-"
     document.getElementById("req-style-mappings").style.display = 'flex'
     //populates all 5 style mapping boxes
-    settings = retrieveStyles("req-");
   }
   //opens the test cases style mappings if test mappings is the selected artifact type
   else {
     pageTag = "test-"
     document.getElementById("test-style-mappings").style.display = 'flex'
-    settings = retrieveStyles("test-")
   }
+  let settings = retrieveStyles(pageTag)
   for (let i = 1; i <= 5; i++) {
     populateStyles(Object.keys(Word.Style), pageTag + 'style-select' + i.toString());
   }
