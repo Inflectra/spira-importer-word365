@@ -86,10 +86,9 @@ const openStyleMappings = async () => {
   document.getElementById("main-screen").classList.add("hidden")
   document.getElementById("style-mappings").style.display = 'flex'
   //populates all 5 style mapping boxes
-  let settings = []
+  let settings = retrieveStyles();
   for (let i = 1; i <= 5; i++) {
     populateStyles(Object.keys(Word.Style), 'style-select' + i.toString());
-    settings.push(Office.context.document.settings.get('style' + i.toString()));
   }
   //move selectors to the relevant option
   settings.forEach((setting, i) => {
@@ -99,8 +98,9 @@ const openStyleMappings = async () => {
 }
 
 //closes the style mapping page taking in a boolean result
-//if result = true, it will save the settings but not done yet
+
 const closeStyleMappings = (result) => {
+  //result = true when a user selects confirm to exit the style mappings page
   if (result) {
     //saves the users style preferences. this is document bound
     for (let i = 1; i <= 5; i++) {
@@ -142,6 +142,14 @@ const populateStyles = (styles, element_id) => {
     option.value = style
     dropdown.add(option);
   })
+}
+
+const retrieveStyles = () => {
+  let styles = []
+  for (let i = 1; i <= 5; i++) {
+    styles.push(Office.context.document.settings.get('style' + i.toString()));
+  }
+  return styles
 }
 
 //basic testing function for validating code snippet behaviour.
@@ -201,11 +209,11 @@ export async function updateSelectionArray() {
   })
 }
 
-
 // Parses an array of range objects based on style and turns them into
 // them into requirement objects
 const parseRequirements = (lines) => {
   let requirements = []
+  let styles = retrieveStyles()
   lines.forEach((line, i) => {
     let requirement = {};
     //check for style mapping reference here
@@ -217,28 +225,28 @@ const parseRequirements = (lines) => {
           requirements[requirements.length - 1].Description = requirements[requirements.length - 1].Description + line.text
         }
         break
-      //rather than heading 1-5, reference these cases against the style mappings 
-      case "Heading1": {
+      //Uses the files styles settings to 
+      case styles[0]: {
         requirement = { Name: line.text, IndentLevel: 0, Description: "" }
         requirements.push(requirement)
         break
       }
-      case "Heading2": {
+      case styles[1]: {
         requirement = { Name: line.text, IndentLevel: 1, Description: "" }
         requirements.push(requirement)
         break
       }
-      case "Heading3": {
+      case styles[2]: {
         requirement = { Name: line.text, IndentLevel: 2, Description: "" }
         requirements.push(requirement)
         break
       }
-      case "Heading4": {
+      case styles[3]: {
         requirement = { Name: line.text, IndentLevel: 3, Description: "" }
         requirements.push(requirement)
         break
       }
-      case "Heading5":
+      case styles[4]:
         requirement = { Name: line.text, IndentLevel: 4, Description: "" }
         requirements.push(requirement)
         break
@@ -251,7 +259,7 @@ const parseRequirements = (lines) => {
 }
 //clears the credentials and returns the user to the home page
 const logout = () => {
-  USER_OBJ = {}
+  var USER_OBJ = { url: "", username: "", password: "" }
   document.getElementById('panel-auth').classList.remove('hidden');
   document.getElementById('main-screen').classList.add('hidden');
   clearDropdownElement('project-select');
@@ -266,6 +274,7 @@ const pushRequirements = async () => {
   await updateSelectionArray();
   // Tests the parseRequirements Function
   let requirements = parseRequirements(SELECTION);
+  let testcall = await axios.post("http://localhost:5000/retrieve", {test: "This is testing styles", requirements: requirements})
 
   // Tests the pushRequirements Function
   let id = document.getElementById('project-select').value;
