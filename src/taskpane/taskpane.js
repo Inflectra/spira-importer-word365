@@ -92,7 +92,7 @@ const openStyleMappings = async () => {
     settings.push(Office.context.document.settings.get('style' + i.toString()));
   }
   //move selectors to the relevant option
-  settings.forEach((setting, i) =>{
+  settings.forEach((setting, i) => {
     document.getElementById("style-select" + (i + 1).toString()).value = setting
   })
   //after this, select the relevant box when compared to the users settings
@@ -254,7 +254,10 @@ const logout = () => {
   document.getElementById('panel-auth').classList.remove('hidden');
   document.getElementById('main-screen').classList.add('hidden');
   clearDropdownElement('project-select');
-  clearDropdownElement('style-select');
+  //clears all 5 style select elements (titled style-select[1-5])
+  for (let i = 1; i <= 5; i++) {
+    clearDropdownElement('style-select' + i.toString());
+  }
 }
 
 // Send a requirement to Spira using the API -- WIP
