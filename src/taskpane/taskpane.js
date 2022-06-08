@@ -113,7 +113,7 @@ const openStyleMappings = async () => {
       populateStyles(customStyles.concat(Object.keys(Word.Style)), pageTag + 'style-select' + i.toString());
     }
     //bottom 3 selectors will be related to tables
-    for (let i =3; i<=5; i++){
+    for (let i = 3; i <= 5; i++) {
       let tableStyles = ["column1", "column2", "column3", "column4", "column5"]
       populateStyles(tableStyles, pageTag + 'style-select' + i.toString())
     }
@@ -184,9 +184,9 @@ const retrieveStyles = (pageTag) => {
   for (let i = 1; i <= 5; i++) {
     let style = Office.context.document.settings.get(pageTag + 'style' + i.toString());
     //if this is for one of the last 3 test style selectors, choose column1-3 as auto populate settings
-    if (!style && pageTag == "test-" && i >= 3){
-      Office.context.document.settings.set(pageTag + 'style' + i.toString(), 'column' + (i-2).toString())
-      style = 'column' + (i-2).toString()
+    if (!style && pageTag == "test-" && i >= 3) {
+      Office.context.document.settings.set(pageTag + 'style' + i.toString(), 'column' + (i - 2).toString())
+      style = 'column' + (i - 2).toString()
     }
     //if there isnt an existing setting, populate with headings
     else if (!style) {
@@ -339,6 +339,7 @@ const pushRequirements = async () => {
   /*if someone has selected an area with no properly formatted text, show an error explaining
   that and then return this function to prevent sending an empty request.*/
   if (requirements.length == 0) {
+    document.getElementById("empty-error").innerText = "You currently have no valid text selected. if this isincorrect, check your style mappings and set them as the relevant styles."
     document.getElementById("empty-error").style.display = 'flex';
     setTimeout(() => {
       document.getElementById('empty-error').style.display = 'none';
@@ -356,7 +357,12 @@ const pushRequirements = async () => {
       let call = await axios.post(apiCall, { Name: item.Name, Description: item.Description, RequirementTypeId: 2 });
     }
     catch (err) {
-      console.log(err);
+      //shows the failed requirement to add. This should work if it fails in the middle of sending
+      document.getElementById("empty-error").innerText = `The request to the API has failed on requirement: '${item.Name}'. All, if any previous requirements should be in Spira.`
+      document.getElementById("empty-error").style.display = "flex";
+      setTimeout(() => {
+        document.getElementById('empty-error').style.display = 'none';
+      }, 8000)
     }
   }
   return
