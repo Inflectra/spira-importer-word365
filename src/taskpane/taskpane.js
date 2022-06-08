@@ -89,7 +89,7 @@ const loginAttempt = async () => {
 const openStyleMappings = async () => {
   //opens the requirements style mappings if requirements is the selected artifact type
   /*all id's and internal word settings are now set using a "pageTag". This allows code 
-  to be re-used between testing and requirement style settings. The tags are -req for
+  to be re-used between testing and requirement style settings. The tags are req- for
   requirements and test- for test cases.*/
   let pageTag;
   document.getElementById("main-screen").classList.add("hidden")
@@ -248,11 +248,13 @@ const parseRequirements = (lines) => {
   else{
     styles = retrieveStyles('test-')
   }
-  lines.forEach((line, i) => {
+  lines.forEach((line) => {
+    //removes the indentation tags from the text
+    line.text = line.text.replace("\t", "").replace("\r", "")
     let requirement = {};
     //check for style mapping reference here
-    switch (line.style) {
-      case "Normal":
+    switch (line.style.toLowerCase()) {
+      case "normal":
         //only executes if there is a requirement to add the description to.
         if (requirements.length > 0) {
           //if it is description text, add it to Description of the previously added item in requirements. This allows multi line descriptions
@@ -297,7 +299,7 @@ const parseRequirements = (lines) => {
 }
 //clears the credentials and returns the user to the home page
 const logout = () => {
-  var USER_OBJ = { url: "", username: "", password: "" }
+  var USER_OBJ = { url: "", username: "", password: "" };
   document.getElementById('panel-auth').classList.remove('hidden');
   document.getElementById('main-screen').classList.add('hidden');
   clearDropdownElement('project-select');
