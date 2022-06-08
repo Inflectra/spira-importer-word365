@@ -132,6 +132,7 @@ const populateProjects = (projects) => {
   return
 }
 
+//Populates a passed in style-selector with the word styles
 const populateStyles = (styles, element_id) => {
   let dropdown = document.getElementById(element_id)
   styles.forEach((style) => {
@@ -143,7 +144,7 @@ const populateStyles = (styles, element_id) => {
   })
 }
 
-//basic function which uses Word API to extract text as a proof of concept.
+//basic testing function for validating code snippet behaviour.
 export async function test() {
 
   return Word.run(async (context) => {
