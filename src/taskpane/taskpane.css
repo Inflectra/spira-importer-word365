@@ -94,7 +94,8 @@ ul {
 
 .panel {
     background-color: white;
-    height: calc(100vh - 100px); /* 150 leaves space around header and footer */
+    height: calc(100vh - 100px);
+    /* 150 leaves space around header and footer */
     left: 0;
     overflow-y: auto;
     padding: 1rem;
@@ -103,10 +104,12 @@ ul {
     visibility: visible;
     width: 100vw
 }
+
 .panel.offscreen {
     left: 100%;
     visibility: hidden;
 }
+
 .well {
     background-color: #f1f1f1;
     padding: .5rem;
@@ -114,37 +117,50 @@ ul {
     border: 1px solid #ddd;
     margin: 0;
 }
-.error-message{
-    color:red;
+
+.error-message {
+    color: red;
     font-weight: 700;
 }
+
 /*FORMS AND SPECIFIC ELEMENTS*/
 
 .form {
     margin: 0;
     padding: 0;
 }
+
 .form-pair {
     list-style-type: none;
     margin-bottom: 0;
 }
-.form-label, 
+
+.form-label,
 .form-input {
     display: block;
 }
+
 .form-label {
     font-size: .9em;
 }
+
 .form-input {
     width: 100%;
 }
-.styles-page{
-    align-items:center;
-    justify-content:center;
+
+.styles-page {
+    align-items: center;
+    justify-content: center;
     flex-direction: column;
+    text-align:center;
 }
-.style-selector{
-    margin-top: 3em;
+
+.style-labels {
+    margin-top: 2em;
+}
+
+.styles-explainer{
+    width: 60vw;
 }
 
 /*MS DEFAULT CLASSES*/
