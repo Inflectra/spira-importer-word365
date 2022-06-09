@@ -166,7 +166,10 @@ ul {
     display: flex;
     flex-direction: row;
     align-items: center;
-    justify-content: space-evenly;
+}
+
+.style-button {
+    margin-left: 0.5em;
 }
 
 #main-page-buttons {
