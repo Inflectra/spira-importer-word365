@@ -24,17 +24,19 @@
 </head>
 
 <body class="ms-font-m ms-welcome ms-Fabric">
-    
+    <header class="header">
+        <!--We don't have the image asset file as it stands now-->
+        <!--img alt="" src="" class="header-logo"-->
+        <h3 class="header-heading">SpiraPlan Artifact Importer Tool<br></h3>
+    </header>
     <!--auth page-->
-    <div class="panel" id="panel-auth">
-
+    <div id="panel-auth" class="panel">
         <p class="well">
             Learn how to use this app via the <a id="lnk-help-login" href="#">mini help</a>, or read our <a
                 target="_blank"
                 href="https://spiradoc.inflectra.com/Unit-Testing-Integration/Using-Test-Runner-For-Excel/">full
                 documentation</a>.
         </p>
-
         <h3 class="mt-md mb-0">1. Connect to your Spira app</h3>
         <h4 id="login-err-message" class="error-message hidden">Your credentials are invalid</h4>
         <ul class="form">
@@ -96,9 +98,13 @@
             <div role="button" id="test" class="ms-welcome__action ms-Button ms-Button--hero ms-font-xl">
                 <span class="ms-Button-label">test</span>
             </div>
-            <h4 id="empty-error" class="error-message">You currently have no valid text selected. if this is
-                incorrect, check your style mappings and set them as the relevant styles.
+            <h4 id="empty-err" class="error-message">
+                You currently have no valid text selected or within the body of the document.
+                if this is incorrect, check your style mappings and set them as the relevant
+                styles.
             </h4>
+            <!--Failed-req-error is dynamicly generated on throw in javascript-->
+            <h4 id="failed-req-err"></h4>
             <div role="button" id="send-artifacts" class="ms-welcome__action ms-Button ms-Button--hero ms-font-xl">
                 <span class="ms-Button-label">Send to Spira</span>
             </div>
@@ -126,10 +132,12 @@
         <select title="req-style-select4" id="req-style-select4" class="style-selector"></select>
         <label for="req-style-select5" class="style-labels">Style 5:</label>
         <select title="req-style-select5" id="req-style-select5" class="style-selector"></select>
-        <div role="button" id="confirm-req-style-mappings" class="ms-welcome__action ms-Button ms-Button--hero ms-font-xl">
+        <div role="button" id="confirm-req-style-mappings"
+            class="ms-welcome__action ms-Button ms-Button--hero ms-font-xl">
             <span class="ms-Button-label">Confirm</span>
         </div>
-        <div role="button" id="cancel-req-style-mappings" class="ms-welcome__action ms-Button ms-Button--hero ms-font-xl">
+        <div role="button" id="cancel-req-style-mappings"
+            class="ms-welcome__action ms-Button ms-Button--hero ms-font-xl">
             <span class="ms-Button-label">Cancel</span>
         </div>
     </div>
@@ -158,6 +166,14 @@
             <span class="ms-Button-label">Cancel</span>
         </div>
     </div>
+
+    <!-- footer -->
+    <footer class="footer">
+        <a href="https://www.inflectra.com" target="_blank">
+            <img alt="inflectra insignia" src="https://files.inflectra.com/google/sheets/by_inflectra.png"
+                class="footer-logo">
+        </a>
+    </footer>
 </body>
 
 </html>

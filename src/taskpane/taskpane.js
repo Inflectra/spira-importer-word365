@@ -24,18 +24,22 @@ var USER_OBJ = { url: "", username: "", password: "" }
 
 Office.onReady((info) => {
   if (info.host === Office.HostType.Word) {
-    document.getElementById("sideload-msg").style.display = "none";
-    document.getElementById("app-body").style.display = "flex";
-    document.getElementById("req-style-mappings").style.display = 'none';
-    document.getElementById("test-style-mappings").style.display = 'none';
-    document.getElementById("empty-error").style.display = 'none';
+    setDefaultDisplay();
     setEventListeners();
-
     document.body.classList.add('ms-office');
     // this element doesn't currently exist
     // document.getElementById("help-connection-google").style.display = "none";
   }
 });
+
+const setDefaultDisplay = () => {
+  document.getElementById("sideload-msg").style.display = "none";
+  document.getElementById("app-body").style.display = "flex";
+  document.getElementById("req-style-mappings").style.display = 'none';
+  document.getElementById("test-style-mappings").style.display = 'none';
+  document.getElementById("empty-err").style.display = 'none';
+  document.getElementById("failed-req-err").style.display = 'none'
+}
 
 const setEventListeners = () => {
   document.getElementById('test').onclick = test;
@@ -139,10 +143,9 @@ const pushRequirements = async () => {
   /*if someone has selected an area with no properly formatted text, show an error explaining
   that and then return this function to prevent sending an empty request.*/
   if (requirements.length == 0) {
-    document.getElementById("empty-error").textContent = "You currently have no valid text selected. if this isincorrect, check your style mappings and set them as the relevant styles."
-    document.getElementById("empty-error").style.display = 'flex';
+    document.getElementById("empty-err").style.display = 'flex';
     setTimeout(() => {
-      document.getElementById('empty-error').style.display = 'none';
+      document.getElementById('empty-err').style.display = 'none';
     }, 8000)
     return
   }
@@ -159,12 +162,12 @@ const pushRequirements = async () => {
       lastIndent = item.IndentLevel;
     }
     catch (err) {
-      /*shows the failed requirement to add. This should work if it fails in the middle of sending
-      a set of requirements*/
-      document.getElementById("empty-error").textContent = `The request to the API has failed on requirement: '${item.Name}'. All, if any previous requirements should be in Spira.`
-      document.getElementById("empty-error").style.display = "flex";
+      /*shows the requirement which failed to add. This should work if it fails in the middle of 
+      sending a set of requirements*/
+      document.getElementById("failed-req-error").textContent = `The request to the API has failed on requirement: '${item.Name}'. All, if any previous requirements should be in Spira.`
+      document.getElementById("failed-req-error").style.display = "flex";
       setTimeout(() => {
-        document.getElementById('empty-error').style.display = 'none';
+        document.getElementById('failed-req-error').style.display = 'none';
       }, 8000)
     }
   }
@@ -400,7 +403,7 @@ const parseRequirements = (lines) => {
         //only executes if there is a requirement to add the description to.
         if (requirements.length > 0) {
           //if it is description text, add it to Description of the previously added item in requirements. This allows multi line descriptions
-          requirements[requirements.length - 1].Description = requirements[requirements.length - 1].Description + line.text
+          requirements[requirements.length - 1].Description = requirements[requirements.length - 1].Description + ' ' + line.text
         }
         break
       //Uses the file styles settings to populate into this function. If none set, uses heading1-5
