@@ -33,7 +33,6 @@ Office.onReady((info) => {
 });
 
 const setDefaultDisplay = () => {
-  document.getElementById("sideload-msg").style.display = "none";
   document.getElementById("app-body").style.display = "flex";
   document.getElementById("req-style-mappings").style.display = 'none';
   document.getElementById("test-style-mappings").style.display = 'none';
@@ -42,7 +41,7 @@ const setDefaultDisplay = () => {
 }
 
 const setEventListeners = () => {
-  document.getElementById('test').onclick = test;
+  // document.getElementById('test').onclick = test;
   document.getElementById('btn-login').onclick = () => loginAttempt();
   document.getElementById('dev-mode').onclick = () => devmode();
   document.getElementById('send-artifacts').onclick = () => pushRequirements();
@@ -97,6 +96,9 @@ Spira API calls
 **************/
 
 const loginAttempt = async () => {
+  /*disable the login button to prevent someone from pressing it multiple times, this can
+  overpopulate the projects selector with duplicate sets.*/
+  document.getElementById("btn-login").disabled = true
   //retrieves form data from input elements
   let url = document.getElementById("input-url").value
   let username = document.getElementById("input-username").value
@@ -116,6 +118,8 @@ const loginAttempt = async () => {
       //if successful response, move user to main screen
       document.getElementById('panel-auth').classList.add('hidden');
       document.getElementById('main-screen').classList.remove('hidden');
+      document.getElementById('main-screen').style.display = 'flex';
+      document.getElementById("btn-login").disabled = false
       //save user credentials in global object to use in future requests
       USER_OBJ = {
         url: finalUrl || url, username: username, password: rssToken
@@ -130,6 +134,7 @@ const loginAttempt = async () => {
   catch (err) {
     //if the response throws an error, show an error message
     document.getElementById("login-err-message").classList.remove('hidden');
+    document.getElementById("btn-login").disabled = false;
     return
   }
 }
@@ -220,15 +225,14 @@ const populateProjects = (projects) => {
 }
 
 const logout = () => {
-  //Maybe check for / clear login token as well?
-  var USER_OBJ = { url: "", username: "", password: "" };
-  document.getElementById('panel-auth').classList.remove('hidden');
+  USER_OBJ = { url: "", username: "", password: "" };
   document.getElementById('main-screen').classList.add('hidden');
+  document.getElementById('main-screen').style.display = "none";
+  //removes currently entered RSS token to prevent a user from leaving their login credentials
+  //populated after logging out and leaving their computer.
+  document.getElementById("input-password").value = ""
+  document.getElementById('panel-auth').classList.remove('hidden');
   clearDropdownElement('project-select');
-  //clears all 5 style select elements (titled style-select[1-5])
-  for (let i = 1; i <= 5; i++) {
-    clearDropdownElement('style-select' + i.toString());
-  }
 }
 
 const openStyleMappings = async () => {
@@ -279,7 +283,7 @@ const openStyleMappings = async () => {
 //pageTag is req or test depending on which page is currently open
 
 const closeStyleMappings = (result, pageTag) => {
-  //result = true when a user selects confirm to exit the style mappings page
+  //result = true when a user selects confirm to exit a style mappings page
   if (result) {
     //saves the users style preferences. this is document bound
     for (let i = 1; i <= 5; i++) {
@@ -289,12 +293,14 @@ const closeStyleMappings = (result, pageTag) => {
     //this saves the settings
     Office.context.document.settings.saveAsync()
   }
-
+  //returns user to main screen
   document.getElementById("main-screen").classList.remove("hidden")
   document.getElementById("req-style-mappings").style.display = 'none'
   document.getElementById("test-style-mappings").style.display = 'none'
+  //clears dropdowns to prevent being populated with duplicate options upon re-opening
   for (let i = 1; i <= 5; i++) {
-    clearDropdownElement('style-select' + i.toString());
+    clearDropdownElement('req-style-select' + i.toString());
+    clearDropdownElement('test-style-select' + i.toString());
   }
 }
 
