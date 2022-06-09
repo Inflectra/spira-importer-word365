@@ -10,6 +10,9 @@ Initialization Functions
 ***********************/
 
 const axios = require('axios')
+const superagent = require('superagent');
+//adding content-type header as it is required for spira api v6_0
+//ignore it saying defaults doesnt exist, it does and using default does not work.
 
 // Global selection array, used throughout
 /*This is a global variable because the word API call functions are unable to return
@@ -104,9 +107,8 @@ const loginAttempt = async () => {
   let validatingURL = finalUrl || url + apiBase + `?username=${username}&api-key=${rssToken}`;
   try {
     //call the projects API to populate relevant projects
-    var response = await axios.get(validatingURL)
-
-    if (response.data) {
+    var response = await superagent.get(validatingURL).set('accept', 'application/json').set("Content-Type", "application/json")
+    if (response.body) {
       //if successful response, move user to main screen
       document.getElementById('panel-auth').classList.add('hidden');
       document.getElementById('main-screen').classList.remove('hidden');
@@ -114,8 +116,8 @@ const loginAttempt = async () => {
       USER_OBJ = {
         url: finalUrl || url, username: username, password: rssToken
       }
-      populateProjects(response.data)
-
+      //populate the projects dropdown with the response body.
+      populateProjects(response.body)
       //On successful login, hide error message if its visible
       document.getElementById("login-err-message").classList.add('hidden')
       return
@@ -313,12 +315,12 @@ const clearDropdownElement = (element_id) => {
 }
 
 const handleErrors = (error) => {
-  
+
 }
 
 /********************
 Word/Office API calls
-********************/ 
+********************/
 
 const retrieveStyles = (pageTag) => {
   let styles = []

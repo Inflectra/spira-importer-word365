@@ -21,7 +21,6 @@ loginAttempt
 pushRequirements
 indentRequirement
 
-//here
 Word/Office API calls:
 retrieveStyles
 updateSelectionArray
