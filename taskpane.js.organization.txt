@@ -1,0 +1,33 @@
+Initialization: 
+Office.onReady function
+setting global variables 
+importing axios
+setEventListeners
+devmode
+
+test function will go after initialization for easy access
+
+HTML DOM manipulation:
+populateProjects
+logout
+openStyleMappings
+closeStyleMappings
+populateStyles
+clearDropdownElement
+handleErrors
+
+Spira API calls:
+loginAttempt
+pushRequirements
+indentRequirement
+
+//here
+Word/Office API calls:
+retrieveStyles
+updateSelectionArray
+
+Pure data manipulation:
+parseRequirements
+scanForCustomStyles
+
+
