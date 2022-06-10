@@ -209,30 +209,43 @@ const indentRequirement = async (apiCall, id, indent) => {
 }
 
 /* 
-  Parses the selection and sends the found test case folders and test cases to the Spira instance
+  Sends all of the test case folders and test cases found in the selection to the Spira instance
 */
 const pushTestCases = async () => {
   // CURRENTLY USED FOR TESTING
-  let response = await createTestCaseFolder("Test Folder", "First Functional Folder Test");
+  let folderResponse = await pushTestCaseFolder("Test Folder", "First Functional Folder Test");
+  let testCaseResponse = await pushTestCase("test case", folderResponse)
   try {
-    let call1 = await axios.post("http://localhost:5000/retrieve", { thing: `Folder Id: ${response}` })
+    let call1 = await axios.post("http://localhost:5000/retrieve", { Folder: folderResponse, TestCase: testCaseResponse })
   }
   catch (err) {
     console.log(err);
   }
 }
 /* 
-  Creates a test case using the information given and sends it to the Spira instance.
+  Creates a test case using the information given and sends it to the Spira instance. Returns the Id of the created test case
 */
-const pushTestCase = async (testCaseName, testFolderId, testSteps) => {
-
+const pushTestCase = async (testCaseName, testFolderId) => {
+  let testCaseResponse;
+  try {
+    let testCaseResponse = await axios.post(`${USER_OBJ.url}/services/v6_0/RestService.svc/projects/24/test-cases?username=${USER_OBJ.username}
+      &api-key=${USER_OBJ.password}`, {
+      Name: testCaseName,
+      TestCaseFolderId: testFolderId
+    })
+    return testCaseResponse.data.TestCaseId;
+  }
+  catch (err) {
+    console.log(err);
+    return null;
+  }
 }
 /*  
   Creates a test folder and returns the Test Folder Id
 */
-const createTestCaseFolder = async (folderName, description) => {
-  let id = document.getElementById('project-select').value;
-  let apiCall = USER_OBJ.url + "/services/v6_0/RestService.svc/projects/" + id +
+const pushTestCaseFolder = async (folderName, description) => {
+  let projectId = document.getElementById('project-select').value;
+  let apiCall = USER_OBJ.url + "/services/v6_0/RestService.svc/projects/" + projectId +
     `/test-folders?username=${USER_OBJ.username}&api-key=${USER_OBJ.password}`;
   let folderCall = "err";
   try {
@@ -247,13 +260,13 @@ const createTestCaseFolder = async (folderName, description) => {
   }
 }
 
-const pushTestStep = async (testCaseId, testStep) =>{
+const pushTestStep = async (testCaseId, testStep) => {
   /*pushTestCase should call this passing in the created testCaseId and iterate through passing
   in that test cases test steps.*/
   let projectId = document.getElementById('project-select').value;
-  let apiCall = USER_OBJ.url + "/services/v6_0/RestService.svc/projects/" + projectId + 
+  let apiCall = USER_OBJ.url + "/services/v6_0/RestService.svc/projects/" + projectId +
     `/test-cases/${testCaseId}/test-steps?username=${USER_OBJ.username}&api-key=${USER_OBJ.password}`;
-  try{
+  try {
     //testStep = {Description: "", SampleData: "", ExpectedResult: ""}
     //we dont need the response from this - so no assigning to variable.
     await axios.post(apiCall, {
