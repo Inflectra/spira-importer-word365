@@ -44,7 +44,7 @@ const setEventListeners = () => {
   // document.getElementById('test').onclick = test;
   document.getElementById('btn-login').onclick = () => loginAttempt();
   document.getElementById('dev-mode').onclick = () => devmode();
-  document.getElementById('send-artifacts').onclick = () => pushArtifacts();
+  document.getElementById('send-artifacts').onclick = () => test();
   document.getElementById('log-out').onclick = () => logout();
   document.getElementById("style-mappings-button").onclick = () => openStyleMappings();
   //I think theres a way to use classes to reduce this to 2 but unsure
@@ -69,26 +69,32 @@ Testing Functions
 export async function test() {
 
   return Word.run(async (context) => {
-    await updateSelectionArray();
+    /*this is the syntax for accessing all tables. table text ends with \t when retrieved from
+     the existing fucntion (load(context.document.getSelection(), 'text'))and this can be 
+     utilized in order to identify when you have entered a table, at which point we parse
+     information out of the table using that method to know the structure (returns 2d array) */
+    let selection = context.document.getSelection().tables;
+    context.load(selection);
+    await context.sync();
+    await axios.post("http://localhost:5000/retrieve", {se: selection.items[0].values})
     let lines = SELECTION;
-
     //try catch block for backend node call to prevent errors crashing the application
     try {
-      let call1 = await axios.post("http://localhost:5000/retrieve", { lines: lines })
+      // let call1 = await axios.post("http://localhost:5000/retrieve", { lines: lines })
     }
     catch (err) {
       console.log(err)
     }
     // Tests the parseRequirements Function
-    let requirements = parseRequirements(lines);
+    // let requirements = parseRequirements(lines);
 
     //try catch block for backend node call to prevent errors crashing the application
-    try {
-      let call1 = await axios.post("http://localhost:5000/retrieve", { lines: lines, headings: requirements })
-    }
-    catch (err) {
-      console.log(err)
-    }
+    // try {
+    //   let call1 = await axios.post("http://localhost:5000/retrieve", { lines: lines, headings: requirements })
+    // }
+    // catch (err) {
+    //   console.log(err)
+    // }
   })
 }
 
@@ -226,7 +232,6 @@ const pushTestCases = async () => {
   Creates a test case using the information given and sends it to the Spira instance. Returns the Id of the created test case
 */
 const pushTestCase = async (testCaseName, testFolderId) => {
-  let testCaseResponse;
   try {
     let testCaseResponse = await axios.post(`${USER_OBJ.url}/services/v6_0/RestService.svc/projects/24/test-cases?username=${USER_OBJ.username}
       &api-key=${USER_OBJ.password}`, {
@@ -444,7 +449,6 @@ export async function updateSelectionArray() {
       context.load(selection, ['text', 'styleBuiltIn', 'style'])
       await context.sync();
     }
-
     // Testing parsing lines of text from the selection array and logging it
     let lines = []
     selection.items.forEach((item) => {
@@ -474,14 +478,7 @@ const pushArtifacts = async () => {
 // Parses an array of range objects based on style and turns them into requirement objects
 const parseRequirements = (lines) => {
   let requirements = []
-  let page = document.getElementById("artifact-select").value;
-  let styles;
-  if (page == 'requirements') {
-    styles = retrieveStyles('req-')
-  }
-  else {
-    styles = retrieveStyles('test-')
-  }
+  let styles = retrieveStyles('req-')
   lines.forEach((line) => {
     //removes the indentation tags from the text
     line.text = line.text.replaceAll("\t", "").replaceAll("\r", "")
@@ -530,6 +527,26 @@ const parseRequirements = (lines) => {
     }
   })
   return requirements
+}
+
+const parseTestCases = (lines) =>{
+  let testCases = []
+  //styles = ['style1', 'style2', ...]
+  let styles = retrieveStyles("test-")
+  let testStep = {Description: "", ExpectedResult: "", SampleData: ""}
+  lines.forEach((line) =>{
+    let testCase = {folderName: "", Name: "", testSteps: []}
+    //this handles whether a line is a folder name or test case name
+    switch (line.style.toLowerCase()){
+      case styles[0]: 
+        testCase.folderName = line.text
+      case styles[1]:
+        testCase.Name = line.text
+      case styles[2]:
+
+    }
+
+  })
 }
 
 // Updates selection array and then loops through it and adds any
