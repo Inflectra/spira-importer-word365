@@ -114,7 +114,7 @@ ul {
 
 .panel {
     background-color: white;
-    height: calc(100% - 100px);
+    height: calc(100vh - 100px);
     /* 150 leaves space around header and footer */
     left: 0;
     top: 50px;
@@ -123,12 +123,12 @@ ul {
     position: absolute;
     transition: left 0.2s;
     visibility: visible;
-    width: 100vw
+    width: 100vw;
 }
 
 .panel.offscreen {
     left: 100%;
-    visibility: hidden;
+    visibility:hidden;
 }
 
 .footer {
@@ -158,6 +158,8 @@ ul {
 }
 
 .style-prompt {
+    top: 30px;
+    position:static;
     margin: 0 auto;
 }
 
@@ -214,10 +216,11 @@ ul {
     justify-content: center;
     flex-direction: column;
     text-align: center;
+    top: 50px;
 }
 
 .style-labels {
-    margin-top: 1.5em;
+    margin-top: 1em;
 }
 
 /*MS DEFAULT CLASSES*/

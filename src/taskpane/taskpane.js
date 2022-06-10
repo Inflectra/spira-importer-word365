@@ -58,6 +58,7 @@ const devmode = () => {
   //moves us to the main interface without manually entering credentials
   document.getElementById('panel-auth').classList.add('hidden');
   document.getElementById('main-screen').classList.remove('hidden');
+  document.getElementById("main-screen").style.display = "flex"
 }
 
 
@@ -227,6 +228,7 @@ const populateProjects = (projects) => {
 const logout = () => {
   USER_OBJ = { url: "", username: "", password: "" };
   document.getElementById('main-screen').classList.add('hidden');
+  //display: flex is set after hidden is removed, may want to make this only use style.display
   document.getElementById('main-screen').style.display = "none";
   //removes currently entered RSS token to prevent a user from leaving their login credentials
   //populated after logging out and leaving their computer.
