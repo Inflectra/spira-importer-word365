@@ -44,7 +44,7 @@ const setEventListeners = () => {
   // document.getElementById('test').onclick = test;
   document.getElementById('btn-login').onclick = () => loginAttempt();
   document.getElementById('dev-mode').onclick = () => devmode();
-  document.getElementById('send-artifacts').onclick = () => pushRequirements();
+  document.getElementById('send-artifacts').onclick = () => pushArtifacts();
   document.getElementById('log-out').onclick = () => logout();
   document.getElementById("style-mappings-button").onclick = () => openStyleMappings();
   //I think theres a way to use classes to reduce this to 2 but unsure
@@ -205,6 +205,45 @@ const indentRequirement = async (apiCall, id, indent) => {
         console.log(err)
       }
     }
+  }
+}
+
+/* 
+  Parses the selection and sends the found test case folders and test cases to the Spira instance
+*/
+const pushTestCases = async () => {
+  // CURRENTLY USED FOR TESTING
+  let response = await createTestCaseFolder("Test Folder", "First Functional Folder Test");
+  try {
+    let call1 = await axios.post("http://localhost:5000/retrieve", { thing: `Folder Id: ${response}` })
+  }
+  catch (err) {
+    console.log(err);
+  }
+}
+/* 
+  Creates a test case using the information given and sends it to the Spira instance.
+*/
+const pushTestCase = async (testCaseName, testFolderId, testSteps) => {
+
+}
+/*  
+  Creates a test folder and returns the Test Folder Id
+*/
+const createTestCaseFolder = async (folderName, description) => {
+  let id = document.getElementById('project-select').value;
+  let apiCall = USER_OBJ.url + "/services/v6_0/RestService.svc/projects/" + id +
+    `/test-folders?username=${USER_OBJ.username}&api-key=${USER_OBJ.password}`;
+  let folderCall = "err";
+  try {
+    folderCall = await axios.post(apiCall, {
+      Name: folderName,
+      Description: description
+    })
+    return folderCall.data.TestCaseFolderId;
+  }
+  catch (err) {
+    console.log(err);
   }
 }
 
@@ -389,6 +428,16 @@ export async function updateSelectionArray() {
 /*********************
 Pure data manipulation
 **********************/
+
+const pushArtifacts = async () => {
+  let artifacts = document.getElementById("artifact-select").value;
+  if (artifacts == "requirements") {
+    await pushRequirements();
+  }
+  else {
+    await pushTestCases();
+  }
+}
 
 // Parses an array of range objects based on style and turns them into requirement objects
 const parseRequirements = (lines) => {
