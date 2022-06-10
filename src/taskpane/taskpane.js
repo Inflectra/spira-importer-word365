@@ -216,8 +216,35 @@ const indentRequirement = async (apiCall, id, indent) => {
 
 /* 
   Sends all of the test case folders and test cases found in the selection to the Spira instance
+  WIP Until parseTestSteps is fully implemented
 */
 const pushTestCases = async () => {
+  await updateSelectionArray();
+  let testCases = []; // Will add the parser call here once it is implemented
+  let testCaseFolders = []; // This is an array of string:int objects
+  for (let i = 0; i < testCases.length; i++) {
+    let testCase = testCases[i];
+
+    // First check if it's in a new folder we've already made
+    let folder = testCaseFolders.find(folder => folder.folderName == testCase.folderName)
+    let testCaseId;
+
+    if (!folder) { // If the folder doesn't exist yet, make it and then make the 
+      let newFolder = {}
+      newFolder.folderId = await pushTestCaseFolder(testCase.folderName, testCase.testFolderDescription);
+      newFolder.folderName = testCase.folderName;
+      testCaseFolders.push(newFolder);
+    }
+    // make the testCase and keep the Id for later
+    testCaseId = await pushTestCase(testCase.Name, testCase.testCaseDescription, folder.folderId);
+
+    // now make the testSteps
+    for (let j = 0; j < testCase.Steps.length; i++) {
+      await pushTestStep(testCaseId, testCase.Step[i]);
+    }
+  }
+
+
   // CURRENTLY USED FOR TESTING
   let folderResponse = await pushTestCaseFolder("Test Folder", "First Functional Folder Test");
   let testCaseResponse = await pushTestCase("test case", folderResponse)
@@ -231,11 +258,12 @@ const pushTestCases = async () => {
 /* 
   Creates a test case using the information given and sends it to the Spira instance. Returns the Id of the created test case
 */
-const pushTestCase = async (testCaseName, testFolderId) => {
+const pushTestCase = async (testCaseName, testCaseDescription, testFolderId) => {
   try {
-    let testCaseResponse = await axios.post(`${USER_OBJ.url}/services/v6_0/RestService.svc/projects/24/test-cases?username=${USER_OBJ.username}
+    var testCaseResponse = await axios.post(`${USER_OBJ.url}/services/v6_0/RestService.svc/projects/24/test-cases?username=${USER_OBJ.username}
       &api-key=${USER_OBJ.password}`, {
       Name: testCaseName,
+      Description: testCaseDescription,
       TestCaseFolderId: testFolderId
     })
     return testCaseResponse.data.TestCaseId;
@@ -252,9 +280,8 @@ const pushTestCaseFolder = async (folderName, description) => {
   let projectId = document.getElementById('project-select').value;
   let apiCall = USER_OBJ.url + "/services/v6_0/RestService.svc/projects/" + projectId +
     `/test-folders?username=${USER_OBJ.username}&api-key=${USER_OBJ.password}`;
-  let folderCall = "err";
   try {
-    folderCall = await axios.post(apiCall, {
+    let folderCall = await axios.post(apiCall, {
       Name: folderName,
       Description: description
     })
@@ -262,6 +289,7 @@ const pushTestCaseFolder = async (folderName, description) => {
   }
   catch (err) {
     console.log(err);
+    return null;
   }
 }
 
