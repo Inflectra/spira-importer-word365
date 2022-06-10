@@ -247,6 +247,25 @@ const createTestCaseFolder = async (folderName, description) => {
   }
 }
 
+const pushTestStep = async (testCaseId, testStep) =>{
+  /*pushTestCase should call this passing in the created testCaseId and iterate through passing
+  in that test cases test steps.*/
+  let projectId = document.getElementById('project-select').value;
+  let apiCall = USER_OBJ.url + "/services/v6_0/RestService.svc/projects/" + projectId + 
+    `/test-cases/${testCaseId}/test-steps?username=${USER_OBJ.username}&api-key=${USER_OBJ.password}`;
+  try{
+    //testStep = {Description: "", SampleData: "", ExpectedResult: ""}
+    //we dont need the response from this - so no assigning to variable.
+    await axios.post(apiCall, {
+      Description: testStep.Description,
+      SampleData: testStep.SampleData,
+      ExpectedResult: testStep.ExpectedResult
+    })
+  }
+  catch (err) {
+    console.log(err)
+  }
+}
 /******************** 
 HTML DOM Manipulation
 ********************/
