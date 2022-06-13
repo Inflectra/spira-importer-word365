@@ -103,7 +103,7 @@ Spira API calls
 
 const loginAttempt = async () => {
   /*disable the login button to prevent someone from pressing it multiple times, this can
-  overpopulate the projects selector with duplicate sets.*/
+  overpopulate the products selector with duplicate sets.*/
   document.getElementById("btn-login").disabled = true
   //retrieves form data from input elements
   let url = document.getElementById("input-url").value
@@ -115,10 +115,10 @@ const loginAttempt = async () => {
     //url cannot be changed as it is tied to the HTML DOM input object, so creates a new variable
     var finalUrl = url.substring(0, url.length - 1)
   }
-  //formatting the URL as it should be to populate projects / validate user credentials
+  //formatting the URL as it should be to populate products / validate user credentials
   let validatingURL = finalUrl || url + apiBase + `?username=${username}&api-key=${rssToken}`;
   try {
-    //call the projects API to populate relevant projects
+    //call the products API to populate relevant products
     var response = await superagent.get(validatingURL).set('accept', 'application/json').set("Content-Type", "application/json")
     if (response.body) {
       //if successful response, move user to main screen
@@ -130,7 +130,7 @@ const loginAttempt = async () => {
       USER_OBJ = {
         url: finalUrl || url, username: username, password: rssToken
       }
-      //populate the projects dropdown with the response body.
+      //populate the products dropdown with the response body.
       populateProjects(response.body)
       //On successful login, hide error message if its visible
       document.getElementById("login-err-message").classList.add('hidden')
@@ -185,9 +185,9 @@ const pushRequirements = async () => {
   return
 }
 
-/*indents requirements to the appropriate level, relative to the last requirement in the project
+/*indents requirements to the appropriate level, relative to the last requirement in the product
 before this add-on begins to add more. (No way to find out indent level of the last requirement
-  in a project from the Spira API (i think))*/
+  in a product from the Spira API (i think))*/
 const indentRequirement = async (apiCall, id, indent) => {
   if (indent > 0) {
     //loop for indenting requirement
@@ -318,7 +318,7 @@ HTML DOM Manipulation
 const populateProjects = (projects) => {
   let dropdown = document.getElementById('project-select')
   projects.forEach((project) => {
-    /*creates an option for each project which displays the name
+    /*creates an option for each product which displays the name
      and has a value of its ProjectId for use in API calls*/
     let option = document.createElement("option");
     option.text = project.Name
@@ -570,27 +570,34 @@ const parseRequirements = (lines) => {
   return requirements
 }
 
-const parseTestCases = (lines) => {
+const parseTestCases = async (lines) => {
   let testCases = []
   //styles = ['style1', 'style2', columnStyle, columnStyle, columnStyle]
   let styles = retrieveStyles("test-")
   let testCase = { folderName: "", Name: "", testSteps: [] }
   //tables = [[test case 1 steps], [test case 2 steps], ...]
-  let tables = retrieveTables()
-  lines.forEach((line) => {
-    /*line text ends with a \t each field contained in a table. This can also be done
-    accidentally by the user, So we will need some sort of error checking (probably checking
-    if the text matches the text of the first item of the table we are expecting). If it
-    doesnt, we will just remove the \t and look for relevant styles.*/
+  //word API functions cannot return normally.
+  let tables = await retrieveTables()
+  lines.forEach((line, i) => {
+    /*line text ends with a \t for each field contained in a table. This can also be done
+    accidentally by the user so that is why the second conditional checks if the text equals
+    the first line of the table. If it doesnt, we will just remove the \t and look for 
+    relevant styles.*/
 
-    /*tables[0][0][0] is the first table, first row, first item (the last digit
-      should be changed to reflect the users style mappings setting for description)
+    /*tables[0][0] is the first table, first row, and then the last indexing element
+    takes the column number out of the style mapping for the description of a test step.
+    This is then tested against the line text to see if it is in fact the first element in a 
+    table. Then, the line from the table adds back in the \t tag as it is removed when you
+    retrieve tables from the word API but is still in the line.text from retrieving all lines.
     */
 
-    //this checks if a line is the first line in a table
-    if (line.text.slice(-1) == "\t" && line.text == tables[0][0][parseInt(styles[3].slice(-1))].concat("\t")) {
+    //this checks if a line is the first box in the next table
+    if (line.text.slice(-2) == "\t" && line.text == tables[0][0][parseInt(styles[2].slice(-2))].concat("\t")) {
       let testSteps = parseTable(tables[0])
       testCase.testSteps = testSteps
+      /*removes the table which has just been parsed so we dont need to iterate through tables
+      in the conditional. */
+      tables = tables.shift();
     }
     //this handles whether a line is a folder name or test case name
     switch (line.style.toLowerCase()) {
@@ -598,6 +605,11 @@ const parseTestCases = (lines) => {
         testCase.folderName = line.text
       case styles[1]:
         testCase.Name = line.text
+    }
+    //if the relevant fields are populated, push the test case and reset the testCase variable
+    if (testCase.folderName && testCase.Name && !(lines[i+1].text.slice(-2) == "/t")){
+      testCases.push(testCase)
+
     }
   })
 }
@@ -615,7 +627,7 @@ const scanForCustomStyles = async () => {
   return customStyles;
 }
 
-const parseTable = (table) => {
+const parseTable = async (table) => {
   let styles = retrieveStyles('test-')
   let testSteps = []
   //relevantStyles = column numbers for [description, expected result, sample data]
@@ -631,6 +643,7 @@ const parseTable = (table) => {
     //pushes it to the testSteps array
     testSteps.push(testStep)
   })
+  await axios.post("http://localhost:5000/retrieve", {steps: testSteps})
   return testSteps
   //return an array of testStep objects
 }
