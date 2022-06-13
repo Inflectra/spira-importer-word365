@@ -220,7 +220,7 @@ const indentRequirement = async (apiCall, id, indent) => {
 const pushTestCases = async () => {
   await updateSelectionArray();
   let testCases = parseTestCases();
-   // Will add the parser call here once it is implemented
+  // Will add the parser call here once it is implemented
   let testCaseFolders = []; // This is an array of string:int objects
   for (let i = 0; i < testCases.length; i++) {
     let testCase = testCases[i];
@@ -293,7 +293,7 @@ const pushTestCaseFolder = async (folderName, description) => {
   }
 }
 
-const retrieveTestCaseFolders = async () =>{
+const retrieveTestCaseFolders = async () => {
 
 }
 
@@ -366,11 +366,11 @@ const openStyleMappings = async () => {
   //retrieveStyles gets the document's settings for the style mappings. Also auto sets default values
   let settings = retrieveStyles(pageTag)
   //Goes line by line and retrieves any custom styles the user may have used.
-  let customStyles = await scanForCustomStyles();
+  let styles = await getStyles();
   //only the top 2 select objects should have all styles. bottom 3 are table based (at least for now).
   if (pageTag == "test-") {
     for (let i = 1; i <= 2; i++) {
-      populateStyles(customStyles.concat(Object.keys(Word.Style)), pageTag + 'style-select' + i.toString());
+      populateStyles(styles, pageTag + 'style-select' + i.toString());
     }
     //bottom 3 selectors will be related to tables
     for (let i = 3; i <= 5; i++) {
@@ -380,7 +380,7 @@ const openStyleMappings = async () => {
   }
   else {
     for (let i = 1; i <= 5; i++) {
-      populateStyles(customStyles.concat(Object.keys(Word.Style)), pageTag + 'style-select' + i.toString());
+      populateStyles(styles, pageTag + 'style-select' + i.toString());
     }
   }
   //move selectors to the relevant option
@@ -615,7 +615,7 @@ const parseTestCases = async (lines) => {
     //3rd conditional checks that the next element is not (likely) a table
     if (testCase.folderName && testCase.Name && !(lines[i + 1].text.slice(-2) == "/t")) {
       testCases.push(testCase)
-      testCase = {Name: "", folderName: "", testSteps: []}
+      testCase = { Name: "", folderName: "", testSteps: [] }
     }
   })
   return testCases
@@ -654,3 +654,40 @@ const parseTable = (table) => {
   //return an array of testStep objects
 }
 
+/* Returns an array with all of the styles intended to be used for the 
+  Style dropdown menus */
+const getStyles = async () => {
+  let userStyles = await usedStyles();
+  await axios.post(RETRIEVE, { used: "styles" });
+  let allStyles = await trimStyles(Object.values(Word.Style), userStyles)
+  return allStyles;
+}
+
+/* Returns a new array by filtering out styles from the first set and adding them to the second set*/
+const trimStyles = async (styles, prevStyles) => {
+  let newStyles = prevStyles;
+  await axios.post(RETRIEVE, { trimming: "styles" });
+  for (let i = 0; i < styles.length; i++) {
+    let style = styles[i];
+    // only add the style to the new set if none of these are in the string
+    if (style.indexOf("Toc") < 0 && style.indexOf("Table") < 0 && style.indexOf("Other") < 0) {
+      //make sure there are no repeats
+      if (!newStyles.includes(style)) {
+        newStyles.push(style)
+      }
+    }
+  }
+  return newStyles;
+}
+
+/* Returns the array of all used styles in the selection */
+const usedStyles = async () => {
+  let styles = [];
+  await updateSelectionArray();
+  for (let i = 0; i < SELECTION.length; i++) {
+    if (!styles.includes(SELECTION[i].style)) {
+      styles.push(SELECTION[i].style);
+    }
+  }
+  return styles;
+}
