@@ -570,23 +570,35 @@ const parseRequirements = (lines) => {
   return requirements
 }
 
-const parseTestCases = (lines) =>{
+const parseTestCases = (lines) => {
   let testCases = []
-  //styles = ['style1', 'style2', ...]
+  //styles = ['style1', 'style2', columnStyle, columnStyle, columnStyle]
   let styles = retrieveStyles("test-")
-  let testStep = {Description: "", ExpectedResult: "", SampleData: ""}
-  lines.forEach((line) =>{
-    let testCase = {folderName: "", Name: "", testSteps: []}
+  let testCase = { folderName: "", Name: "", testSteps: [] }
+  //tables = [[test case 1 steps], [test case 2 steps], ...]
+  let tables = retrieveTables()
+  lines.forEach((line) => {
+    /*line text ends with a \t each field contained in a table. This can also be done
+    accidentally by the user, So we will need some sort of error checking (probably checking
+    if the text matches the text of the first item of the table we are expecting). If it
+    doesnt, we will just remove the \t and look for relevant styles.*/
+
+    /*tables[0][0][0] is the first table, first row, first item (the last digit
+      should be changed to reflect the users style mappings setting for description)
+    */
+
+    //this checks if a line is the first line in a table
+    if (line.text.slice(-1) == "\t" && line.text == tables[0][0][parseInt(styles[3].slice(-1))].concat("\t")) {
+      let testSteps = parseTable(tables[0])
+      testCase.testSteps = testSteps
+    }
     //this handles whether a line is a folder name or test case name
-    switch (line.style.toLowerCase()){
-      case styles[0]: 
+    switch (line.style.toLowerCase()) {
+      case styles[0]:
         testCase.folderName = line.text
       case styles[1]:
         testCase.Name = line.text
-      case styles[2]:
-
     }
-
   })
 }
 
@@ -601,5 +613,25 @@ const scanForCustomStyles = async () => {
     }
   }
   return customStyles;
+}
+
+const parseTable = (table) => {
+  let styles = retrieveStyles('test-')
+  let testSteps = []
+  //relevantStyles = column numbers for [description, expected result, sample data]
+  let relevantStyles = [parseInt(styles[2].slice(-1)), parseInt(styles[3].slice(-1)),
+  parseInt(styles[4].slice(-1))]
+  //row = [column1, column 2, column3, ...]
+  table.forEach((row) => {
+    let testStep = { Description: "", ExpectedResult: "", SampleData: "" }
+    //populates fields based on styles
+    testStep.Description = row[relevantStyles[0]]
+    testStep.ExpectedResult = row[relevantStyles[1]]
+    testStep.SampleData = row[relevantStyles[2]]
+    //pushes it to the testSteps array
+    testSteps.push(testStep)
+  })
+  return testSteps
+  //return an array of testStep objects
 }
 

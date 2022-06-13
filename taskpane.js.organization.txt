@@ -27,6 +27,7 @@ updateSelectionArray
 
 Pure data manipulation:
 parseRequirements
+parseTestCases
 scanForCustomStyles
 
 
