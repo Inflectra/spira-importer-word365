@@ -73,10 +73,9 @@ export async function test() {
      the existing fucntion (load(context.document.getSelection(), 'text'))and this can be 
      utilized in order to identify when you have entered a table, at which point we parse
      information out of the table using that method to know the structure (returns 2d array) */
-    let selection = context.document.getSelection().tables;
-    context.load(selection);
     await context.sync();
-    await axios.post("http://localhost:5000/retrieve", {se: selection.items[0].values})
+    let tables = await retrieveTables();
+    await axios.post("http://localhost:5000/retrieve", { Tables: tables })
     let lines = SELECTION;
     //try catch block for backend node call to prevent errors crashing the application
     try {
@@ -489,6 +488,20 @@ export async function updateSelectionArray() {
   })
 }
 
+/* Gets an array of all the tables from the Word document and returns it. */
+const retrieveTables = async () => {
+  return Word.run(async (context) => {
+    let selection = context.document.getSelection().tables;
+    context.load(selection);
+    await context.sync();
+    let tables = [];
+    for (let i = 0; i < selection.items.length; i++) {
+      let table = selection.items[i].values;
+      tables.push(table);
+    }
+    return tables;
+  })
+}
 /*********************
 Pure data manipulation
 **********************/
