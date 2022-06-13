@@ -21,6 +21,7 @@ function. */
 var SELECTION = [];
 //setting a user object to maintain credentials when using other parts of the add-in
 var USER_OBJ = { url: "", username: "", password: "" }
+var RETRIEVE = "http://localhost:5000/retrieve"
 
 Office.onReady((info) => {
   if (info.host === Office.HostType.Word) {
@@ -44,7 +45,7 @@ const setEventListeners = () => {
   // document.getElementById('test').onclick = test;
   document.getElementById('btn-login').onclick = () => loginAttempt();
   document.getElementById('dev-mode').onclick = () => devmode();
-  document.getElementById('send-artifacts').onclick = () => test();
+  document.getElementById('send-artifacts').onclick = () => pushArtifacts();
   document.getElementById('log-out').onclick = () => logout();
   document.getElementById("style-mappings-button").onclick = () => openStyleMappings();
   //I think theres a way to use classes to reduce this to 2 but unsure
@@ -74,16 +75,15 @@ export async function test() {
      utilized in order to identify when you have entered a table, at which point we parse
      information out of the table using that method to know the structure (returns 2d array) */
     await context.sync();
-    let tables = await retrieveTables();
+    let tables = await retrieveTables()
     await axios.post("http://localhost:5000/retrieve", { Tables: tables })
-    let lines = SELECTION;
     //try catch block for backend node call to prevent errors crashing the application
-    try {
-      // let call1 = await axios.post("http://localhost:5000/retrieve", { lines: lines })
-    }
-    catch (err) {
-      console.log(err)
-    }
+    // try {
+    //   let call1 = await axios.post("http://localhost:5000/retrieve", { lines: lines })
+    // }
+    // catch (err) {
+    //   console.log(err)
+    // }
     // Tests the parseRequirements Function
     // let requirements = parseRequirements(lines);
 
@@ -219,7 +219,8 @@ const indentRequirement = async (apiCall, id, indent) => {
 */
 const pushTestCases = async () => {
   await updateSelectionArray();
-  let testCases = []; // Will add the parser call here once it is implemented
+  let testCases = parseTestCases();
+   // Will add the parser call here once it is implemented
   let testCaseFolders = []; // This is an array of string:int objects
   for (let i = 0; i < testCases.length; i++) {
     let testCase = testCases[i];
@@ -290,6 +291,10 @@ const pushTestCaseFolder = async (folderName, description) => {
     console.log(err);
     return null;
   }
+}
+
+const retrieveTestCaseFolders = async () =>{
+
 }
 
 const pushTestStep = async (testCaseId, testStep) => {
@@ -607,11 +612,13 @@ const parseTestCases = async (lines) => {
         testCase.Name = line.text
     }
     //if the relevant fields are populated, push the test case and reset the testCase variable
-    if (testCase.folderName && testCase.Name && !(lines[i+1].text.slice(-2) == "/t")){
+    //3rd conditional checks that the next element is not (likely) a table
+    if (testCase.folderName && testCase.Name && !(lines[i + 1].text.slice(-2) == "/t")) {
       testCases.push(testCase)
-
+      testCase = {Name: "", folderName: "", testSteps: []}
     }
   })
+  return testCases
 }
 
 // Updates selection array and then loops through it and adds any
@@ -627,23 +634,22 @@ const scanForCustomStyles = async () => {
   return customStyles;
 }
 
-const parseTable = async (table) => {
+const parseTable = (table) => {
   let styles = retrieveStyles('test-')
   let testSteps = []
-  //relevantStyles = column numbers for [description, expected result, sample data]
-  let relevantStyles = [parseInt(styles[2].slice(-1)), parseInt(styles[3].slice(-1)),
-  parseInt(styles[4].slice(-1))]
+  //columnNums = column numbers for [description, expected result, sample data]
+  let columnNums = [parseInt(styles[2].slice(-1)) - 1, parseInt(styles[3].slice(-1)) - 1,
+  parseInt(styles[4].slice(-1)) - 1]
   //row = [column1, column 2, column3, ...]
   table.forEach((row) => {
     let testStep = { Description: "", ExpectedResult: "", SampleData: "" }
     //populates fields based on styles
-    testStep.Description = row[relevantStyles[0]]
-    testStep.ExpectedResult = row[relevantStyles[1]]
-    testStep.SampleData = row[relevantStyles[2]]
+    testStep.Description = row[columnNums[0]]
+    testStep.ExpectedResult = row[columnNums[1]]
+    testStep.SampleData = row[columnNums[2]]
     //pushes it to the testSteps array
     testSteps.push(testStep)
   })
-  await axios.post("http://localhost:5000/retrieve", {steps: testSteps})
   return testSteps
   //return an array of testStep objects
 }
