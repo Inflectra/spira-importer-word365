@@ -534,7 +534,7 @@ const parseRequirements = (lines) => {
     line.text = line.text.replaceAll("\t", "").replaceAll("\r", "")
     let requirement = {};
     // TODO: refactor to use for loop where IndentLevel = styles index rather than a switch statement.
-    switch (line.style.toLowerCase()) {
+    switch (line.style) {
       case "normal":
         //only executes if there is a requirement to add the description to.
         if (requirements.length > 0) {
@@ -583,6 +583,7 @@ const parseTestCases = async (lines) => {
   let testCases = []
   //styles = ['style1', 'style2', columnStyle, columnStyle, columnStyle]
   let styles = retrieveStyles("test-")
+  await axios.post(RETRIEVE, {styles: styles})
   let testCase = { folderName: "", Name: "", testSteps: [] }
   //tables = [[test case 1 steps], [test case 2 steps], ...]
   //word API functions cannot return normally.
@@ -607,13 +608,12 @@ const parseTestCases = async (lines) => {
       let testSteps = parseTable(tables[0])
       //allows multiple tables to populate the same test case in the case it is multiple tables
       testCase = {...testCase, testSteps: [...testSteps]}
-      await axios.post(RETRIEVE, {testCaseSteps: testCase.testSteps})
       /*removes the table which has just been parsed so we dont need to iterate through tables
       in the conditional. */
       tables.shift();
     }
     //this handles whether a line is a folder name or test case name
-    switch (lines[i].style.toLowerCase()) {
+    switch (lines[i].style) {
       case styles[0]:
         testCase.folderName = lines[i].text
         break
@@ -626,7 +626,7 @@ const parseTestCases = async (lines) => {
     }
     //if the relevant fields are populated, push the test case and reset the testCase variable
     //3rd conditional checks that the next element is not (likely) a table
-    await axios.post(RETRIEVE, {conditions: testCase.folderName, condition2: testCase.Name, condition3: tables.length})
+    // await axios.post(RETRIEVE, {conditions: testCase.folderName, condition2: testCase.Name, condition3: tables.length})
     if (testCase.folderName && testCase.Name && !tables.length) {
       await axios.post(RETRIEVE, { tables: tables, testCase: testCase })
       testCases.push(testCase)
