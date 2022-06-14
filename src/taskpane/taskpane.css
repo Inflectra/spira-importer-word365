@@ -128,7 +128,7 @@ ul {
 
 .panel.offscreen {
     left: 100%;
-    visibility:hidden;
+    visibility: hidden;
 }
 
 .footer {
@@ -159,7 +159,7 @@ ul {
 
 .style-prompt {
     top: 30px;
-    position:static;
+    position: static;
     margin: 0 auto;
 }
 
@@ -183,6 +183,10 @@ ul {
 
 #main-page-buttons div {
     margin-top: 10px;
+}
+
+.selectors {
+    width: 100%;
 }
 
 /*FORMS AND SPECIFIC ELEMENTS*/
@@ -212,22 +216,31 @@ ul {
 
 .styles-page,
 #main-screen {
-    align-items: center;
-    justify-content: center;
+    width: 100%;
+    justify-content: flex-start;
     flex-direction: column;
-    text-align: center;
+    text-align: left;
     top: 50px;
 }
 
 .style-labels {
     margin-top: 1em;
 }
-#login-prompt{
+
+#login-prompt {
     margin-top: 8%;
     margin-bottom: 0%;
 }
-#login-buttons{
+
+#login-buttons {
     margin-top: 8%;
+}
+#artifact-select{
+    display:flex;
+    flex-direction: row;
+    align-items:center;
+    text-align: center;
+    width: 105%;
 }
 
 /*MS DEFAULT CLASSES*/

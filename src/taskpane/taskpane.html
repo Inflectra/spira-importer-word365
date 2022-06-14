@@ -86,14 +86,21 @@
     <!--Main screen-->
     <div id="main-screen" class="hidden panel">
         <div id="app-body" class="ms-welcome__main" style="display: none;">
+            <div role="button" id="log-out" class="action ms-Button ms-Button--default">
+                <span class="ms-Button-label">log-out</span>
+            </div>
             <p>Select the product you wish to import to:</p>
-            <select id="project-select"></select>
+            <select id="project-select" class="selectors"></select>
             <!--Turn this into radio buttons of some sort which fit the theming instead of dd-->
-            <p>Select the artifact type you wish to import:</p>
-            <select id="artifact-select">
-                <option id="artifact-requirements" value="requirements">Requirements</option>
-                <option id="artifact-test-cases" value="test-cases">Test Cases</option>
-            </select>
+            <p>Select the artifact type you want to import:</p>
+            <div id="artifact-select" class="artifact-buttons">
+                <div role="button" id="select-requirements" class="action ms-Button ms-Button--primary">
+                    <span class="ms-Button-label">Requirements</span>
+                </div>
+                <div role="button" id="select-test-cases" class="action ms-Button ms-Button--primary">
+                    <span class="ms-Button-label">Test Cases</span>
+                </div>
+            </div>
             <div id="main-page-buttons">
                 <h4 id="empty-err" class="error-message">
                     You currently have no valid text selected or within the body of the document.
@@ -102,15 +109,7 @@
                 </h4>
                 <!--Failed-req-error is dynamicly generated on throw in javascript-->
                 <h4 id="failed-req-err"></h4>
-                <div role="button" id="send-artifacts" class="action ms-Button ms-Button--primary">
-                    <span class="ms-Button-label">Send to Spira</span>
-                </div>
-                <div role="button" id="style-mappings-button" class="action ms-Button ms-Button--primary">
-                    <span class="ms-Button-label">Style Mappings</span>
-                </div>
-                <div role="button" id="log-out" class="action ms-Button ms-Button--default">
-                    <span class="ms-Button-label">log-out</span>
-                </div>
+                
                 <!--remove this before deployment
                 <div role="button" id="test" class="action ms-Button ms-Button--default">
                     <span class="ms-Button-label">test</span>
@@ -118,55 +117,53 @@
             -->
             </div>
         </div>
+        <!--end of main screen-->
+        <div id="req-style-mappings" class="styles-page hidden">
+            <h1 class="style-prompt">2. Select the styles used:</h1>
+            <label for="req-style-select1" class="style-labels">Indent Level 1:</label>
+            <select title="req-style-select1" id="req-style-select1" class="style-selector"></select>
+            <label for="req-style-select2" class="style-labels">Indent Level 2:</label>
+            <select title="req-style-select2" id="req-style-select2" class="style-selector"></select>
+            <label for="req-style-select3" class="style-labels">Indent Level 3:</label>
+            <select title="req-style-select3" id="req-style-select3" class="style-selector"></select>
+            <label for="req-style-select4" class="style-labels">Indent Level 4:</label>
+            <select title="req-style-select4" id="req-style-select4" class="style-selector"></select>
+            <label for="req-style-select5" class="style-labels">Indent Level 5:</label>
+            <select title="req-style-select5" id="req-style-select5" class="style-selector"></select>
+            <div class="style-buttons">
+                <div role="button" id="confirm-req-style-mappings"
+                    class="action ms-Button ms-Button--primary style-button">
+                    <span class="ms-Button-label">Confirm</span>
+                </div>
+            </div>
+        </div>
+        <div id="test-style-mappings" class="styles-page hidden">
+            <h1 class="style-prompt">2. Select the styles used:</h1>
+            <label for="test-style-select1" class="style-labels">Folder Name:</label>
+            <select title="test-style-select1" id="test-style-select1" class="style-selector"></select>
+            <label for="test-style-select2" class="style-labels">Test Name:</label>
+            <select title="test-style-select2" id="test-style-select2" class="style-selector"></select>
+            <h4>Test Steps:</h4>
+            <label for="test-style-select3" class="style-labels">Description:</label>
+            <select title="test-style-select3" id="test-style-select3" class="style-selector"></select>
+            <label for="test-style-select4" class="style-labels">Expected Result:</label>
+            <select title="test-style-select4" id="test-style-select4" class="style-selector"></select>
+            <label for="test-style-select5" class="style-labels">Sample Data:</label>
+            <select title="test-style-select5" id="test-style-select5" class="style-selector"></select>
+            <div class="style-buttons">
+                <div role="button" id="confirm-test-style-mappings"
+                    class="action ms-Button ms-Button--primary style-button">
+                    <span class="ms-Button-label">Confirm</span>
+                </div>
+            </div>
+        </div>
     </div>
 
     <!--Style mappings page for requirements-->
-    <div id="req-style-mappings" class="styles-page panel hidden">
-        <h1 class="style-prompt">Select the styles used:</h1>
-        <label for="req-style-select1" class="style-labels">Style 1:</label>
-        <select title="req-style-select1" id="req-style-select1" class="style-selector"></select>
-        <label for="req-style-select2" class="style-labels">Style 2:</label>
-        <select title="req-style-select2" id="req-style-select2" class="style-selector"></select>
-        <label for="req-style-select3" class="style-labels">Style 3:</label>
-        <select title="req-style-select3" id="req-style-select3" class="style-selector"></select>
-        <label for="req-style-select4" class="style-labels">Style 4:</label>
-        <select title="req-style-select4" id="req-style-select4" class="style-selector"></select>
-        <label for="req-style-select5" class="style-labels">Style 5:</label>
-        <select title="req-style-select5" id="req-style-select5" class="style-selector"></select>
-        <div class="style-buttons">
-            <div role="button" id="confirm-req-style-mappings" class="action ms-Button ms-Button--primary style-button">
-                <span class="ms-Button-label">Confirm</span>
-            </div>
-            <div role="button" id="cancel-req-style-mappings" class="action ms-Button ms-Button--default style-button">
-                <span class="ms-Button-label">Cancel</span>
-            </div>
-        </div>
-    </div>
+
 
     <!--Style mappings page for test cases-->
-    <div id="test-style-mappings" class="styles-page panel hidden">
-        <h1 class="style-prompt">Select the styles used:</h1>
-        <label for="test-style-select1" class="style-labels">Folder Name:</label>
-        <select title="test-style-select1" id="test-style-select1" class="style-selector"></select>
-        <label for="test-style-select2" class="style-labels">Test Name:</label>
-        <select title="test-style-select2" id="test-style-select2" class="style-selector"></select>
-        <h4>Test Steps:</h4>
-        <label for="test-style-select3" class="style-labels">Description:</label>
-        <select title="test-style-select3" id="test-style-select3" class="style-selector"></select>
-        <label for="test-style-select4" class="style-labels">Expected Result:</label>
-        <select title="test-style-select4" id="test-style-select4" class="style-selector"></select>
-        <label for="test-style-select5" class="style-labels">Sample Data:</label>
-        <select title="test-style-select5" id="test-style-select5" class="style-selector"></select>
-        <div class="style-buttons">
-            <div role="button" id="confirm-test-style-mappings"
-                class="action ms-Button ms-Button--primary style-button">
-                <span class="ms-Button-label">Confirm</span>
-            </div>
-            <div role="button" id="cancel-test-style-mappings" class="action ms-Button ms-Button--default style-button">
-                <span class="ms-Button-label">Cancel</span>
-            </div>
-        </div>
-    </div>
+
 
     <!-- footer -->
     <footer class="footer">

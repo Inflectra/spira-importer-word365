@@ -45,14 +45,13 @@ const setEventListeners = () => {
   // document.getElementById('test').onclick = test;
   document.getElementById('btn-login').onclick = () => loginAttempt();
   document.getElementById('dev-mode').onclick = () => devmode();
-  document.getElementById('send-artifacts').onclick = () => pushArtifacts();
+  // document.getElementById('send-artifacts').onclick = () => pushArtifacts();
   document.getElementById('log-out').onclick = () => logout();
-  document.getElementById("style-mappings-button").onclick = () => openStyleMappings();
   //I think theres a way to use classes to reduce this to 2 but unsure
-  document.getElementById("confirm-req-style-mappings").onclick = () => closeStyleMappings(true, 'req-');
-  document.getElementById("cancel-req-style-mappings").onclick = () => closeStyleMappings(false, 'req-');
-  document.getElementById("confirm-test-style-mappings").onclick = () => closeStyleMappings(true, 'test-');
-  document.getElementById("cancel-test-style-mappings").onclick = () => closeStyleMappings(false, 'test-');
+  document.getElementById("confirm-req-style-mappings").onclick = () => confirmStyleMappings(true, 'req-');
+  document.getElementById("confirm-test-style-mappings").onclick = () => confirmStyleMappings(true, 'test-');
+  document.getElementById("select-requirements").onclick = () => openStyleMappings("req-");
+  document.getElementById("select-test-cases").onclick = () => openStyleMappings("test-")
 }
 
 const devmode = () => {
@@ -370,23 +369,34 @@ const logout = () => {
   clearDropdownElement('project-select');
 }
 
-const openStyleMappings = async () => {
+const openStyleMappings = async (pageTag) => {
   //opens the requirements style mappings if requirements is the selected artifact type
   /*all id's and internal word settings are now set using a "pageTag". This allows code 
   to be re-used between testing and requirement style settings. The tags are req- for
   requirements and test- for test cases.*/
-  let pageTag;
-  document.getElementById("main-screen").classList.add("hidden")
   //checks the current selected artifact type then loads the appropriate menu
-  if (document.getElementById("artifact-select").value == "requirements") {
-    pageTag = "req-"
+  if (pageTag == "req-") {
+    document.getElementById("req-style-mappings").classList.remove("hidden")
+    document.getElementById("test-style-mappings").style.display = 'none'
     document.getElementById("req-style-mappings").style.display = 'flex'
     //populates all 5 style mapping boxes
   }
   //opens the test cases style mappings if test mappings is the selected artifact type
   else {
-    pageTag = "test-"
+    document.getElementById("req-style-mappings").style.display = 'none'
     document.getElementById("test-style-mappings").style.display = 'flex'
+  }
+  //wont populate styles for requirements if it is already populated
+  if(document.getElementById("req-style-select1").childElementCount && pageTag == "req-"){
+    return
+  }
+  //wont populate styles for test-cases if it is already populated
+  else if(document.getElementById("test-style-select1").childElementCount && pageTag == "test-"){
+    return
+  }
+  //doesnt populate styles if both test & req style selectors are populated
+  else if (document.getElementById("test-style-select1").childElementCount && document.getElementById("req-style-select1").childElementCount){
+    return;
   }
   //retrieveStyles gets the document's settings for the style mappings. Also auto sets default values
   let settings = retrieveStyles(pageTag)
@@ -417,7 +427,7 @@ const openStyleMappings = async () => {
 //closes the style mapping page taking in a boolean 'result'
 //pageTag is req or test depending on which page is currently open
 
-const closeStyleMappings = (result, pageTag) => {
+const confirmStyleMappings = (result, pageTag) => {
   //result = true when a user selects confirm to exit a style mappings page
   if (result) {
     //saves the users style preferences. this is document bound
@@ -428,10 +438,6 @@ const closeStyleMappings = (result, pageTag) => {
     //this saves the settings
     Office.context.document.settings.saveAsync()
   }
-  //returns user to main screen
-  document.getElementById("main-screen").classList.remove("hidden")
-  document.getElementById("req-style-mappings").style.display = 'none'
-  document.getElementById("test-style-mappings").style.display = 'none'
   //clears dropdowns to prevent being populated with duplicate options upon re-opening
   for (let i = 1; i <= 5; i++) {
     clearDropdownElement('req-style-select' + i.toString());
@@ -650,6 +656,7 @@ const parseTestCases = async (lines) => {
       default:
         //do nothing
         break
+
     }
     //if the relevant fields are populated, push the test case and reset the testCase variable
     //3rd conditional checks that the next element is not (likely) a table
