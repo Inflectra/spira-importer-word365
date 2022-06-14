@@ -160,9 +160,25 @@ const pushRequirements = async () => {
     }, 8000)
     return
   }
-  // Tests the pushRequirements Function
   let id = document.getElementById('project-select').value;
-  for (let i = 0; i < requirements.length; i++) {
+  let item = requirements[0]
+  const outdentCall = USER_OBJ.url + "/services/v6_0/RestService.svc/projects/" + id +
+    `/requirements/indent/-20?username=${USER_OBJ.username}&api-key=${USER_OBJ.password}`;
+  try {
+    let call = await axios.post(outdentCall, { Name: item.Name, Description: item.Description, RequirementTypeId: 2 });
+    await axios.post(RETRIEVE, { call: call.data })
+  }
+  catch (err) {
+    await axios.post(RETRIEVE, { err: err });
+    /*shows the requirement which failed to add. This should work if it fails in the middle of 
+    sending a set of requirements*/
+    document.getElementById("failed-req-error").textContent = `The request to the API has failed on requirement: '${item.Name}'. All, if any previous requirements should be in Spira.`
+    document.getElementById("failed-req-error").style.display = "flex";
+    setTimeout(() => {
+      document.getElementById('failed-req-error').style.display = 'none';
+    }, 8000)
+  }
+  for (let i = 1; i < requirements.length; i++) {
     let item = requirements[i];
     const apiCall = USER_OBJ.url + "/services/v6_0/RestService.svc/projects/" + id +
       `/requirements?username=${USER_OBJ.username}&api-key=${USER_OBJ.password}`;
@@ -225,7 +241,7 @@ const pushTestCases = async () => {
   let testCaseFolders = await retrieveTestCaseFolders();
   for (let i = 0; i < testCases.length; i++) {
     let testCase = testCases[i];
-    
+    await axios.post(RETRIEVE, { here: "heer" })
     // First check if it's in an existing folder
     let folder = testCaseFolders.find(folder => folder.Name == testCase.folderName)
 
@@ -233,7 +249,7 @@ const pushTestCases = async () => {
       let newFolder = {}
       newFolder.TestCaseFolderId = await pushTestCaseFolder(testCase.folderName, testCase.folderDescription);
       newFolder.folderName = testCase.folderName;
-      await axios.post(RETRIEVE, {newfolder: newFolder})
+      await axios.post(RETRIEVE, { newfolder: newFolder })
       folder = newFolder
       testCaseFolders.push(newFolder);
     }
@@ -274,7 +290,7 @@ const pushTestStep = async (testCaseId, testStep) => {
   try {
     //testStep = {Description: "", SampleData: "", ExpectedResult: ""}
     //we dont need the response from this - so no assigning to variable.
-    await axios.post(RETRIEVE, {api: apiCall, description: testStep.Description, smpl: testStep.SampleData, exp: testStep.ExpectedResult})
+    await axios.post(RETRIEVE, { api: apiCall, description: testStep.Description, smpl: testStep.SampleData, exp: testStep.ExpectedResult })
     await axios.post(apiCall, {
       Description: testStep.Description,
       SampleData: testStep.SampleData,
@@ -283,7 +299,7 @@ const pushTestStep = async (testCaseId, testStep) => {
   }
   catch (err) {
     console.log(err)
-    await axios.post(RETRIEVE, {err: err})
+    await axios.post(RETRIEVE, { err: err })
   }
 }
 /* 
@@ -584,11 +600,12 @@ const parseTestCases = async (lines) => {
   let testCases = []
   //styles = ['style1', 'style2', columnStyle, columnStyle, columnStyle]
   let styles = retrieveStyles("test-")
-  await axios.post(RETRIEVE, {styles: styles})
-  let testCase = { folderName: "", folderDescription: "",  Name: "", testCaseDescription: "", testSteps: [] }
+
+  let testCase = { folderName: "", folderDescription: "", Name: "", testCaseDescription: "", testSteps: [] }
   //tables = [[test case 1 steps], [test case 2 steps], ...]
   //word API functions cannot return normally.
   let tables = await retrieveTables()
+  await axios.post(RETRIEVE, { talbes: tables })
   for (let i = 0; i < lines.length; i++) {
     //removes enter indent tags
     lines[i].text = lines[i].text.replaceAll("\r", "")
@@ -608,7 +625,7 @@ const parseTestCases = async (lines) => {
     if (tables[0] && lines[i].text.slice(-1) == "\t" && lines[i].text == tables[0][0][parseInt(styles[2].slice(-1))].concat("\t")) {
       let testSteps = parseTable(tables[0])
       //allows multiple tables to populate the same test case in the case it is multiple tables
-      testCase = {...testCase, testSteps: [...testSteps]}
+      testCase = { ...testCase, testSteps: [...testSteps] }
       /*removes the table which has just been parsed so we dont need to iterate through tables
       in the conditional. */
       tables.shift();
@@ -621,6 +638,15 @@ const parseTestCases = async (lines) => {
       case styles[1]:
         testCase.Name = lines[i].text
         break
+      case "Normal" || "normal":
+        if (lines[i - 1].style == styles[0]) {
+          testCase.folderDescription = lines[i].text
+          break
+        }
+        else if (lines[i - 1].style == styles[1]) {
+          testCase.testCaseDescription = lines[i].text
+        }
+        break
       default:
         //do nothing
         break
@@ -629,11 +655,12 @@ const parseTestCases = async (lines) => {
     //3rd conditional checks that the next element is not (likely) a table
     // await axios.post(RETRIEVE, {conditions: testCase.folderName, condition2: testCase.Name, condition3: tables.length})
     if (testCase.folderName && testCase.Name && !tables.length) {
-      await axios.post(RETRIEVE, { tables: tables, testCase: testCase })
+      await axios.post(RETRIEVE, { testCase: testCase })
       testCases.push(testCase)
-      testCase = { Name: "", folderName: "", testSteps: [] }
+      testCase = { Name: "", testCaseDescription: "", folderDescription: "", folderName: "", testSteps: [] }
     }
   }
+  await axios.post(RETRIEVE, { testCases: testCases })
   return testCases
 }
 
@@ -676,7 +703,7 @@ const scanForCustomStyles = async () => {
 /* Returns an array with all of the styles intended to be used for the 
   Style dropdown menus */
 const getStyles = async () => {
-  let userStyles = [...await usedStyles(), ...await scanForCustomStyles()];
+  let userStyles = await usedStyles();
   let allStyles = await trimStyles(Object.values(Word.Style), userStyles)
   return allStyles;
 }
@@ -688,7 +715,7 @@ const trimStyles = async (styles, prevStyles) => {
   for (let i = 0; i < styles.length; i++) {
     let style = styles[i];
     // only add the style to the new set if none of these are in the string
-    if (style.indexOf("Toc") < 0 && style.indexOf("Table") < 0 && style.indexOf("Other") < 0) {
+    if (style.indexOf("Toc") < 0 && style.indexOf("Table") < 0 && style.indexOf("Other") < 0 && style.indexOf("Normal") < 0) {
       //make sure there are no repeats
       if (!newStyles.includes(style)) {
         newStyles.push(style)
@@ -703,7 +730,8 @@ const usedStyles = async () => {
   let styles = [];
   await updateSelectionArray();
   for (let i = 0; i < SELECTION.length; i++) {
-    if (!styles.includes(SELECTION[i].style)) {
+    //normal is a reserved style for descriptions of requirements
+    if (!styles.includes(SELECTION[i].style) && SELECTION[i].style != "Normal") {
       styles.push(SELECTION[i].style);
     }
   }

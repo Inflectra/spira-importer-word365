@@ -222,6 +222,13 @@ ul {
 .style-labels {
     margin-top: 1em;
 }
+#login-prompt{
+    margin-top: 8%;
+    margin-bottom: 0%;
+}
+#login-buttons{
+    margin-top: 8%;
+}
 
 /*MS DEFAULT CLASSES*/
 .ms-welcome__header {
