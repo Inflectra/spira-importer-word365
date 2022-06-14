@@ -1,7 +1,7 @@
 Initialization: 
 Office.onReady function
-setting global variables 
-importing axios
+initializing global variables 
+importing axios/superagent
 setEventListeners
 devmode
 
@@ -14,20 +14,29 @@ openStyleMappings
 closeStyleMappings
 populateStyles
 clearDropdownElement
-handleErrors
 
 Spira API calls:
 loginAttempt
 pushRequirements
 indentRequirement
+pushTestCaseFolder
+retrieveTestCaseFolders
+pushTestCases
+pushTestCase
+pushTestStep
 
 Word/Office API calls:
 retrieveStyles
 updateSelectionArray
+retrieveTables
 
 Pure data manipulation:
+pushArtifacts
 parseRequirements
 parseTestCases
+parseTable
 scanForCustomStyles
-
+usedStyles
+trimStyles
+getStyles
 

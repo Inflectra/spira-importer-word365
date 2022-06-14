@@ -219,6 +219,7 @@ const indentRequirement = async (apiCall, id, indent) => {
 */
 const pushTestCases = async () => {
   await updateSelectionArray();
+  // testCases = {folderName: "", Name: "", testSteps: [{Description, expected result, sample data}, ...]}
   let testCases = await parseTestCases(SELECTION);
   // testCaseFolders = [{Name: "", TestCaseFolderId: int}, ...]
   let testCaseFolders = await retrieveTestCaseFolders();
@@ -226,33 +227,63 @@ const pushTestCases = async () => {
     let testCase = testCases[i];
     
     // First check if it's in an existing folder
-    let folder = testCaseFolders.find(folder => folder.folderName == testCase.folderName)
-    let testCaseId;
+    let folder = testCaseFolders.find(folder => folder.Name == testCase.folderName)
 
     if (!folder) { // If the folder doesn't exist yet, make it and then make the 
       let newFolder = {}
-      newFolder.folderId = await pushTestCaseFolder(testCase.folderName, testCase.testFolderDescription);
+      newFolder.TestCaseFolderId = await pushTestCaseFolder(testCase.folderName, testCase.folderDescription);
       newFolder.folderName = testCase.folderName;
+      await axios.post(RETRIEVE, {newfolder: newFolder})
+      folder = newFolder
       testCaseFolders.push(newFolder);
     }
     // make the testCase and keep the Id for later
-    testCaseId = await pushTestCase(testCase.Name, testCase.testCaseDescription, folder.folderId);
-
+    let testCaseId = await pushTestCase(testCase.Name, testCase.testCaseDescription, folder.TestCaseFolderId);
     // now make the testSteps
-    for (let j = 0; j < testCase.Steps.length; i++) {
-      await pushTestStep(testCaseId, testCase.Step[i]);
+    for (let j = 0; j < testCase.testSteps.length; j++) {
+      await pushTestStep(testCaseId, testCase.testSteps[j]);
     }
   }
 
 
   // CURRENTLY USED FOR TESTING
-  let folderResponse = await pushTestCaseFolder("Test Folder", "First Functional Folder Test");
-  let testCaseResponse = await pushTestCase("test case", folderResponse)
+  // let folderResponse = await pushTestCaseFolder("Test Folder", "First Functional Folder Test");
+  // let testCaseResponse = await pushTestCase("test case", folderResponse)
+  // try {
+  //   let call1 = await axios.post("http://localhost:5000/retrieve", { Folder: folderResponse, TestCase: testCaseResponse })
+  // }
+  // catch (err) {
+  //   console.log(err);
+  // }
+}
+const retrieveTestCaseFolders = async () => {
+  let projectId = document.getElementById('project-select').value;
+  let apiCall = USER_OBJ.url + "/services/v6_0/RestService.svc/projects/" + projectId +
+    `/test-folders?username=${USER_OBJ.username}&api-key=${USER_OBJ.password}`;
+  let callResponse = await superagent.get(apiCall).set('accept', "application/json").set('Content-Type', "application/json")
+  return callResponse.body
+}
+
+const pushTestStep = async (testCaseId, testStep) => {
+  /*pushTestCase should call this passing in the created testCaseId and iterate through passing
+  in that test cases test steps.*/
+  let projectId = document.getElementById('project-select').value;
+  await axios.post(RETRIEVE)
+  let apiCall = USER_OBJ.url + "/services/v6_0/RestService.svc/projects/" + projectId +
+    `/test-cases/${testCaseId}/test-steps?username=${USER_OBJ.username}&api-key=${USER_OBJ.password}`;
   try {
-    let call1 = await axios.post("http://localhost:5000/retrieve", { Folder: folderResponse, TestCase: testCaseResponse })
+    //testStep = {Description: "", SampleData: "", ExpectedResult: ""}
+    //we dont need the response from this - so no assigning to variable.
+    await axios.post(RETRIEVE, {api: apiCall, description: testStep.Description, smpl: testStep.SampleData, exp: testStep.ExpectedResult})
+    await axios.post(apiCall, {
+      Description: testStep.Description,
+      SampleData: testStep.SampleData,
+      ExpectedResult: testStep.ExpectedResult
+    })
   }
   catch (err) {
-    console.log(err);
+    console.log(err)
+    await axios.post(RETRIEVE, {err: err})
   }
 }
 /* 
@@ -293,33 +324,7 @@ const pushTestCaseFolder = async (folderName, description) => {
   }
 }
 
-const retrieveTestCaseFolders = async () => {
-  let projectId = document.getElementById('project-select').value;
-  let apiCall = USER_OBJ.url + "/services/v6_0/RestService.svc/projects/" + projectId +
-    `/test-folders?username=${USER_OBJ.username}&api-key=${USER_OBJ.password}`;
-  let callResponse = await superagent.get(apiCall).set('accept', "application/json").set('Content-Type', "application/json")
-  return callResponse.body
-}
 
-const pushTestStep = async (testCaseId, testStep) => {
-  /*pushTestCase should call this passing in the created testCaseId and iterate through passing
-  in that test cases test steps.*/
-  let projectId = document.getElementById('project-select').value;
-  let apiCall = USER_OBJ.url + "/services/v6_0/RestService.svc/projects/" + projectId +
-    `/test-cases/${testCaseId}/test-steps?username=${USER_OBJ.username}&api-key=${USER_OBJ.password}`;
-  try {
-    //testStep = {Description: "", SampleData: "", ExpectedResult: ""}
-    //we dont need the response from this - so no assigning to variable.
-    await axios.post(apiCall, {
-      Description: testStep.Description,
-      SampleData: testStep.SampleData,
-      ExpectedResult: testStep.ExpectedResult
-    })
-  }
-  catch (err) {
-    console.log(err)
-  }
-}
 /******************** 
 HTML DOM Manipulation
 ********************/
@@ -435,10 +440,6 @@ const clearDropdownElement = (element_id) => {
   while (dropdown.length > 0) {
     dropdown.remove(0);
   }
-}
-
-const handleErrors = (error) => {
-
 }
 
 /********************
@@ -584,7 +585,7 @@ const parseTestCases = async (lines) => {
   //styles = ['style1', 'style2', columnStyle, columnStyle, columnStyle]
   let styles = retrieveStyles("test-")
   await axios.post(RETRIEVE, {styles: styles})
-  let testCase = { folderName: "", Name: "", testSteps: [] }
+  let testCase = { folderName: "", folderDescription: "",  Name: "", testCaseDescription: "", testSteps: [] }
   //tables = [[test case 1 steps], [test case 2 steps], ...]
   //word API functions cannot return normally.
   let tables = await retrieveTables()
@@ -638,16 +639,6 @@ const parseTestCases = async (lines) => {
 
 // Updates selection array and then loops through it and adds any
 // user-created styles found to its array and returns it. WIP
-const scanForCustomStyles = async () => {
-  let customStyles = [];
-  await updateSelectionArray();
-  for (let i = 0; i < SELECTION.length; i++) {
-    if (SELECTION[i].custom && !customStyles.includes(SELECTION[i].style)) {
-      customStyles.push(SELECTION[i].style);
-    }
-  }
-  return customStyles;
-}
 
 const parseTable = (table) => {
   let styles = retrieveStyles('test-')
@@ -671,11 +662,21 @@ const parseTable = (table) => {
   //return an array of testStep objects
 }
 
+const scanForCustomStyles = async () => {
+  let customStyles = [];
+  await updateSelectionArray();
+  for (let i = 0; i < SELECTION.length; i++) {
+    if (SELECTION[i].custom && !customStyles.includes(SELECTION[i].style)) {
+      customStyles.push(SELECTION[i].style);
+    }
+  }
+  return customStyles;
+}
+
 /* Returns an array with all of the styles intended to be used for the 
   Style dropdown menus */
 const getStyles = async () => {
-  let userStyles = await usedStyles();
-  await axios.post(RETRIEVE, { used: "styles" });
+  let userStyles = [...await usedStyles(), ...await scanForCustomStyles()];
   let allStyles = await trimStyles(Object.values(Word.Style), userStyles)
   return allStyles;
 }
