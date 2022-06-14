@@ -219,13 +219,13 @@ const indentRequirement = async (apiCall, id, indent) => {
 */
 const pushTestCases = async () => {
   await updateSelectionArray();
-  let testCases = parseTestCases();
-  // Will add the parser call here once it is implemented
-  let testCaseFolders = []; // This is an array of string:int objects
+  let testCases = await parseTestCases(SELECTION);
+  // testCaseFolders = [{Name: "", TestCaseFolderId: int}, ...]
+  let testCaseFolders = await retrieveTestCaseFolders();
   for (let i = 0; i < testCases.length; i++) {
     let testCase = testCases[i];
-
-    // First check if it's in a new folder we've already made
+    
+    // First check if it's in an existing folder
     let folder = testCaseFolders.find(folder => folder.folderName == testCase.folderName)
     let testCaseId;
 
@@ -294,7 +294,11 @@ const pushTestCaseFolder = async (folderName, description) => {
 }
 
 const retrieveTestCaseFolders = async () => {
-
+  let projectId = document.getElementById('project-select').value;
+  let apiCall = USER_OBJ.url + "/services/v6_0/RestService.svc/projects/" + projectId +
+    `/test-folders?username=${USER_OBJ.username}&api-key=${USER_OBJ.password}`;
+  let callResponse = await superagent.get(apiCall).set('accept', "application/json").set('Content-Type', "application/json")
+  return callResponse.body
 }
 
 const pushTestStep = async (testCaseId, testStep) => {
@@ -583,7 +587,9 @@ const parseTestCases = async (lines) => {
   //tables = [[test case 1 steps], [test case 2 steps], ...]
   //word API functions cannot return normally.
   let tables = await retrieveTables()
-  lines.forEach((line, i) => {
+  for (let i = 0; i < lines.length; i++) {
+    //removes enter indent tags
+    lines[i].text = lines[i].text.replaceAll("\r", "")
     /*line text ends with a \t for each field contained in a table. This can also be done
     accidentally by the user so that is why the second conditional checks if the text equals
     the first line of the table. If it doesnt, we will just remove the \t and look for 
@@ -597,27 +603,36 @@ const parseTestCases = async (lines) => {
     */
 
     //this checks if a line is the first box in the next table
-    if (line.text.slice(-2) == "\t" && line.text == tables[0][0][parseInt(styles[2].slice(-2))].concat("\t")) {
+    if (tables[0] && lines[i].text.slice(-1) == "\t" && lines[i].text == tables[0][0][parseInt(styles[2].slice(-1))].concat("\t")) {
       let testSteps = parseTable(tables[0])
-      testCase.testSteps = testSteps
+      //allows multiple tables to populate the same test case in the case it is multiple tables
+      testCase = {...testCase, testSteps: [...testSteps]}
+      await axios.post(RETRIEVE, {testCaseSteps: testCase.testSteps})
       /*removes the table which has just been parsed so we dont need to iterate through tables
       in the conditional. */
-      tables = tables.shift();
+      tables.shift();
     }
     //this handles whether a line is a folder name or test case name
-    switch (line.style.toLowerCase()) {
+    switch (lines[i].style.toLowerCase()) {
       case styles[0]:
-        testCase.folderName = line.text
+        testCase.folderName = lines[i].text
+        break
       case styles[1]:
-        testCase.Name = line.text
+        testCase.Name = lines[i].text
+        break
+      default:
+        //do nothing
+        break
     }
     //if the relevant fields are populated, push the test case and reset the testCase variable
     //3rd conditional checks that the next element is not (likely) a table
-    if (testCase.folderName && testCase.Name && !(lines[i + 1].text.slice(-2) == "/t")) {
+    await axios.post(RETRIEVE, {conditions: testCase.folderName, condition2: testCase.Name, condition3: tables.length})
+    if (testCase.folderName && testCase.Name && !tables.length) {
+      await axios.post(RETRIEVE, { tables: tables, testCase: testCase })
       testCases.push(testCase)
       testCase = { Name: "", folderName: "", testSteps: [] }
     }
-  })
+  }
   return testCases
 }
 
@@ -643,12 +658,14 @@ const parseTable = (table) => {
   //row = [column1, column 2, column3, ...]
   table.forEach((row) => {
     let testStep = { Description: "", ExpectedResult: "", SampleData: "" }
-    //populates fields based on styles
-    testStep.Description = row[columnNums[0]]
-    testStep.ExpectedResult = row[columnNums[1]]
-    testStep.SampleData = row[columnNums[2]]
+    //populates fields based on styles, doesnt populate if no description
+    if (row[columnNums[0]] != "") {
+      testStep.Description = row[columnNums[0]]
+      testStep.ExpectedResult = row[columnNums[1]]
+      testStep.SampleData = row[columnNums[2]]
+      testSteps.push(testStep)
+    }
     //pushes it to the testSteps array
-    testSteps.push(testStep)
   })
   return testSteps
   //return an array of testStep objects
