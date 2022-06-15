@@ -101,13 +101,6 @@
                     <span class="ms-Button-label">Test Cases</span>
                 </div>
             </div>
-            <h4 id="empty-err" class="error-message">
-                You currently have no valid text selected or within the body of the document.
-                if this is incorrect, check your style mappings and set them as the relevant
-                styles.
-            </h4>
-            <!--Failed-req-error is dynamicly generated on throw in javascript-->
-            <h4 id="failed-req-err" class="error-message"></h4>
             <h4 class="hidden error-message" id="empty-styles-err">You currently have unselected styles. Please provide a style for all provided inputs.</h4>
             <h4 class="hidden error-message" id="duplicate-styles-err">You currently have multiple mappings set to the same style. Please only use each style once.</h4>
         </div>
@@ -154,6 +147,17 @@
             </div>
         </div>
         <div id="send-to-spira">
+            <h4 id="empty-err" class="error-message">
+                You currently have no valid text selected or within the body of the document.
+                if this is incorrect, check your style mappings and set them as the relevant
+                styles.
+            </h4>
+            <!--Failed-req-error is dynamicly generated on throw in javascript-->
+            <h4 id="failed-req-err" class="error-message"></h4>
+            <h4 id="heirarchy-err" class="error-message">Your style heirarchy is invalid for the 
+                selected area. Please make sure requirements only indent 1 additional level 
+                from the previous requirement as specified in the indent level style selectors above. 
+            </h4>
             <p>4. Check your selection, then send to spira:</p>
             <button class="action ms-Button ms-Button--primary" id="send-to-spira-button" title="Send-to-spira"
                 type="button">

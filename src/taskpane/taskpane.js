@@ -40,6 +40,7 @@ const setDefaultDisplay = () => {
   document.getElementById("empty-err").style.display = 'none';
   document.getElementById("failed-req-err").style.display = 'none'
   document.getElementById("send-to-spira").style.display = 'none'
+  document.getElementById("hierarchy-err").style.display = "none"
 }
 
 const setEventListeners = () => {
@@ -150,6 +151,10 @@ const pushRequirements = async () => {
   await updateSelectionArray();
   // Tests the parseRequirements Function
   let requirements = parseRequirements(SELECTION);
+  //if parseRequirements fails (due to invalid hierarchy) stop the process of pushing requirements.
+  if (!requirements) {
+    return
+  }
   let lastIndent = 0;
   /*if someone has selected an area with no properly formatted text, show an error explaining
   that and then return this function to prevent sending an empty request.*/
@@ -436,7 +441,7 @@ const confirmStyleMappings = async (pageTag) => {
   //saves the users style preferences. this is document bound
   let styles = []
   for (let i = 1; i <= 5; i++) {
-    await axios.post(RETRIEVE, {style: document.getElementById(pageTag + "style-select" + i.toString()).value})
+    await axios.post(RETRIEVE, { style: document.getElementById(pageTag + "style-select" + i.toString()).value })
     if (document.getElementById(pageTag + "style-select" + i.toString()).value) {
       let setting = document.getElementById(pageTag + "style-select" + i.toString()).value
       //checks if a setting is used multiple times
@@ -629,7 +634,17 @@ const parseRequirements = (lines) => {
       requirements.pop();
     }
   })
-  return requirements
+  //validates the heirarchy complies with spira's constraints. 
+  if (validateHierarchy(requirements)) {
+    //removes the error message when a valid heirarchy is submitted.
+    document.getElementById("hierarchy-err").style.display = "none"
+    return requirements
+  }
+  //if it doesnt, shows an error message explaining why the requirements did not send.
+  else {
+    document.getElementById("hierarchy-err").style.display = "flex"
+    return false
+  }
 }
 
 const parseTestCases = async (lines) => {
@@ -772,4 +787,22 @@ const usedStyles = async () => {
     }
   }
   return styles;
+}
+
+const validateHierarchy = (requirements) => {
+  //requirements = [{Name: str, Description: str, IndentLevel: int}, ...]
+  //the first requirement must always be indent level 0 (level 1 in UI terms)
+  if (requirements[0].IndentLevel != 0) {
+    return false
+  }
+  let prevIndent = 0
+  for (let i = 0; i < requirements.length; i++) {
+    //if there is a jump in indent levels greater than 1, fails validation
+    if (requirements[i].IndentLevel > prevIndent + 1) {
+      return false
+    }
+    prevIndent = requirements[i].IndentLevel
+  }
+  //if the loop goes through without returning false, the heirarchy is valid so returns true
+  return true
 }
