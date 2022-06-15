@@ -84,6 +84,7 @@ body {
     height: 100%;
     margin: 0;
     padding: 0;
+    overflow: hidden;
 }
 
 ul {
@@ -158,9 +159,8 @@ ul {
 }
 
 .style-prompt {
-    top: 30px;
+    margin-top: 0;
     position: static;
-    margin: 0 auto;
 }
 
 .style-buttons {
@@ -214,15 +214,31 @@ ul {
     width: 100%;
 }
 
-.styles-page,
 #main-screen {
+    height: calc(100vh - 100px);
     width: 100%;
     justify-content: flex-start;
     flex-direction: column;
     text-align: left;
-    top: 50px;
+    margin-top: 50px;
+    overflow-y: auto;
+    overflow-x: auto;
 }
 
+.styles-block {
+    margin-left: 5%;
+    width: 90%;
+    align-items: flex-start;
+    justify-content: flex-start;
+    flex-direction: column;
+    text-align: left;
+    top: 0px;
+    margin-top: 0px;
+}
+.styles-block select{
+    width: 100%;
+    align-self: center;
+}
 .style-labels {
     margin-top: 1em;
 }
@@ -235,12 +251,20 @@ ul {
 #login-buttons {
     margin-top: 8%;
 }
-#artifact-select{
-    display:flex;
+
+#artifact-select {
+    display: flex;
     flex-direction: row;
-    align-items:center;
+    align-items: center;
     text-align: center;
-    width: 105%;
+    width: 100%;
+    height: auto;
+}
+
+#send-to-spira {
+    margin-left: 5%;
+    margin-top: 5%;
+    margin-bottom: 3%;
 }
 
 /*MS DEFAULT CLASSES*/

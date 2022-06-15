@@ -84,15 +84,15 @@
     </div>
 
     <!--Main screen-->
-    <div id="main-screen" class="hidden panel">
+    <div id="main-screen" class="hidden">
         <div id="app-body" class="ms-welcome__main" style="display: none;">
             <div role="button" id="log-out" class="action ms-Button ms-Button--default">
                 <span class="ms-Button-label">log-out</span>
             </div>
-            <p>Select the product you wish to import to:</p>
+            <p>1. Select the product you wish to import to:</p>
             <select id="project-select" class="selectors"></select>
             <!--Turn this into radio buttons of some sort which fit the theming instead of dd-->
-            <p>Select the artifact type you want to import:</p>
+            <p>2. Select the artifact type you want to import:</p>
             <div id="artifact-select" class="artifact-buttons">
                 <div role="button" id="select-requirements" class="action ms-Button ms-Button--primary">
                     <span class="ms-Button-label">Requirements</span>
@@ -101,25 +101,21 @@
                     <span class="ms-Button-label">Test Cases</span>
                 </div>
             </div>
-            <div id="main-page-buttons">
-                <h4 id="empty-err" class="error-message">
-                    You currently have no valid text selected or within the body of the document.
-                    if this is incorrect, check your style mappings and set them as the relevant
-                    styles.
-                </h4>
-                <!--Failed-req-error is dynamicly generated on throw in javascript-->
-                <h4 id="failed-req-err"></h4>
-                
-                <!--remove this before deployment
-                <div role="button" id="test" class="action ms-Button ms-Button--default">
-                    <span class="ms-Button-label">test</span>
-                </div>
-            -->
-            </div>
+            <h4 id="empty-err" class="error-message">
+                You currently have no valid text selected or within the body of the document.
+                if this is incorrect, check your style mappings and set them as the relevant
+                styles.
+            </h4>
+            <!--Failed-req-error is dynamicly generated on throw in javascript-->
+            <h4 id="failed-req-err"></h4>
+            <h4 id="empty-styles-err"></h4>
+            <h4 id="duplicate-styles-err"></h4>
         </div>
-        <!--end of main screen-->
-        <div id="req-style-mappings" class="styles-page hidden">
-            <h1 class="style-prompt">2. Select the styles used:</h1>
+        <!--These style-block elements are hugging the bottom of the page for some reason.
+        It looks perfect after you confirm the styles (and they are valid) and the send to
+        spira button appears, but before that it behaves oddly. Unsure how to fix.-->
+        <div id="req-style-mappings" class="styles-block hidden">
+            <p class="style-prompt">3. Select the styles used:</p>
             <label for="req-style-select1" class="style-labels">Indent Level 1:</label>
             <select title="req-style-select1" id="req-style-select1" class="style-selector"></select>
             <label for="req-style-select2" class="style-labels">Indent Level 2:</label>
@@ -137,8 +133,8 @@
                 </div>
             </div>
         </div>
-        <div id="test-style-mappings" class="styles-page hidden">
-            <h1 class="style-prompt">2. Select the styles used:</h1>
+        <div id="test-style-mappings" class="styles-block hidden">
+            <p class="style-prompt">3. Select the styles used:</p>
             <label for="test-style-select1" class="style-labels">Folder Name:</label>
             <select title="test-style-select1" id="test-style-select1" class="style-selector"></select>
             <label for="test-style-select2" class="style-labels">Test Name:</label>
@@ -157,14 +153,14 @@
                 </div>
             </div>
         </div>
+        <div id="send-to-spira">
+            <p>4. Check your selection, then send to spira:</p>
+            <button class="action ms-Button ms-Button--primary" id="send-to-spira-button" title="Send-to-spira"
+                type="button">
+                Send to Spira
+            </button>
+        </div>
     </div>
-
-    <!--Style mappings page for requirements-->
-
-
-    <!--Style mappings page for test cases-->
-
-
     <!-- footer -->
     <footer class="footer">
         <a href="https://www.inflectra.com" target="_blank">

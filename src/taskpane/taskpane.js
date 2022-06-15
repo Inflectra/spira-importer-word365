@@ -39,19 +39,20 @@ const setDefaultDisplay = () => {
   document.getElementById("test-style-mappings").style.display = 'none';
   document.getElementById("empty-err").style.display = 'none';
   document.getElementById("failed-req-err").style.display = 'none'
+  document.getElementById("send-to-spira").style.display = 'none'
 }
 
 const setEventListeners = () => {
   // document.getElementById('test').onclick = test;
   document.getElementById('btn-login').onclick = () => loginAttempt();
   document.getElementById('dev-mode').onclick = () => devmode();
-  // document.getElementById('send-artifacts').onclick = () => pushArtifacts();
+  document.getElementById('send-to-spira').onclick = () => pushArtifacts();
   document.getElementById('log-out').onclick = () => logout();
-  //I think theres a way to use classes to reduce this to 2 but unsure
-  document.getElementById("confirm-req-style-mappings").onclick = () => confirmStyleMappings(true, 'req-');
-  document.getElementById("confirm-test-style-mappings").onclick = () => confirmStyleMappings(true, 'test-');
   document.getElementById("select-requirements").onclick = () => openStyleMappings("req-");
-  document.getElementById("select-test-cases").onclick = () => openStyleMappings("test-")
+  document.getElementById("select-test-cases").onclick = () => openStyleMappings("test-");
+  document.getElementById("confirm-req-style-mappings").onclick = () => confirmStyleMappings('req-');
+  document.getElementById("confirm-test-style-mappings").onclick = () => confirmStyleMappings('test-');
+
 }
 
 const devmode = () => {
@@ -240,7 +241,6 @@ const pushTestCases = async () => {
   let testCaseFolders = await retrieveTestCaseFolders();
   for (let i = 0; i < testCases.length; i++) {
     let testCase = testCases[i];
-    await axios.post(RETRIEVE, { here: "heer" })
     // First check if it's in an existing folder
     let folder = testCaseFolders.find(folder => folder.Name == testCase.folderName)
 
@@ -305,8 +305,9 @@ const pushTestStep = async (testCaseId, testStep) => {
   Creates a test case using the information given and sends it to the Spira instance. Returns the Id of the created test case
 */
 const pushTestCase = async (testCaseName, testCaseDescription, testFolderId) => {
+  let projectId = document.getElementById("project-select").value
   try {
-    var testCaseResponse = await axios.post(`${USER_OBJ.url}/services/v6_0/RestService.svc/projects/24/test-cases?username=${USER_OBJ.username}
+    var testCaseResponse = await axios.post(`${USER_OBJ.url}/services/v6_0/RestService.svc/projects/${projectId}/test-cases?username=${USER_OBJ.username}
       &api-key=${USER_OBJ.password}`, {
       Name: testCaseName,
       Description: testCaseDescription,
@@ -374,6 +375,10 @@ const openStyleMappings = async (pageTag) => {
   /*all id's and internal word settings are now set using a "pageTag". This allows code 
   to be re-used between testing and requirement style settings. The tags are req- for
   requirements and test- for test cases.*/
+  /*hides the send button when they select an artifact type, so if they had completed
+  style mappings for one or the other then change the artifact type they are required to enter
+  their style mappings again.*/
+  document.getElementById("send-to-spira").style.display = "none"
   //checks the current selected artifact type then loads the appropriate menu
   if (pageTag == "req-") {
     document.getElementById("req-style-mappings").classList.remove("hidden")
@@ -387,15 +392,15 @@ const openStyleMappings = async (pageTag) => {
     document.getElementById("test-style-mappings").style.display = 'flex'
   }
   //wont populate styles for requirements if it is already populated
-  if(document.getElementById("req-style-select1").childElementCount && pageTag == "req-"){
+  if (document.getElementById("req-style-select1").childElementCount && pageTag == "req-") {
     return
   }
   //wont populate styles for test-cases if it is already populated
-  else if(document.getElementById("test-style-select1").childElementCount && pageTag == "test-"){
+  else if (document.getElementById("test-style-select1").childElementCount && pageTag == "test-") {
     return
   }
   //doesnt populate styles if both test & req style selectors are populated
-  else if (document.getElementById("test-style-select1").childElementCount && document.getElementById("req-style-select1").childElementCount){
+  else if (document.getElementById("test-style-select1").childElementCount && document.getElementById("req-style-select1").childElementCount) {
     return;
   }
   //retrieveStyles gets the document's settings for the style mappings. Also auto sets default values
@@ -427,22 +432,31 @@ const openStyleMappings = async (pageTag) => {
 //closes the style mapping page taking in a boolean 'result'
 //pageTag is req or test depending on which page is currently open
 
-const confirmStyleMappings = (result, pageTag) => {
+const confirmStyleMappings = async (pageTag) => {
   //result = true when a user selects confirm to exit a style mappings page
-  if (result) {
-    //saves the users style preferences. this is document bound
-    for (let i = 1; i <= 5; i++) {
+  //saves the users style preferences. this is document bound
+  let styles = []
+  for (let i = 1; i <= 5; i++) {
+    if (document.getElementById(pageTag + "style-select" + i.toString()).value) {
       let setting = document.getElementById(pageTag + "style-select" + i.toString()).value
+      if (!styles.includes(setting)) {
+        styles.push(setting)
+      }
+      else {
+        //throw error saying they are using duplicate styles
+        return
+      }
       Office.context.document.settings.set(pageTag + 'style' + i.toString(), setting);
     }
-    //this saves the settings
-    Office.context.document.settings.saveAsync()
+    else {
+      //show an error saying they have not populated all selector options and ask them to do so.
+      return
+    }
   }
-  //clears dropdowns to prevent being populated with duplicate options upon re-opening
-  for (let i = 1; i <= 5; i++) {
-    clearDropdownElement('req-style-select' + i.toString());
-    clearDropdownElement('test-style-select' + i.toString());
-  }
+  //this saves the settings
+  Office.context.document.settings.saveAsync()
+  //show the send to spira button after this is clicked and all style selectors are populated.
+  document.getElementById("send-to-spira").style.display = "inline-block"
 }
 
 //Populates a passed in style-selector with the avaiable word styles
@@ -539,8 +553,9 @@ Pure data manipulation
 **********************/
 
 const pushArtifacts = async () => {
-  let artifacts = document.getElementById("artifact-select").value;
-  if (artifacts == "requirements") {
+  let active = document.getElementById("req-style-mappings").style.display
+  //if the requirements style mappings are visible that is the selected artifact.
+  if (active == "flex") {
     await pushRequirements();
   }
   else {
@@ -718,7 +733,6 @@ const getStyles = async () => {
 /* Returns a new array by filtering out styles from the first set and adding them to the second set*/
 const trimStyles = async (styles, prevStyles) => {
   let newStyles = prevStyles;
-  await axios.post(RETRIEVE, { trimming: "styles" });
   for (let i = 0; i < styles.length; i++) {
     let style = styles[i];
     // only add the style to the new set if none of these are in the string
