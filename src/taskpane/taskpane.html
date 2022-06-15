@@ -107,9 +107,9 @@
                 styles.
             </h4>
             <!--Failed-req-error is dynamicly generated on throw in javascript-->
-            <h4 id="failed-req-err"></h4>
-            <h4 id="empty-styles-err"></h4>
-            <h4 id="duplicate-styles-err"></h4>
+            <h4 id="failed-req-err" class="error-message"></h4>
+            <h4 class="hidden error-message" id="empty-styles-err">You currently have unselected styles. Please provide a style for all provided inputs.</h4>
+            <h4 class="hidden error-message" id="duplicate-styles-err">You currently have multiple mappings set to the same style. Please only use each style once.</h4>
         </div>
         <!--These style-block elements are hugging the bottom of the page for some reason.
         It looks perfect after you confirm the styles (and they are valid) and the send to

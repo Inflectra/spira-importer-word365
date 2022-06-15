@@ -433,26 +433,41 @@ const openStyleMappings = async (pageTag) => {
 //pageTag is req or test depending on which page is currently open
 
 const confirmStyleMappings = async (pageTag) => {
-  //result = true when a user selects confirm to exit a style mappings page
   //saves the users style preferences. this is document bound
   let styles = []
   for (let i = 1; i <= 5; i++) {
+    await axios.post(RETRIEVE, {style: document.getElementById(pageTag + "style-select" + i.toString()).value})
     if (document.getElementById(pageTag + "style-select" + i.toString()).value) {
       let setting = document.getElementById(pageTag + "style-select" + i.toString()).value
+      //checks if a setting is used multiple times
       if (!styles.includes(setting)) {
         styles.push(setting)
       }
+      //gives an error explaining they have empty style mappings and cannot proceed.
       else {
-        //throw error saying they are using duplicate styles
+        document.getElementById("duplicate-styles-err").classList.remove("hidden")
+        setTimeout(() => {
+          document.getElementById("duplicate-styles-err").classList.add("hidden")
+        }, 8000)
+        //hides the final button if it is already displayed when a user inputs invalid styles.
+        document.getElementById("send-to-spira").style.display = "none"
         return
       }
       Office.context.document.settings.set(pageTag + 'style' + i.toString(), setting);
     }
+    //gives an error explaining they have duplicate style mappings which conflict.
     else {
-      //show an error saying they have not populated all selector options and ask them to do so.
+      document.getElementById("empty-styles-err").classList.remove("hidden")
+      setTimeout(() => {
+        document.getElementById("empty-styles-err").classList.add("hidden")
+      }, 8000)
+      document.getElementById("send-to-spira").style.display = "none"
       return
     }
   }
+  //hides error on successful confirm
+  document.getElementById("duplicate-styles-err").classList.add("hidden")
+  document.getElementById("empty-styles-err").classList.add("hidden")
   //this saves the settings
   Office.context.document.settings.saveAsync()
   //show the send to spira button after this is clicked and all style selectors are populated.
