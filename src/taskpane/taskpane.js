@@ -41,6 +41,7 @@ const setDefaultDisplay = () => {
   document.getElementById("failed-req-err").style.display = 'none'
   document.getElementById("send-to-spira").style.display = 'none'
   document.getElementById("hierarchy-err").style.display = "none"
+  document.getElementById('table-err').style.display = 'none'
 }
 
 const setEventListeners = () => {
@@ -248,7 +249,7 @@ const pushTestCases = async () => {
     let testCase = testCases[i];
     // First check if it's in an existing folder
     let folder = testCaseFolders.find(folder => folder.Name == testCase.folderName)
-
+    await axios.post(RETRIEVE, {folder: folder})
     if (!folder) { // If the folder doesn't exist yet, make it and then make the 
       let newFolder = {}
       newFolder.TestCaseFolderId = await pushTestCaseFolder(testCase.folderName, testCase.folderDescription);
@@ -634,9 +635,9 @@ const parseRequirements = (lines) => {
       requirements.pop();
     }
   })
-  //validates the heirarchy complies with spira's constraints. 
+  //validates the hierarchy complies with spira's constraints. 
   if (validateHierarchy(requirements)) {
-    //removes the error message when a valid heirarchy is submitted.
+    //removes the error message when a valid hierarchy is submitted.
     document.getElementById("hierarchy-err").style.display = "none"
     return requirements
   }
@@ -651,12 +652,14 @@ const parseTestCases = async (lines) => {
   let testCases = []
   //styles = ['style1', 'style2', columnStyle, columnStyle, columnStyle]
   let styles = retrieveStyles("test-")
-
   let testCase = { folderName: "", folderDescription: "", Name: "", testCaseDescription: "", testSteps: [] }
   //tables = [[test case 1 steps], [test case 2 steps], ...]
   //word API functions cannot return normally.
   let tables = await retrieveTables()
-  await axios.post(RETRIEVE, { talbes: tables })
+  if(!await validateTestSteps(tables, styles[2])){
+    //throw hierarchy error for test cases / tables
+    return
+  }
   for (let i = 0; i < lines.length; i++) {
     //removes enter indent tags
     lines[i].text = lines[i].text.replaceAll("\r", "")
@@ -701,7 +704,6 @@ const parseTestCases = async (lines) => {
       default:
         //do nothing
         break
-
     }
     //if the relevant fields are populated, push the test case and reset the testCase variable
     //3rd conditional checks that the next element is not (likely) a table
@@ -803,6 +805,31 @@ const validateHierarchy = (requirements) => {
     }
     prevIndent = requirements[i].IndentLevel
   }
-  //if the loop goes through without returning false, the heirarchy is valid so returns true
+  //if the loop goes through without returning false, the hierarchy is valid so returns true
+  return true
+}
+//passes in all relevant tables and description style for test steps (only required field).
+const validateTestSteps = async (tables, descStyle) =>{
+  //the column of descriptions according to the style mappings. -1 for indexing against the arrays
+  let column = parseInt(descStyle.slice(-1)) - 1
+  //tables = [[[], [], []], [[], []], ...] array of 2d arrays(3d array). tables[tableNum][row][column]
+  for (let i=0; i<tables.length; i++){
+    //holder for at least one description for a test step being in a given table
+    let atLeastOneDesc = false;
+    for (let j=0; j<tables[i].length; j++){
+      /*if a description for any row of a table within the style mapped column exists, the table
+      is considered valid*/
+      if (tables[i][j][column]){
+        atLeastOneDesc = true
+      }
+    }
+    //if there is a table containing no test step descriptions, throws an error and stops execution
+    if (!atLeastOneDesc){
+      await axios.post(RETRIEVE, {fail: "FAilrue", table: tables[i]})
+      document.getElementById('table-err').style.display = "flex"
+      return false
+    }
+  }
+  document.getElementById('table-err').style.display = "none"
   return true
 }
