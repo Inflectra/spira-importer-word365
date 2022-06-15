@@ -78,7 +78,7 @@ export async function test() {
      information out of the table using that method to know the structure (returns 2d array) */
     await context.sync();
     let tables = await retrieveTables()
-    await axios.post("http://localhost:5000/retrieve", { Tables: tables })
+    // await axios.post("http://localhost:5000/retrieve", { Tables: tables })
     //try catch block for backend node call to prevent errors crashing the application
     // try {
     //   let call1 = await axios.post("http://localhost:5000/retrieve", { lines: lines })
@@ -172,10 +172,8 @@ const pushRequirements = async () => {
     `/requirements/indent/-20?username=${USER_OBJ.username}&api-key=${USER_OBJ.password}`;
   try {
     let call = await axios.post(outdentCall, { Name: item.Name, Description: item.Description, RequirementTypeId: 2 });
-    await axios.post(RETRIEVE, { call: call.data })
   }
   catch (err) {
-    await axios.post(RETRIEVE, { err: err });
     /*shows the requirement which failed to add. This should work if it fails in the middle of 
     sending a set of requirements*/
     document.getElementById("failed-req-error").textContent = `The request to the API has failed on requirement: '${item.Name}'. All, if any previous requirements should be in Spira.`
@@ -237,24 +235,25 @@ const indentRequirement = async (apiCall, id, indent) => {
 
 /* 
   Sends all of the test case folders and test cases found in the selection to the Spira instance
-  WIP Until parseTestSteps is fully implemented
 */
 const pushTestCases = async () => {
   await updateSelectionArray();
   // testCases = {folderName: "", Name: "", testSteps: [{Description, expected result, sample data}, ...]}
   let testCases = await parseTestCases(SELECTION);
+  //if parseTestCases fails due to bad table styles, stops execution of the function
+  if (!testCases){
+    return
+  }
   // testCaseFolders = [{Name: "", TestCaseFolderId: int}, ...]
   let testCaseFolders = await retrieveTestCaseFolders();
   for (let i = 0; i < testCases.length; i++) {
     let testCase = testCases[i];
     // First check if it's in an existing folder
     let folder = testCaseFolders.find(folder => folder.Name == testCase.folderName)
-    await axios.post(RETRIEVE, {folder: folder})
     if (!folder) { // If the folder doesn't exist yet, make it and then make the 
       let newFolder = {}
       newFolder.TestCaseFolderId = await pushTestCaseFolder(testCase.folderName, testCase.folderDescription);
       newFolder.folderName = testCase.folderName;
-      await axios.post(RETRIEVE, { newfolder: newFolder })
       folder = newFolder
       testCaseFolders.push(newFolder);
     }
@@ -289,13 +288,13 @@ const pushTestStep = async (testCaseId, testStep) => {
   /*pushTestCase should call this passing in the created testCaseId and iterate through passing
   in that test cases test steps.*/
   let projectId = document.getElementById('project-select').value;
-  await axios.post(RETRIEVE)
   let apiCall = USER_OBJ.url + "/services/v6_0/RestService.svc/projects/" + projectId +
     `/test-cases/${testCaseId}/test-steps?username=${USER_OBJ.username}&api-key=${USER_OBJ.password}`;
   try {
     //testStep = {Description: "", SampleData: "", ExpectedResult: ""}
+    
+    // await axios.post(RETRIEVE, { api: apiCall, description: testStep.Description, smpl: testStep.SampleData, exp: testStep.ExpectedResult })
     //we dont need the response from this - so no assigning to variable.
-    await axios.post(RETRIEVE, { api: apiCall, description: testStep.Description, smpl: testStep.SampleData, exp: testStep.ExpectedResult })
     await axios.post(apiCall, {
       Description: testStep.Description,
       SampleData: testStep.SampleData,
@@ -304,7 +303,6 @@ const pushTestStep = async (testCaseId, testStep) => {
   }
   catch (err) {
     console.log(err)
-    await axios.post(RETRIEVE, { err: err })
   }
 }
 /* 
@@ -442,7 +440,6 @@ const confirmStyleMappings = async (pageTag) => {
   //saves the users style preferences. this is document bound
   let styles = []
   for (let i = 1; i <= 5; i++) {
-    await axios.post(RETRIEVE, { style: document.getElementById(pageTag + "style-select" + i.toString()).value })
     if (document.getElementById(pageTag + "style-select" + i.toString()).value) {
       let setting = document.getElementById(pageTag + "style-select" + i.toString()).value
       //checks if a setting is used multiple times
@@ -656,9 +653,8 @@ const parseTestCases = async (lines) => {
   //tables = [[test case 1 steps], [test case 2 steps], ...]
   //word API functions cannot return normally.
   let tables = await retrieveTables()
-  if(!await validateTestSteps(tables, styles[2])){
-    //throw hierarchy error for test cases / tables
-    return
+  if (!validateTestSteps(tables, styles[2])) {
+    return false
   }
   for (let i = 0; i < lines.length; i++) {
     //removes enter indent tags
@@ -675,14 +671,23 @@ const parseTestCases = async (lines) => {
     retrieve tables from the word API but is still in the line.text from retrieving all lines.
     */
 
-    //this checks if a line is the first box in the next table
-    if (tables[0] && lines[i].text.slice(-1) == "\t" && lines[i].text == tables[0][0][parseInt(styles[2].slice(-1))].concat("\t")) {
+    /*this checks if a line is the first description in the next table (a table that has not been parsed
+       still exists, the line ends in \t character, and the text matches the tables first description)*/
+    if (tables[0] && lines[i].text == tables[0][0][parseInt(styles[2].slice(-1)) - 1]?.concat("\t") && lines[i].text.slice(-1) == "\t") {
       let testSteps = parseTable(tables[0])
       //allows multiple tables to populate the same test case in the case it is multiple tables
       testCase = { ...testCase, testSteps: [...testSteps] }
       /*removes the table which has just been parsed so we dont need to iterate through tables
       in the conditional. */
       tables.shift();
+    }
+    /*if the relevant fields are populated and the current line would replace the 
+    folderName/Name or is the last line, push the test case and reset the testCase variable */
+    if (testCase.folderName && testCase.Name && (lines[i].style == styles[0] || lines[i].style == styles[1] || i == lines.length - 1)) {
+      testCases.push(testCase)
+      /*clears testCase besdies folder name. If there is a new folder name it gets replaced
+      in the following switch statement.*/
+      testCase = { Name: "", testCaseDescription: "", folderDescription: "", folderName: testCase.folderName, testSteps: [] }
     }
     //this handles whether a line is a folder name or test case name
     switch (lines[i].style) {
@@ -705,16 +710,7 @@ const parseTestCases = async (lines) => {
         //do nothing
         break
     }
-    //if the relevant fields are populated, push the test case and reset the testCase variable
-    //3rd conditional checks that the next element is not (likely) a table
-    // await axios.post(RETRIEVE, {conditions: testCase.folderName, condition2: testCase.Name, condition3: tables.length})
-    if (testCase.folderName && testCase.Name && !tables.length) {
-      await axios.post(RETRIEVE, { testCase: testCase })
-      testCases.push(testCase)
-      testCase = { Name: "", testCaseDescription: "", folderDescription: "", folderName: "", testSteps: [] }
-    }
   }
-  await axios.post(RETRIEVE, { testCases: testCases })
   return testCases
 }
 
@@ -809,23 +805,22 @@ const validateHierarchy = (requirements) => {
   return true
 }
 //passes in all relevant tables and description style for test steps (only required field).
-const validateTestSteps = async (tables, descStyle) =>{
+const validateTestSteps = (tables, descStyle) => {
   //the column of descriptions according to the style mappings. -1 for indexing against the arrays
   let column = parseInt(descStyle.slice(-1)) - 1
   //tables = [[[], [], []], [[], []], ...] array of 2d arrays(3d array). tables[tableNum][row][column]
-  for (let i=0; i<tables.length; i++){
+  for (let i = 0; i < tables.length; i++) {
     //holder for at least one description for a test step being in a given table
     let atLeastOneDesc = false;
-    for (let j=0; j<tables[i].length; j++){
+    for (let j = 0; j < tables[i].length; j++) {
       /*if a description for any row of a table within the style mapped column exists, the table
       is considered valid*/
-      if (tables[i][j][column]){
+      if (tables[i][j][column]) {
         atLeastOneDesc = true
       }
     }
     //if there is a table containing no test step descriptions, throws an error and stops execution
-    if (!atLeastOneDesc){
-      await axios.post(RETRIEVE, {fail: "FAilrue", table: tables[i]})
+    if (!atLeastOneDesc) {
       document.getElementById('table-err').style.display = "flex"
       return false
     }
