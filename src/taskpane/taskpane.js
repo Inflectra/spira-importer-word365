@@ -72,30 +72,9 @@ Testing Functions
 export async function test() {
 
   return Word.run(async (context) => {
-    /*this is the syntax for accessing all tables. table text ends with \t when retrieved from
-     the existing fucntion (load(context.document.getSelection(), 'text'))and this can be 
-     utilized in order to identify when you have entered a table, at which point we parse
-     information out of the table using that method to know the structure (returns 2d array) */
-    await updateSelectionArray();
-    let image = context.document.body.inlinePictures
-    image.load()
-    await context.sync();
-    //target format is Base64
-    //getBase64ImageSrc() requires context.sync().
-    let base64 = image.items[0].getBase64ImageSrc();
-    await context.sync();
-    //base64.m_value gives the actual src of the image which is all we need. 
-    let imageCheck = []
-    for (let i=0; i<SELECTION.length; i++){
-      imageCheck.push(SELECTION[i].images.items[0])
-    }
-    await axios.post(RETRIEVE, { selection: base64.m_value })
-    // try {
-    //   await axios.post('https://demo-us.spiraservice.net/augustguenther/services/v6_0/RestService.svc/projects/24/documents/file?username=administrator&api-key={3E0DC29B-D3DC-46C2-B650-F46B8488A500}', { BinaryData: base64.m_value, FilenameOrUrl: "testing123.jpg" });
-    // }
-    // catch (err) {
-    //   await axios.post(RETRIEVE, {err: err})
-    // }
+    //retrieveImages gives image objects back which can be used to send to spira.
+    let imageObjects = await retrieveImages();
+    await axios.post(RETRIEVE, { selection: imageObjects });
   })
 }
 
@@ -572,26 +551,40 @@ const retrieveImages = async () => {
   //spira API call requires FilenameOrUrl and binary base 64 encoded data
   //word api has context.document.body.inlinePictures.items[i].getBase64ImageSrc()
   return Word.run(async (context) => {
-    let imageLines = []
     await updateSelectionArray();
-    for (let i=0; i<SELECTION.length; i++){
+    let imageLines = []
+    for (let i = 0; i < SELECTION.length; i++) {
       //go through each line, if it has images extract them with the line number
-      if(SELECTION[i].images.items[0]){
-        for (let j=0; j<SELECTION[i].images.items.length; j++){
+      if (SELECTION[i].images.items[0]) {
+        for (let j = 0; j < SELECTION[i].images.items.length; j++) {
           //pushes a line number for each image so its known where they get placed
           imageLines.push(i)
         }
       }
     }
-    let images = context.document.getSelection().inlinePictures;
-    images.load();
-    await context.sync();
     let imageObjects = []
     let imageObj;
-    for (let i=0; i<images.items.length; i++){
+    let images = context.document.getSelection();
+    context.load(images, 'text');
+    await context.sync();
+    //if there is a selection, gets all images in that selection
+    if (images.text) {
+      images = context.document.getSelection().inlinePictures;
+      images.load();
+      await context.sync();
+    }
+    // if nothing is selected, select the entire body of the document
+    else {
+      images = context.document.body.inlinePictures;
+      images.load()
+      await context.sync();
+    }
+    //creates image objects with base64 encoded string, name, and the line the image is on. 
+    for (let i = 0; i < images.items.length; i++) {
       let base64 = images.items[i].getBase64ImageSrc();
       await context.sync();
-      imageObj = {base64: base64, name: `inline${i}.jpg`, lineNum: imageLines[0]}
+      //lineNum starts counting at 0, so first line is line 0. 
+      imageObj = { base64: base64.m_value, name: `inline${i}.jpg`, lineNum: imageLines[0] }
       imageObjects.push(imageObj)
       imageObj = {}
       imageLines.shift();
