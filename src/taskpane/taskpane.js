@@ -45,7 +45,7 @@ const setDefaultDisplay = () => {
 }
 
 const setEventListeners = () => {
-  // document.getElementById('test').onclick = test;
+  document.getElementById('test').onclick = () => test();
   document.getElementById('btn-login').onclick = () => loginAttempt();
   document.getElementById('dev-mode').onclick = () => devmode();
   document.getElementById('send-to-spira').onclick = () => pushArtifacts();
@@ -76,25 +76,25 @@ export async function test() {
      the existing fucntion (load(context.document.getSelection(), 'text'))and this can be 
      utilized in order to identify when you have entered a table, at which point we parse
      information out of the table using that method to know the structure (returns 2d array) */
+    await updateSelectionArray();
+    let image = context.document.body.inlinePictures
+    image.load()
     await context.sync();
-    let tables = await retrieveTables()
-    // await axios.post("http://localhost:5000/retrieve", { Tables: tables })
-    //try catch block for backend node call to prevent errors crashing the application
+    //target format is Base64
+    //getBase64ImageSrc() requires context.sync().
+    let base64 = image.items[0].getBase64ImageSrc();
+    await context.sync();
+    //base64.m_value gives the actual src of the image which is all we need. 
+    let imageCheck = []
+    for (let i=0; i<SELECTION.length; i++){
+      imageCheck.push(SELECTION[i].images.items[0])
+    }
+    await axios.post(RETRIEVE, { selection: base64.m_value })
     // try {
-    //   let call1 = await axios.post("http://localhost:5000/retrieve", { lines: lines })
+    //   await axios.post('https://demo-us.spiraservice.net/augustguenther/services/v6_0/RestService.svc/projects/24/documents/file?username=administrator&api-key={3E0DC29B-D3DC-46C2-B650-F46B8488A500}', { BinaryData: base64.m_value, FilenameOrUrl: "testing123.jpg" });
     // }
     // catch (err) {
-    //   console.log(err)
-    // }
-    // Tests the parseRequirements Function
-    // let requirements = parseRequirements(lines);
-
-    //try catch block for backend node call to prevent errors crashing the application
-    // try {
-    //   let call1 = await axios.post("http://localhost:5000/retrieve", { lines: lines, headings: requirements })
-    // }
-    // catch (err) {
-    //   console.log(err)
+    //   await axios.post(RETRIEVE, {err: err})
     // }
   })
 }
@@ -241,7 +241,7 @@ const pushTestCases = async () => {
   // testCases = {folderName: "", Name: "", testSteps: [{Description, expected result, sample data}, ...]}
   let testCases = await parseTestCases(SELECTION);
   //if parseTestCases fails due to bad table styles, stops execution of the function
-  if (!testCases){
+  if (!testCases) {
     return
   }
   // testCaseFolders = [{Name: "", TestCaseFolderId: int}, ...]
@@ -292,7 +292,7 @@ const pushTestStep = async (testCaseId, testStep) => {
     `/test-cases/${testCaseId}/test-steps?username=${USER_OBJ.username}&api-key=${USER_OBJ.password}`;
   try {
     //testStep = {Description: "", SampleData: "", ExpectedResult: ""}
-    
+
     // await axios.post(RETRIEVE, { api: apiCall, description: testStep.Description, smpl: testStep.SampleData, exp: testStep.ExpectedResult })
     //we dont need the response from this - so no assigning to variable.
     await axios.post(apiCall, {
@@ -530,14 +530,15 @@ export async function updateSelectionArray() {
     await context.sync();
     if (selection.text) {
       selection = context.document.getSelection().split(['/r'])
-      context.load(selection, ['text', 'styleBuiltIn', 'style'])
+      //loads the text, style elements, and any images from a given line
+      context.load(selection, ['text', 'styleBuiltIn', 'style', 'inlinePictures'])
       await context.sync();
     }
 
     // if nothing is selected, select the entire body of the document
     else {
       selection = context.document.body.getRange().split(['/r']);
-      context.load(selection, ['text', 'styleBuiltIn', 'style'])
+      context.load(selection, ['text', 'styleBuiltIn', 'style', 'inlinePictures'])
       await context.sync();
     }
     // Testing parsing lines of text from the selection array and logging it
@@ -545,7 +546,7 @@ export async function updateSelectionArray() {
     selection.items.forEach((item) => {
       lines.push({
         text: item.text, style: (item.styleBuiltIn == "Other" ? item.style : item.styleBuiltIn),
-        custom: (item.styleBuiltIn == "Other")
+        custom: (item.styleBuiltIn == "Other"), images: item.inlinePictures
       })
     })
     SELECTION = lines;
@@ -564,6 +565,38 @@ const retrieveTables = async () => {
       tables.push(table);
     }
     return tables;
+  })
+}
+
+const retrieveImages = async () => {
+  //spira API call requires FilenameOrUrl and binary base 64 encoded data
+  //word api has context.document.body.inlinePictures.items[i].getBase64ImageSrc()
+  return Word.run(async (context) => {
+    let imageLines = []
+    await updateSelectionArray();
+    for (let i=0; i<SELECTION.length; i++){
+      //go through each line, if it has images extract them with the line number
+      if(SELECTION[i].images.items[0]){
+        for (let j=0; j<SELECTION[i].images.items.length; j++){
+          //pushes a line number for each image so its known where they get placed
+          imageLines.push(i)
+        }
+      }
+    }
+    let images = context.document.getSelection().inlinePictures;
+    images.load();
+    await context.sync();
+    let imageObjects = []
+    let imageObj;
+    for (let i=0; i<images.items.length; i++){
+      let base64 = images.items[i].getBase64ImageSrc();
+      await context.sync();
+      imageObj = {base64: base64, name: `inline${i}.jpg`, lineNum: imageLines[0]}
+      imageObjects.push(imageObj)
+      imageObj = {}
+      imageLines.shift();
+    }
+    return imageObjects
   })
 }
 /*********************
@@ -828,3 +861,4 @@ const validateTestSteps = (tables, descStyle) => {
   document.getElementById('table-err').style.display = "none"
   return true
 }
+
