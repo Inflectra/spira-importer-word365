@@ -159,10 +159,8 @@ const pushRequirements = async () => {
       object properties (placeholders[i].input)*/
     let placeholderRegex = /\[inline[\d]*\.jpg\]/g
     let placeholders = [...item.Description.matchAll(placeholderRegex)]
-    await axios.post(RETRIEVE, { pholds: placeholders, desc: item.Description })
     //if there are any placeholders, parse for relevant images and update descriptions accordingly
     for (let i = 0; i < placeholders.length; i++) {
-      await axios.post(RETRIEVE, { imgname: images[0].name })
       if (placeholders[i][0] == `[${images[0].name}]`) {
         await pushImage(call.data, item.Description, images[0])
         //because the image has been inserted (if pushImages works) it removes the image from mem.
@@ -189,6 +187,16 @@ const pushRequirements = async () => {
       let call = await axios.post(apiCall, { Name: item.Name, Description: item.Description, RequirementTypeId: 2 });
       await indentRequirement(apiCall, call.data.RequirementId, item.IndentLevel - lastIndent)
       lastIndent = item.IndentLevel;
+      let placeholderRegex = /\[inline[\d]*\.jpg\]/g
+      let placeholders = [...item.Description.matchAll(placeholderRegex)]
+      //if there are any placeholders, parse for relevant images and update descriptions accordingly
+      for (let i = 0; i < placeholders.length; i++) {
+        if (placeholders[i][0] == `[${images[0].name}]`) {
+          await pushImage(call.data, item.Description, images[0])
+          //because the image has been inserted (if pushImages works) it removes the image from mem.
+          images.shift()
+        }
+      }
     }
     catch (err) {
       /*shows the requirement which failed to add. This should work if it fails in the middle of 
@@ -290,8 +298,6 @@ const pushTestStep = async (testCaseId, testStep) => {
     `/test-cases/${testCaseId}/test-steps?username=${USER_OBJ.username}&api-key=${USER_OBJ.password}`;
   try {
     //testStep = {Description: "", SampleData: "", ExpectedResult: ""}
-
-    // await axios.post(RETRIEVE, { api: apiCall, description: testStep.Description, smpl: testStep.SampleData, exp: testStep.ExpectedResult })
     //we dont need the response from this - so no assigning to variable.
     await axios.post(apiCall, {
       Description: testStep.Description,
@@ -356,7 +362,6 @@ const pushImage = async (Artifact, Description, image) => {
   try {
     let imageCall = await axios.post(imageApiCall, { FilenameOrUrl: image.name, BinaryData: image.base64 })
     imgLink = USER_OBJ.url + `/${Artifact.ProjectId}/Attachment/${imageCall.data.AttachmentId}.aspx`
-    await axios.post(RETRIEVE, { link: imgLink })
   }
   catch (err) {
     console.log(err)
@@ -371,7 +376,8 @@ const pushImage = async (Artifact, Description, image) => {
       fullArtifactObj = getArtifactCall.body
     }
     catch (err) {
-      await axios.post(RETRIEVE, { err3: err, fullArtifactObj: fullArtifactObj })
+      //do nothing
+      console.log(err)
     }
 
     // now replace the placeholder in the description with img tags
@@ -388,7 +394,8 @@ const pushImage = async (Artifact, Description, image) => {
       await axios.put(putArtifact, fullArtifactObj)
     }
     catch (err) {
-      await axios.post(RETRIEVE, { err4: err })
+      //do nothing
+      console.log(err)
     }
   }
 }
@@ -678,7 +685,7 @@ const pushArtifacts = async () => {
 
 // Parses an array of range objects based on style and turns them into requirement objects
 const parseRequirements = (lines, images) => {
-  //images = [{base64: "", name: "", lineNum: int}] line= index of lines where an image is located
+  //images = [{base64: "", name: "", lineNum: int}] lineNum = index of lines where an image is located
   let requirements = []
   let styles = retrieveStyles('req-')
   lines.forEach((line, i) => {
