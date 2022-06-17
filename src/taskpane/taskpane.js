@@ -11,8 +11,10 @@ Initialization Functions
 
 const axios = require('axios')
 const superagent = require('superagent');
-//adding content-type header as it is required for spira api v6_0
 //ignore it saying defaults doesnt exist, it does and using default does not work.
+//makes sure put requests uses the proper content-type header
+axios.defaults.headers.put['Content-Type'] = "application/json"
+axios.defaults.headers.put['accept'] = "application/json"
 
 // Global selection array, used throughout
 /*This is a global variable because the word API call functions are unable to return
@@ -45,7 +47,7 @@ const setDefaultDisplay = () => {
 }
 
 const setEventListeners = () => {
-  document.getElementById('test').onclick = () => test();
+  // document.getElementById('test').onclick = () => test();
   document.getElementById('btn-login').onclick = () => loginAttempt();
   document.getElementById('dev-mode').onclick = () => devmode();
   document.getElementById('send-to-spira').onclick = () => pushArtifacts();
@@ -70,10 +72,9 @@ Testing Functions
 *****************/
 //basic testing function for validating code snippet behaviour.
 export async function test() {
-
   return Word.run(async (context) => {
     //retrieveImages gives image objects back which can be used to send to spira.
-    let imageObjects = await retrieveImages();
+    // let imageObjects = await retrieveImages();
     await axios.post(RETRIEVE, { selection: imageObjects });
   })
 }
@@ -129,8 +130,9 @@ const loginAttempt = async () => {
 // Send a requirement to Spira using the requirements API
 const pushRequirements = async () => {
   await updateSelectionArray();
+  let images = await retrieveImages();
   // Tests the parseRequirements Function
-  let requirements = parseRequirements(SELECTION);
+  let requirements = parseRequirements(SELECTION, images);
   //if parseRequirements fails (due to invalid hierarchy) stop the process of pushing requirements.
   if (!requirements) {
     return
@@ -146,11 +148,27 @@ const pushRequirements = async () => {
     return
   }
   let id = document.getElementById('project-select').value;
-  let item = requirements[0]
+  let item = requirements[0];
+  //this call is for the purpose of resetting the indent level each time a set of reqs are sent
   const outdentCall = USER_OBJ.url + "/services/v6_0/RestService.svc/projects/" + id +
     `/requirements/indent/-20?username=${USER_OBJ.username}&api-key=${USER_OBJ.password}`;
   try {
     let call = await axios.post(outdentCall, { Name: item.Name, Description: item.Description, RequirementTypeId: 2 });
+    /*placeholders = [["matched text", index: 45, input: "inputted text"]]
+      ^ matched text is at index 0 (placeholders[i][0]), rest are called like 
+      object properties (placeholders[i].input)*/
+    let placeholderRegex = /\[inline[\d]*\.jpg\]/g
+    let placeholders = [...item.Description.matchAll(placeholderRegex)]
+    await axios.post(RETRIEVE, { pholds: placeholders, desc: item.Description })
+    //if there are any placeholders, parse for relevant images and update descriptions accordingly
+    for (let i = 0; i < placeholders.length; i++) {
+      await axios.post(RETRIEVE, { imgname: images[0].name })
+      if (placeholders[i][0] == `[${images[0].name}]`) {
+        await pushImage(call.data, item.Description, images[0])
+        //because the image has been inserted (if pushImages works) it removes the image from mem.
+        images.shift()
+      }
+    }
   }
   catch (err) {
     /*shows the requirement which failed to add. This should work if it fails in the middle of 
@@ -161,6 +179,7 @@ const pushRequirements = async () => {
       document.getElementById('failed-req-error').style.display = 'none';
     }, 8000)
   }
+  //this handles the rest of the requirements calls which are indented relative to the first.
   for (let i = 1; i < requirements.length; i++) {
     let item = requirements[i];
     const apiCall = USER_OBJ.url + "/services/v6_0/RestService.svc/projects/" + id +
@@ -322,7 +341,57 @@ const pushTestCaseFolder = async (folderName, description) => {
     return null;
   }
 }
+/*image should be the image object with base64 string and relevant metadata, Artifact is the 
+post response from creation, you need to GET the artifact from the spira API each time you 
+PUT due to the Concurrency date being checked.*/
+const pushImage = async (Artifact, Description, image) => {
+  let pid = Artifact.ProjectId
+  //image = {base64: "", name: "", lineNum: int}
+  /*upload images and build link of image location in spira 
+  ({USER_OBJ.url}/{projectID}/Attachment/{AttachmentID}.aspx)*/
+  //Add AttachmentURL to each imageObject after they are uploaded
+  let imgLink;
+  let imageApiCall = USER_OBJ.url + "/services/v6_0/RestService.svc/projects/"
+    + pid + `/documents/file?username=${USER_OBJ.username}&api-key=${USER_OBJ.password}`
+  try {
+    let imageCall = await axios.post(imageApiCall, { FilenameOrUrl: image.name, BinaryData: image.base64 })
+    imgLink = USER_OBJ.url + `/${Artifact.ProjectId}/Attachment/${imageCall.data.AttachmentId}.aspx`
+    await axios.post(RETRIEVE, { link: imgLink })
+  }
+  catch (err) {
+    console.log(err)
+  }
+  let fullArtifactObj;
+  //checks if the artifact is a requirement (if not it is a test case)
+  if (Artifact.RequirementId) {
+    try {
+      let getArtifact = USER_OBJ.url + "/services/v6_0/RestService.svc/projects/" + pid +
+        `/requirements/${Artifact.RequirementId}?username=${USER_OBJ.username}&api-key=${USER_OBJ.password}`;
+      let getArtifactCall = await superagent.get(getArtifact).set('accept', 'application/json').set('Content-Type', 'application/json');
+      fullArtifactObj = getArtifactCall.body
+    }
+    catch (err) {
+      await axios.post(RETRIEVE, { err3: err, fullArtifactObj: fullArtifactObj })
+    }
 
+    // now replace the placeholder in the description with img tags
+    let placeholderRegex = /\[inline[\d]*\.jpg\]/g
+    let placeholders = [...fullArtifactObj.Description.matchAll(placeholderRegex)]
+    /*placeholders[0][0] is the first matched instance - because you need to get for each change
+    this should work each time - each placeholder should have 1 equivalent image in the same
+    order they appear throughout the document.*/
+    fullArtifactObj.Description = fullArtifactObj.Description.replace(placeholders[0][0], `<img alt=${image.name} src=${imgLink}><br />`)
+    //PUT artifact with new description (including img tags now)
+    let putArtifact = USER_OBJ.url + "/services/v6_0/RestService.svc/projects/" + pid +
+      `/requirements?username=${USER_OBJ.username}&api-key=${USER_OBJ.password}`;
+    try {
+      await axios.put(putArtifact, fullArtifactObj)
+    }
+    catch (err) {
+      await axios.post(RETRIEVE, { err4: err })
+    }
+  }
+}
 
 /******************** 
 HTML DOM Manipulation
@@ -608,21 +677,28 @@ const pushArtifacts = async () => {
 }
 
 // Parses an array of range objects based on style and turns them into requirement objects
-const parseRequirements = (lines) => {
+const parseRequirements = (lines, images) => {
+  //images = [{base64: "", name: "", lineNum: int}] line= index of lines where an image is located
   let requirements = []
   let styles = retrieveStyles('req-')
-  lines.forEach((line) => {
+  lines.forEach((line, i) => {
     //removes the indentation tags from the text
     line.text = line.text.replaceAll("\t", "").replaceAll("\r", "")
     let requirement = {};
     // TODO: refactor to use for loop where IndentLevel = styles index rather than a switch statement.
     switch (line.style) {
-      case "normal":
+      case "Normal":
         //only executes if there is a requirement to add the description to.
-        if (requirements.length > 0) {
-          //if it is description text, add it to Description of the previously added item in requirements. This allows multi line descriptions
-          requirements[requirements.length - 1].Description = requirements[requirements.length - 1].Description + ' ' + line.text
+        if (requirements.length > 0 && line.text.length > 2) {
+          //if it is description text, add it to Description of the currently last requirement.
+          requirements[requirements.length - 1].Description = requirements[requirements.length - 1].Description + ` ${line.text}<br />`
         }
+        //checks for images on this line and adds them to the description of the last requirement.
+        images.forEach((image) => {
+          if (image.lineNum == i) {
+            requirements[requirements.length - 1].Description = requirements[requirements.length - 1].Description + ` [${image.name}]<br />`
+          }
+        })
         break
       //Uses the file styles settings to populate into this function. If none set, uses heading1-5
       case styles[0]: {
