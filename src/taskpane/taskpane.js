@@ -162,7 +162,7 @@ const pushRequirements = async () => {
     //if there are any placeholders, parse for relevant images and update descriptions accordingly
     for (let i = 0; i < placeholders.length; i++) {
       if (placeholders[i][0] == `[${images[0].name}]`) {
-        await pushImage(call.data, item.Description, images[0])
+        await pushImage(call.data, images[0])
         //because the image has been inserted (if pushImages works) it removes the image from mem.
         images.shift()
       }
@@ -192,7 +192,7 @@ const pushRequirements = async () => {
       //if there are any placeholders, parse for relevant images and update descriptions accordingly
       for (let i = 0; i < placeholders.length; i++) {
         if (placeholders[i][0] == `[${images[0].name}]`) {
-          await pushImage(call.data, item.Description, images[0])
+          await pushImage(call.data, images[0])
           //because the image has been inserted (if pushImages works) it removes the image from mem.
           images.shift()
         }
@@ -349,8 +349,9 @@ const pushTestCaseFolder = async (folderName, description) => {
 }
 /*image should be the image object with base64 string and relevant metadata, Artifact is the 
 post response from creation, you need to GET the artifact from the spira API each time you 
-PUT due to the Concurrency date being checked.*/
-const pushImage = async (Artifact, Description, image) => {
+PUT due to the Concurrency date being checked by API.*/
+//this function can be optimized to make 1 put request per artifact, rather than 1 per image
+const pushImage = async (Artifact, image) => {
   let pid = Artifact.ProjectId
   //image = {base64: "", name: "", lineNum: int}
   /*upload images and build link of image location in spira 
@@ -370,20 +371,22 @@ const pushImage = async (Artifact, Description, image) => {
   //checks if the artifact is a requirement (if not it is a test case)
   if (Artifact.RequirementId) {
     try {
+      //makes a get request for the target artifact which will be updated to contain an image
       let getArtifact = USER_OBJ.url + "/services/v6_0/RestService.svc/projects/" + pid +
         `/requirements/${Artifact.RequirementId}?username=${USER_OBJ.username}&api-key=${USER_OBJ.password}`;
       let getArtifactCall = await superagent.get(getArtifact).set('accept', 'application/json').set('Content-Type', 'application/json');
+      //This is the body of the get response in its entirety.
       fullArtifactObj = getArtifactCall.body
     }
     catch (err) {
       //do nothing
       console.log(err)
     }
-
     // now replace the placeholder in the description with img tags
     let placeholderRegex = /\[inline[\d]*\.jpg\]/g
+    //gets an array of all the placeholders for images. 
     let placeholders = [...fullArtifactObj.Description.matchAll(placeholderRegex)]
-    /*placeholders[0][0] is the first matched instance - because you need to get for each change
+    /*placeholders[0][0] is the first matched instance - because you need to GET for each change
     this should work each time - each placeholder should have 1 equivalent image in the same
     order they appear throughout the document.*/
     fullArtifactObj.Description = fullArtifactObj.Description.replace(placeholders[0][0], `<img alt=${image.name} src=${imgLink}><br />`)
@@ -397,6 +400,12 @@ const pushImage = async (Artifact, Description, image) => {
       //do nothing
       console.log(err)
     }
+  }
+  else if (Artifact.TestCaseId) {
+    //handle test cases
+  }
+  else {
+    //handle error (should never reach here, but if it does it should be handled)
   }
 }
 
@@ -611,15 +620,33 @@ export async function updateSelectionArray() {
 /* Gets an array of all the tables from the Word document and returns it. */
 const retrieveTables = async () => {
   return Word.run(async (context) => {
-    let selection = context.document.getSelection().tables;
-    context.load(selection);
+    let check = context.document.getSelection();
+    context.load(check, 'text');
     await context.sync();
-    let tables = [];
-    for (let i = 0; i < selection.items.length; i++) {
-      let table = selection.items[i].values;
-      tables.push(table);
+    //checks if there is a selection
+    if (check.text) {
+      let selection = context.document.getSelection().tables;
+      context.load(selection);
+      await context.sync();
+      let tables = [];
+      for (let i = 0; i < selection.items.length; i++) {
+        let table = selection.items[i].values;
+        tables.push(table);
+      }
+      return tables;
     }
-    return tables;
+    //If there is not a selection, retrieve tables from the entire body.
+    else {
+      let selection = context.document.body.tables;
+      context.load(selection);
+      await context.sync();
+      let tables = [];
+      for (let i = 0; i < selection.items.length; i++) {
+        let table = selection.items[i].values;
+        tables.push(table);
+      }
+      return tables;
+    }
   })
 }
 
