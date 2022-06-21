@@ -73,9 +73,10 @@ Testing Functions
 //basic testing function for validating code snippet behaviour.
 export async function test() {
   return Word.run(async (context) => {
-    let body = context.document.body.getHtml();
+    let body = context.document.getSelection();
+    context.load(body, 'Font')
     await context.sync();
-    await axios.post(RETRIEVE, {body: body})
+    await axios.post(RETRIEVE, { body: body })
   })
 }
 
@@ -194,7 +195,7 @@ const pushRequirements = async () => {
       for (let i = 0; i < placeholders.length; i++) {
         if (placeholders[i][0] == `[${images[0].name}]`) {
           await pushImage(call.data, images[0])
-          //because the image has been inserted (if pushImages works) it removes the image from mem.
+          //because the image has been inserted (if pushImages works) it removes the image from the array.
           images.shift()
         }
       }
@@ -362,8 +363,19 @@ const pushImage = async (Artifact, image) => {
   let imageApiCall = USER_OBJ.url + "/services/v6_0/RestService.svc/projects/"
     + pid + `/documents/file?username=${USER_OBJ.username}&api-key=${USER_OBJ.password}`
   try {
-    let imageCall = await axios.post(imageApiCall, { FilenameOrUrl: image.name, BinaryData: image.base64 })
-    imgLink = USER_OBJ.url + `/${Artifact.ProjectId}/Attachment/${imageCall.data.AttachmentId}.aspx`
+    if (Artifact.RequirementId) {
+      let imageCall = await axios.post(imageApiCall, {
+        FilenameOrUrl: image.name, BinaryData: image.base64,
+        AttachedArtifacts: [{ArtifactId: Artifact.RequirementId, ArtifactTypeId: 1}]
+      })
+      imgLink = USER_OBJ.url + `/${pid}/Attachment/${imageCall.data.AttachmentId}.aspx`
+    }
+    else if (Artifact.TestCaseId) {
+      let imageCall = await axios.post(imageApiCall, {
+        FilenameOrUrl: image.name, BinaryData: image.base64,
+        AttachedArtifacts: [{ArtifactId: Artifact.TestCaseId, ArtifactTypeId: 2}]
+      })
+    }
   }
   catch (err) {
     console.log(err)
