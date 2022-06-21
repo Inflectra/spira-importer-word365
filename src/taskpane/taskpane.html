@@ -26,7 +26,7 @@
 <body class="ms-font-m ms-welcome ms-Fabric">
     <header class="header">
         <!--We don't have the image asset file as it stands now-->
-        <!--img alt="" src="" class="header-logo"-->
+        <img alt="Spira Logo" src="/assets/icon-80.png" class="header-logo" />
         <h3 class="header-heading">SpiraPlan Importer<br></h3>
     </header>
     <!--auth page-->
@@ -86,6 +86,9 @@
     <!--Main screen-->
     <div id="main-screen" class="hidden">
         <div id="app-body" class="ms-welcome__main" style="display: none;">
+            <div role="button" id="test" class="action ms-Button ms-Button--default">
+                <span class="ms-Button-label">Test</span>
+            </div>
             <div role="button" id="log-out" class="action ms-Button ms-Button--default">
                 <span class="ms-Button-label">log-out</span>
             </div>
@@ -100,9 +103,12 @@
                 <div role="button" id="select-test-cases" class="action ms-Button ms-Button--primary">
                     <span class="ms-Button-label">Test Cases</span>
                 </div>
+
             </div>
-            <h4 class="hidden error-message" id="empty-styles-err">You currently have unselected styles. Please provide a style for all provided inputs.</h4>
-            <h4 class="hidden error-message" id="duplicate-styles-err">You currently have multiple mappings set to the same style. Please only use each style once.</h4>
+            <h4 class="hidden error-message" id="empty-styles-err">You currently have unselected styles. Please provide
+                a style for all provided inputs.</h4>
+            <h4 class="hidden error-message" id="duplicate-styles-err">You currently have multiple mappings set to the
+                same style. Please only use each style once.</h4>
         </div>
         <!--These style-block elements are hugging the bottom of the page for some reason.
         It looks perfect after you confirm the styles (and they are valid) and the send to
@@ -154,13 +160,13 @@
             </h4>
             <!--Failed-req-error is dynamicly generated on throw in javascript-->
             <h4 id="failed-req-err" class="error-message"></h4>
-            <h4 id="hierarchy-err" class="error-message">Your style heirarchy is invalid for the 
-                selected area. Please make sure requirements only indent 1 additional level 
-                from the previous requirement as specified in the indent level style selectors above. 
+            <h4 id="hierarchy-err" class="error-message">Your style heirarchy is invalid for the
+                selected area. Please make sure requirements only indent 1 additional level
+                from the previous requirement as specified in the indent level style selectors above.
             </h4>
-            <h4 id="table-err" class="error-message">Your description column for one or more tables only includes 
-                empty cells or does not exist. If you do not want to send test steps - do not 
-                select tables in your document. If you do, check your selection and try again. 
+            <h4 id="table-err" class="error-message">Your description column for one or more tables only includes
+                empty cells or does not exist. If you do not want to send test steps - do not
+                select tables in your document. If you do, check your selection and try again.
             </h4>
             <p>4. Check your selection, then send to spira:</p>
             <button class="action ms-Button ms-Button--primary" id="send-to-spira-button" title="Send-to-spira"

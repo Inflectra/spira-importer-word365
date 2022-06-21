@@ -47,7 +47,7 @@ const setDefaultDisplay = () => {
 }
 
 const setEventListeners = () => {
-  // document.getElementById('test').onclick = () => test();
+  document.getElementById('test').onclick = () => test();
   document.getElementById('btn-login').onclick = () => loginAttempt();
   document.getElementById('dev-mode').onclick = () => devmode();
   document.getElementById('send-to-spira').onclick = () => pushArtifacts();
@@ -73,9 +73,9 @@ Testing Functions
 //basic testing function for validating code snippet behaviour.
 export async function test() {
   return Word.run(async (context) => {
-    //retrieveImages gives image objects back which can be used to send to spira.
-    // let imageObjects = await retrieveImages();
-    await axios.post(RETRIEVE, { selection: imageObjects });
+    let body = context.document.body.getHtml();
+    await context.sync();
+    await axios.post(RETRIEVE, {body: body})
   })
 }
 
@@ -131,8 +131,9 @@ const loginAttempt = async () => {
 const pushRequirements = async () => {
   await updateSelectionArray();
   let images = await retrieveImages();
+  let tables = await retrieveTables();
   // Tests the parseRequirements Function
-  let requirements = parseRequirements(SELECTION, images);
+  let requirements = parseRequirements(SELECTION, images, tables);
   //if parseRequirements fails (due to invalid hierarchy) stop the process of pushing requirements.
   if (!requirements) {
     return
@@ -153,7 +154,7 @@ const pushRequirements = async () => {
   const outdentCall = USER_OBJ.url + "/services/v6_0/RestService.svc/projects/" + id +
     `/requirements/indent/-20?username=${USER_OBJ.username}&api-key=${USER_OBJ.password}`;
   try {
-    let call = await axios.post(outdentCall, { Name: item.Name, Description: item.Description, RequirementTypeId: 2 });
+    let firstCall = await axios.post(outdentCall, { Name: item.Name, Description: item.Description, RequirementTypeId: 2 });
     /*placeholders = [["matched text", index: 45, input: "inputted text"]]
       ^ matched text is at index 0 (placeholders[i][0]), rest are called like 
       object properties (placeholders[i].input)*/
@@ -162,7 +163,7 @@ const pushRequirements = async () => {
     //if there are any placeholders, parse for relevant images and update descriptions accordingly
     for (let i = 0; i < placeholders.length; i++) {
       if (placeholders[i][0] == `[${images[0].name}]`) {
-        await pushImage(call.data, images[0])
+        await pushImage(firstCall.data, images[0])
         //because the image has been inserted (if pushImages works) it removes the image from mem.
         images.shift()
       }
@@ -614,6 +615,7 @@ export async function updateSelectionArray() {
       })
     })
     SELECTION = lines;
+    return
   })
 }
 
@@ -711,12 +713,33 @@ const pushArtifacts = async () => {
 }
 
 // Parses an array of range objects based on style and turns them into requirement objects
-const parseRequirements = (lines, images) => {
+const parseRequirements = (lines, images, tables) => {
+  /*this gives a call by value version of localTables as javascript uses call by sharing
+  by default when a variable is passed in (i dont want to manipulate the variable in the parent 
+    function when i manipulate 'tables' in this function)*/
+  let localTables = [...tables]
   //images = [{base64: "", name: "", lineNum: int}] lineNum = index of lines where an image is located
+  //tables = 3d array [tableNumber][row][column]
   let requirements = []
   let styles = retrieveStyles('req-')
   lines.forEach((line, i) => {
-    //removes the indentation tags from the text
+    //identify a table and populate it in the requirement description
+    //this is generally how to identify a table. table lines end in \t(tab).
+    if (line.text.slice(-1) == "\t") {
+      //this is further verification that a line is the first line of a given table
+      let linesRow = []
+      //pushes the x number of lines into linesRow where x is the length of the first tables first row
+      for (let j = 0; j < localTables[0][0].length; j++) {
+        linesRow.push(lines[i + j])
+      }
+      // let checkForTable = rowCheck(localTables[0][0], linesRow);
+      //gating this functionality for testing purposes (changed what I was working on)
+      let checkForTable = false;
+      if (checkForTable) {
+        //populate table or something
+      }
+    }
+    //removes the indentation tags from the text after checking for a table
     line.text = line.text.replaceAll("\t", "").replaceAll("\r", "")
     let requirement = {};
     // TODO: refactor to use for loop where IndentLevel = styles index rather than a switch statement.
@@ -733,6 +756,7 @@ const parseRequirements = (lines, images) => {
             requirements[requirements.length - 1].Description = requirements[requirements.length - 1].Description + ` [${image.name}]<br />`
           }
         })
+
         break
       //Uses the file styles settings to populate into this function. If none set, uses heading1-5
       case styles[0]: {
@@ -964,4 +988,9 @@ const validateTestSteps = (tables, descStyle) => {
   document.getElementById('table-err').style.display = "none"
   return true
 }
+/*first row is the first row of the table being checked - line row is the accompanying
+x number of 'lines' from the global SELECTION object.*/
 
+const rowCheck = (firstRow, lineRow) => {
+  //for loop, compare inner items at i
+}
