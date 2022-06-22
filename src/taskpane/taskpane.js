@@ -72,14 +72,86 @@ Testing Functions
 *****************/
 //basic testing function for validating code snippet behaviour.
 export async function test() {
-  return Word.run(async (context) => {
-    let body = context.document.getSelection();
-    context.load(body, 'Font')
-    await context.sync();
-    await axios.post(RETRIEVE, { body: body })
-  })
+  await axios.post(RETRIEVE, { "uh": "oh" })
+  let newReqs = await newParseRequirements();
+  await axios.post(RETRIEVE, { newReqs: newReqs })
+  // return Word.run(async (context) => {
+  //   let body = context.document.getSelection().split(['\r']);
+  //   let styles = retrieveStyles('req-');
+  //   context.load(body, ['text', 'style', 'styleBuiltIn'])
+  //   await context.sync();
+  //   //body = {items: [{text, style, styleBuiltIn}, ...]}
+  //   //check for next line with a style within the styles
+  //   let descStart, descEnd;
+  //   let requirements = []
+  //   let requirement = { Name: "", Description: "", RequirementTypeId: 1 }
+  //   //need to use .entries to get index within a for .. of loop.
+  //   for (let [i, item] of body.items.entries()) {
+  //     if (styles.includes(item.styleBuiltIn) || styles.includes(item.style)) {
+  //       //if a description has a starting range already, assign descEnd to the previous line
+  //       if (descStart) {
+  //         descEnd = body.items[i - 1]
+  //         //creates an entre "description range" to be gotten as html.
+  //         let descRange = descStart.expandToOrNullObject(descEnd)
+  //         await context.sync();
+  //         //descRange is null if the descEnd is not valid to extend the descStart
+  //         if (!descRange) {
+  //           descRange = descStart
+  //         }
+  //         //clears these fields so it is known the description has been added to its requirement
+  //         descStart = undefined
+  //         descEnd = undefined
+  //         let descHtml = descRange.getHtml();
+  //         await context.sync();
+  //         //m_value is the actual string of the html
+  //         requirement.Description = descHtml.m_value
+  //         try {
+  //           requirements.push(requirement)
+  //           requirement = { Name: item.text, Description: "", RequirementTypeId: 1 }
+  //         }
+  //         catch (err) {
+  //           await axios.post(RETRIEVE, { err: err })
+  //         }
+  //       }
+  //       /*if there isnt a description section between the last name and this name, push to spira
+  //       and start a new requirement*/
+  //       else if (requirement.Name){
+  //         requirements.push(requirement)
+  //         requirement = { Name: item.text, Description: "", RequirementTypeId: 1 }
+  //       }
+  //       else {
+  //         requirement.Name = item.text
+  //       }
+  //       continue
+  //     }
+  //     else {
+  //       if (!descStart) {
+  //         descStart = item
+  //       }
+  //     }
+  //     /*if a line is the last line in the selection/body
+  //      & the current requirement object has least a name, push the last requirement*/
+  //     if (i == body.items.length -1 && requirement.Name){
+  //       if(item.text && descStart){
+  //         descEnd = item
+  //         let descRange = descStart.expandToOrNullObject(descEnd)
+  //         await context.sync();
+  //         //descRange is null if the descEnd is not valid to extend the descStart
+  //         if (!descRange) {
+  //           descRange = descStart
+  //         }
+  //         let descHtml = descRange.getHtml();
+  //         await context.sync();
+  //         requirement.Description = descHtml.m_value
+  //       }
+  //       requirements.push(requirement)
+  //     }
+  //   }
+  //   await axios.post(RETRIEVE, [...requirements, descStart])
+  //   return requirements
+  // }
+  // )
 }
-
 /**************
 Spira API calls
 **************/
@@ -131,14 +203,7 @@ const loginAttempt = async () => {
 // Send a requirement to Spira using the requirements API
 const pushRequirements = async () => {
   await updateSelectionArray();
-  let images = await retrieveImages();
-  let tables = await retrieveTables();
-  // Tests the parseRequirements Function
-  let requirements = parseRequirements(SELECTION, images, tables);
-  //if parseRequirements fails (due to invalid hierarchy) stop the process of pushing requirements.
-  if (!requirements) {
-    return
-  }
+  let requirements = await parseRequirements();
   let lastIndent = 0;
   /*if someone has selected an area with no properly formatted text, show an error explaining
   that and then return this function to prevent sending an empty request.*/
@@ -149,26 +214,13 @@ const pushRequirements = async () => {
     }, 8000)
     return
   }
-  let id = document.getElementById('project-select').value;
-  let item = requirements[0];
+  let pid = document.getElementById('project-select').value;
+  let firstReq = requirements[0];
   //this call is for the purpose of resetting the indent level each time a set of reqs are sent
-  const outdentCall = USER_OBJ.url + "/services/v6_0/RestService.svc/projects/" + id +
+  const outdentCall = USER_OBJ.url + "/services/v6_0/RestService.svc/projects/" + pid +
     `/requirements/indent/-20?username=${USER_OBJ.username}&api-key=${USER_OBJ.password}`;
   try {
-    let firstCall = await axios.post(outdentCall, { Name: item.Name, Description: item.Description, RequirementTypeId: 2 });
-    /*placeholders = [["matched text", index: 45, input: "inputted text"]]
-      ^ matched text is at index 0 (placeholders[i][0]), rest are called like 
-      object properties (placeholders[i].input)*/
-    let placeholderRegex = /\[inline[\d]*\.jpg\]/g
-    let placeholders = [...item.Description.matchAll(placeholderRegex)]
-    //if there are any placeholders, parse for relevant images and update descriptions accordingly
-    for (let i = 0; i < placeholders.length; i++) {
-      if (placeholders[i][0] == `[${images[0].name}]`) {
-        await pushImage(firstCall.data, images[0])
-        //because the image has been inserted (if pushImages works) it removes the image from mem.
-        images.shift()
-      }
-    }
+    let firstCall = await axios.post(outdentCall, firstReq);
   }
   catch (err) {
     /*shows the requirement which failed to add. This should work if it fails in the middle of 
@@ -182,23 +234,13 @@ const pushRequirements = async () => {
   //this handles the rest of the requirements calls which are indented relative to the first.
   for (let i = 1; i < requirements.length; i++) {
     let item = requirements[i];
-    const apiCall = USER_OBJ.url + "/services/v6_0/RestService.svc/projects/" + id +
+    const apiCall = USER_OBJ.url + "/services/v6_0/RestService.svc/projects/" + pid +
       `/requirements?username=${USER_OBJ.username}&api-key=${USER_OBJ.password}`;
     // try catch block to stop application crashing and show error message if call fails
     try {
       let call = await axios.post(apiCall, { Name: item.Name, Description: item.Description, RequirementTypeId: 2 });
       await indentRequirement(apiCall, call.data.RequirementId, item.IndentLevel - lastIndent)
       lastIndent = item.IndentLevel;
-      let placeholderRegex = /\[inline[\d]*\.jpg\]/g
-      let placeholders = [...item.Description.matchAll(placeholderRegex)]
-      //if there are any placeholders, parse for relevant images and update descriptions accordingly
-      for (let i = 0; i < placeholders.length; i++) {
-        if (placeholders[i][0] == `[${images[0].name}]`) {
-          await pushImage(call.data, images[0])
-          //because the image has been inserted (if pushImages works) it removes the image from the array.
-          images.shift()
-        }
-      }
     }
     catch (err) {
       /*shows the requirement which failed to add. This should work if it fails in the middle of 
@@ -366,14 +408,14 @@ const pushImage = async (Artifact, image) => {
     if (Artifact.RequirementId) {
       let imageCall = await axios.post(imageApiCall, {
         FilenameOrUrl: image.name, BinaryData: image.base64,
-        AttachedArtifacts: [{ArtifactId: Artifact.RequirementId, ArtifactTypeId: 1}]
+        AttachedArtifacts: [{ ArtifactId: Artifact.RequirementId, ArtifactTypeId: 1 }]
       })
       imgLink = USER_OBJ.url + `/${pid}/Attachment/${imageCall.data.AttachmentId}.aspx`
     }
     else if (Artifact.TestCaseId) {
       let imageCall = await axios.post(imageApiCall, {
         FilenameOrUrl: image.name, BinaryData: image.base64,
-        AttachedArtifacts: [{ArtifactId: Artifact.TestCaseId, ArtifactTypeId: 2}]
+        AttachedArtifacts: [{ ArtifactId: Artifact.TestCaseId, ArtifactTypeId: 2 }]
       })
     }
   }
@@ -724,97 +766,101 @@ const pushArtifacts = async () => {
   }
 }
 
-// Parses an array of range objects based on style and turns them into requirement objects
-const parseRequirements = (lines, images, tables) => {
-  /*this gives a call by value version of localTables as javascript uses call by sharing
-  by default when a variable is passed in (i dont want to manipulate the variable in the parent 
-    function when i manipulate 'tables' in this function)*/
-  let localTables = [...tables]
-  //images = [{base64: "", name: "", lineNum: int}] lineNum = index of lines where an image is located
-  //tables = 3d array [tableNumber][row][column]
-  let requirements = []
-  let styles = retrieveStyles('req-')
-  lines.forEach((line, i) => {
-    //identify a table and populate it in the requirement description
-    //this is generally how to identify a table. table lines end in \t(tab).
-    if (line.text.slice(-1) == "\t") {
-      //this is further verification that a line is the first line of a given table
-      let linesRow = []
-      //pushes the x number of lines into linesRow where x is the length of the first tables first row
-      for (let j = 0; j < localTables[0][0].length; j++) {
-        linesRow.push(lines[i + j])
-      }
-      // let checkForTable = rowCheck(localTables[0][0], linesRow);
-      //gating this functionality for testing purposes (changed what I was working on)
-      let checkForTable = false;
-      if (checkForTable) {
-        //populate table or something
-      }
-    }
-    //removes the indentation tags from the text after checking for a table
-    line.text = line.text.replaceAll("\t", "").replaceAll("\r", "")
-    let requirement = {};
-    // TODO: refactor to use for loop where IndentLevel = styles index rather than a switch statement.
-    switch (line.style) {
-      case "Normal":
-        //only executes if there is a requirement to add the description to.
-        if (requirements.length > 0 && line.text.length > 2) {
-          //if it is description text, add it to Description of the currently last requirement.
-          requirements[requirements.length - 1].Description = requirements[requirements.length - 1].Description + ` ${line.text}<br />`
-        }
-        //checks for images on this line and adds them to the description of the last requirement.
-        images.forEach((image) => {
-          if (image.lineNum == i) {
-            requirements[requirements.length - 1].Description = requirements[requirements.length - 1].Description + ` [${image.name}]<br />`
+const parseRequirements = async () => {
+  return Word.run(async (context) => {
+    let body = context.document.getSelection().split(['\r']);
+    let styles = retrieveStyles('req-');
+    context.load(body, ['text', 'style', 'styleBuiltIn'])
+    await context.sync();
+    //body = {items: [{text, style, styleBuiltIn}, ...]}
+    //check for next line with a style within the styles
+    let descStart, descEnd;
+    let requirements = []
+    let requirement = { Name: "", Description: "", RequirementTypeId: 2, IndentLevel: 0 }
+    //need to use .entries to get index within a for .. of loop.
+    for (let [i, item] of body.items.entries()) {
+      if (styles.includes(item.styleBuiltIn) || styles.includes(item.style)) {
+        //if a description has a starting range already, assign descEnd to the previous line
+        if (descStart) {
+          descEnd = body.items[i - 1]
+          //creates an entre "description range" to be gotten as html.
+          let descRange = descStart.expandToOrNullObject(descEnd)
+          await context.sync();
+          //descRange is null if the descEnd is not valid to extend the descStart
+          if (!descRange) {
+            descRange = descStart
           }
-        })
-
-        break
-      //Uses the file styles settings to populate into this function. If none set, uses heading1-5
-      case styles[0]: {
-        requirement = { Name: line.text, IndentLevel: 0, Description: "" }
-        requirements.push(requirement)
-        break
+          //clears these fields so it is known the description has been added to its requirement
+          descStart = undefined
+          descEnd = undefined
+          let descHtml = descRange.getHtml();
+          await context.sync();
+          //m_value is the actual string of the html
+          requirement.Description = descHtml.m_value.replaceAll("\r", "")
+          try {
+            requirements.push(requirement)
+            let indent = styles.indexOf(item.styleBuiltIn)
+            if (!indent) {
+              indent = styles.indexOf(item.style)
+            }
+            requirement = {
+              Name: item.text.replaceAll("\r", ""), Description: "",
+              RequirementTypeId: 2, IndentLevel: indent
+            }
+          }
+          catch (err) {
+            await axios.post(RETRIEVE, { err: err })
+          }
+        }
+        /*if there isnt a description section between the last name and this name, push to spira
+        and start a new requirement*/
+        else if (requirement.Name) {
+          requirements.push(requirement)
+          let indent = styles.indexOf(item.styleBuiltIn)
+          if (!indent) {
+            indent = styles.indexOf(item.style)
+          }
+          requirement = {
+            Name: item.text.replaceAll("\r", ""), Description: "",
+            RequirementTypeId: 2, IndentLevel: indent
+          }
+        }
+        //this should only happen on the first (valid) line parsed
+        else {
+          requirement.Name = item.text.replaceAll("\r", "")
+        }
+        continue
       }
-      case styles[1]: {
-        requirement = { Name: line.text, IndentLevel: 1, Description: "" }
-        requirements.push(requirement)
-        break
+      else {
+        if (!descStart) {
+          descStart = item
+        }
       }
-      case styles[2]: {
-        requirement = { Name: line.text, IndentLevel: 2, Description: "" }
+      /*if a line is the last line in the selection/body
+       & the current requirement object has least a name, push the last requirement*/
+      if (i == body.items.length - 1 && requirement.Name) {
+        if (item.text && descStart) {
+          descEnd = item
+          let descRange = descStart.expandToOrNullObject(descEnd)
+          await context.sync();
+          //descRange is null if the descEnd is not valid to extend the descStart
+          if (!descRange) {
+            descRange = descStart
+          }
+          let descHtml = descRange.getHtml();
+          await context.sync();
+          requirement.Description = descHtml.m_value.replaceAll("\r", "")
+        }
         requirements.push(requirement)
-        break
       }
-      case styles[3]: {
-        requirement = { Name: line.text, IndentLevel: 3, Description: "" }
-        requirements.push(requirement)
-        break
-      }
-      case styles[4]:
-        requirement = { Name: line.text, IndentLevel: 4, Description: "" }
-        requirements.push(requirement)
-        break
-      //lines not stylized normal or concurrent with style mappings are discarded.
-      default: break
     }
-    /*if a requirement is populated with an empty name (happens when a line has a style but 
-    no text), remove it from the requirements before moving to the next line*/
-    if (requirement.Name == "") {
-      requirements.pop();
+    if (validateHierarchy(requirements)) {
+      await axios.post(RETRIEVE, [...requirements, descStart])
+      return requirements
     }
-  })
-  //validates the hierarchy complies with spira's constraints. 
-  if (validateHierarchy(requirements)) {
-    //removes the error message when a valid hierarchy is submitted.
-    document.getElementById("hierarchy-err").style.display = "none"
-    return requirements
+    return []
   }
-  //if it doesnt, shows an error message explaining why the requirements did not send.
-  else {
-    document.getElementById("hierarchy-err").style.display = "flex"
-    return false
-  }
+  )
 }
 
 const parseTestCases = async (lines) => {
@@ -825,6 +871,7 @@ const parseTestCases = async (lines) => {
   //tables = [[test case 1 steps], [test case 2 steps], ...]
   //word API functions cannot return normally.
   let tables = await retrieveTables()
+  //makes sure each table has at least 1 description based on chosen table mappings
   if (!validateTestSteps(tables, styles[2])) {
     return false
   }
@@ -846,7 +893,7 @@ const parseTestCases = async (lines) => {
     /*this checks if a line is the first description in the next table (a table that has not been parsed
        still exists, the line ends in \t character, and the text matches the tables first description)*/
     if (tables[0] && lines[i].text == tables[0][0][parseInt(styles[2].slice(-1)) - 1]?.concat("\t") && lines[i].text.slice(-1) == "\t") {
-      let testSteps = parseTable(tables[0])
+      let testSteps = parseTestSteps(tables[0])
       //allows multiple tables to populate the same test case in the case it is multiple tables
       testCase = { ...testCase, testSteps: [...testSteps] }
       /*removes the table which has just been parsed so we dont need to iterate through tables
@@ -870,6 +917,7 @@ const parseTestCases = async (lines) => {
         testCase.Name = lines[i].text
         break
       case "Normal" || "normal":
+        //this only works for 1 line / 1 paragraph descriptions. 
         if (lines[i - 1].style == styles[0]) {
           testCase.folderDescription = lines[i].text
           break
@@ -886,10 +934,7 @@ const parseTestCases = async (lines) => {
   return testCases
 }
 
-// Updates selection array and then loops through it and adds any
-// user-created styles found to its array and returns it. WIP
-
-const parseTable = (table) => {
+const parseTestSteps = (table) => {
   let styles = retrieveStyles('test-')
   let testSteps = []
   //columnNums = column numbers for [description, expected result, sample data]
@@ -910,6 +955,9 @@ const parseTable = (table) => {
   return testSteps
   //return an array of testStep objects
 }
+
+// Updates selection array and then loops through it and adds any
+// user-created styles found to its array and returns it. WIP
 
 const scanForCustomStyles = async () => {
   let customStyles = [];
