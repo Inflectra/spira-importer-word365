@@ -86,24 +86,13 @@
     <!--Main screen-->
     <div id="main-screen" class="hidden">
         <div id="app-body" class="ms-welcome__main" style="display: none;">
-            <div role="button" id="test" class="action ms-Button ms-Button--default">
-                <span class="ms-Button-label">Test</span>
-            </div>
-            <div role="button" id="log-out" class="action ms-Button ms-Button--default">
-                <span class="ms-Button-label">log-out</span>
-            </div>
-            <p>1. Select the product you wish to import to:</p>
+            <p style="left: 0; margin-left: 0">1. Select the product you wish to import to:</p>
             <select id="project-select" class="selectors"></select>
             <!--Turn this into radio buttons of some sort which fit the theming instead of dd-->
             <p>2. Select the artifact type you want to import:</p>
             <div id="artifact-select" class="artifact-buttons">
-                <div role="button" id="select-requirements" class="action ms-Button ms-Button--primary">
-                    <span class="ms-Button-label">Requirements</span>
-                </div>
-                <div role="button" id="select-test-cases" class="action ms-Button ms-Button--primary">
-                    <span class="ms-Button-label">Test Cases</span>
-                </div>
-
+                <button type="button" class="artifact-button" id="select-requirements">Requirements</button>
+                <button type="button" class="artifact-button" id="select-test-cases">Test Cases</button>
             </div>
             <h4 class="hidden error-message" id="empty-styles-err">You currently have unselected styles. Please provide
                 a style for all provided inputs.</h4>
@@ -138,7 +127,7 @@
             <select title="test-style-select1" id="test-style-select1" class="style-selector"></select>
             <label for="test-style-select2" class="style-labels">Test Name:</label>
             <select title="test-style-select2" id="test-style-select2" class="style-selector"></select>
-            <h4>Test Steps:</h4>
+            <h4 style="margin: 0">Test Steps:</h4>
             <label for="test-style-select3" class="style-labels">Description:</label>
             <select title="test-style-select3" id="test-style-select3" class="style-selector"></select>
             <label for="test-style-select4" class="style-labels">Expected Result:</label>
@@ -173,6 +162,11 @@
                 type="button">
                 Send to Spira
             </button>
+        </div>
+        <div id="bottom-buttons">
+            <div role="button" id="log-out" class="action ms-Button ms-Button--default" style="margin-top: 0.5em; margin-left: 5%;">
+                <span class="ms-Button-label">log-out</span>
+            </div>
         </div>
     </div>
     <!-- footer -->

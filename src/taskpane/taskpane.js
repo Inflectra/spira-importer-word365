@@ -47,7 +47,7 @@ const setDefaultDisplay = () => {
 }
 
 const setEventListeners = () => {
-  document.getElementById('test').onclick = () => test();
+  // document.getElementById('test').onclick = () => test();
   document.getElementById('btn-login').onclick = () => loginAttempt();
   document.getElementById('dev-mode').onclick = () => devmode();
   document.getElementById('send-to-spira').onclick = () => pushArtifacts();
@@ -220,6 +220,7 @@ const pushRequirements = async () => {
   const outdentCall = USER_OBJ.url + "/services/v6_0/RestService.svc/projects/" + pid +
     `/requirements/indent/-20?username=${USER_OBJ.username}&api-key=${USER_OBJ.password}`;
   try {
+    //image parsing needs to be re-integrated here and in the try/catch block in the for loop.
     let firstCall = await axios.post(outdentCall, firstReq);
   }
   catch (err) {
@@ -238,6 +239,7 @@ const pushRequirements = async () => {
       `/requirements?username=${USER_OBJ.username}&api-key=${USER_OBJ.password}`;
     // try catch block to stop application crashing and show error message if call fails
     try {
+      //indent requirement working perfectly
       let call = await axios.post(apiCall, { Name: item.Name, Description: item.Description, RequirementTypeId: 2 });
       await indentRequirement(apiCall, call.data.RequirementId, item.IndentLevel - lastIndent)
       lastIndent = item.IndentLevel;
@@ -504,6 +506,8 @@ const openStyleMappings = async (pageTag) => {
   document.getElementById("send-to-spira").style.display = "none"
   //checks the current selected artifact type then loads the appropriate menu
   if (pageTag == "req-") {
+    document.getElementById("select-requirements").style['background-color'] = "#022360"
+    document.getElementById("select-test-cases").style['background-color'] = "#0078d7"
     document.getElementById("req-style-mappings").classList.remove("hidden")
     document.getElementById("test-style-mappings").style.display = 'none'
     document.getElementById("req-style-mappings").style.display = 'flex'
@@ -511,6 +515,8 @@ const openStyleMappings = async (pageTag) => {
   }
   //opens the test cases style mappings if test mappings is the selected artifact type
   else {
+    document.getElementById("select-test-cases").style['background-color'] = "#022360"
+    document.getElementById("select-requirements").style['background-color'] = "#0078d7"
     document.getElementById("req-style-mappings").style.display = 'none'
     document.getElementById("test-style-mappings").style.display = 'flex'
   }
@@ -673,6 +679,124 @@ export async function updateSelectionArray() {
   })
 }
 
+const parseRequirements = async () => {
+  return Word.run(async (context) => {
+    let body = context.document.getSelection();
+    let styles = retrieveStyles('req-');
+    context.load(body, ['text', 'style', 'styleBuiltIn'])
+    await context.sync();
+    //if there is no selection, select the whole body
+    if (!body.text) {
+      body = context.document.body.getRange();
+      context.load(body, ['text', 'style', 'styleBuiltIn'])
+      await context.sync();
+      await axios.post(RETRIEVE, {in: 'here'})
+    }
+    body = body.split(['\r'])
+    context.load(body)
+    await context.sync();
+    //body = {items: [{text, style, styleBuiltIn}, ...]}
+    //check for next line with a style within the styles
+    await axios.post(RETRIEVE, {items: body.items})
+    let descStart, descEnd;
+    let requirements = []
+    let requirement = { Name: "", Description: "", RequirementTypeId: 2, IndentLevel: 0 }
+    //need to use .entries to get index within a for .. of loop.
+    for (let [i, item] of body.items.entries()) {
+      if (styles.includes(item.styleBuiltIn) || styles.includes(item.style)) {
+        //if a description has a starting range already, assign descEnd to the previous line
+        if (descStart) {
+          descEnd = body.items[i - 1]
+          //creates an entre "description range" to be gotten as html.
+          let descRange = descStart.expandToOrNullObject(descEnd)
+          await context.sync();
+          //descRange is null if the descEnd is not valid to extend the descStart
+          if (!descRange) {
+            descRange = descStart
+          }
+          //clears these fields so it is known the description has been added to its requirement
+          descStart = undefined
+          descEnd = undefined
+          let descHtml = descRange.getHtml();
+          await context.sync();
+          //m_value is the actual string of the html
+          requirement.Description = descHtml.m_value.replaceAll("\r", "")
+          try {
+            requirements.push(requirement)
+            let indent = styles.indexOf(item.styleBuiltIn)
+            if (!indent) {
+              indent = styles.indexOf(item.style)
+            }
+            requirement = {
+              Name: item.text.replaceAll("\r", ""), Description: "",
+              RequirementTypeId: 2, IndentLevel: indent
+            }
+          }
+          catch (err) {
+            await axios.post(RETRIEVE, { err: err })
+          }
+        }
+        /*if there isnt a description section between the last name and this name, push to spira
+        and start a new requirement*/
+        else if (requirement.Name) {
+          requirements.push(requirement)
+          let indent = styles.indexOf(item.styleBuiltIn)
+          if (!indent) {
+            indent = styles.indexOf(item.style)
+          }
+          requirement = {
+            Name: item.text.replaceAll("\r", ""), Description: "",
+            RequirementTypeId: 2, IndentLevel: indent
+          }
+        }
+        //this should only happen on the first (valid) line parsed
+        else {
+          requirement.Name = item.text.replaceAll("\r", "")
+        }
+        continue
+      }
+      else {
+        if (!descStart) {
+          descStart = item
+        }
+      }
+      /*if a line is the last line in the selection/body
+       & the current requirement object has least a name,
+       & the name is not the current line's text 
+       push the last requirement*/
+      if (i == body.items.length - 1 && requirement.Name && item.text != requirement.Name) {
+        //
+        if (item.text) {
+          let descRange;
+          if (descStart) {
+            descEnd = item
+
+            descRange = descStart.expandToOrNullObject(descEnd)
+          }
+          else {
+            descRange = descStart
+          }
+          await context.sync();
+          //descRange is null if the descEnd is not valid to extend the descStart
+          if (!descRange) {
+            descRange = descStart
+          }
+          let descHtml = descRange.getHtml();
+          await context.sync();
+          requirement.Description = descHtml.m_value.replaceAll("\r", "")
+        }
+        requirements.push(requirement)
+      }
+    }
+    if (validateHierarchy(requirements)) {
+      await axios.post(RETRIEVE, [...requirements, descStart])
+      return requirements
+    }
+    return []
+  }
+  )
+}
+
 /* Gets an array of all the tables from the Word document and returns it. */
 const retrieveTables = async () => {
   return Word.run(async (context) => {
@@ -764,103 +888,6 @@ const pushArtifacts = async () => {
   else {
     await pushTestCases();
   }
-}
-
-const parseRequirements = async () => {
-  return Word.run(async (context) => {
-    let body = context.document.getSelection().split(['\r']);
-    let styles = retrieveStyles('req-');
-    context.load(body, ['text', 'style', 'styleBuiltIn'])
-    await context.sync();
-    //body = {items: [{text, style, styleBuiltIn}, ...]}
-    //check for next line with a style within the styles
-    let descStart, descEnd;
-    let requirements = []
-    let requirement = { Name: "", Description: "", RequirementTypeId: 2, IndentLevel: 0 }
-    //need to use .entries to get index within a for .. of loop.
-    for (let [i, item] of body.items.entries()) {
-      if (styles.includes(item.styleBuiltIn) || styles.includes(item.style)) {
-        //if a description has a starting range already, assign descEnd to the previous line
-        if (descStart) {
-          descEnd = body.items[i - 1]
-          //creates an entre "description range" to be gotten as html.
-          let descRange = descStart.expandToOrNullObject(descEnd)
-          await context.sync();
-          //descRange is null if the descEnd is not valid to extend the descStart
-          if (!descRange) {
-            descRange = descStart
-          }
-          //clears these fields so it is known the description has been added to its requirement
-          descStart = undefined
-          descEnd = undefined
-          let descHtml = descRange.getHtml();
-          await context.sync();
-          //m_value is the actual string of the html
-          requirement.Description = descHtml.m_value.replaceAll("\r", "")
-          try {
-            requirements.push(requirement)
-            let indent = styles.indexOf(item.styleBuiltIn)
-            if (!indent) {
-              indent = styles.indexOf(item.style)
-            }
-            requirement = {
-              Name: item.text.replaceAll("\r", ""), Description: "",
-              RequirementTypeId: 2, IndentLevel: indent
-            }
-          }
-          catch (err) {
-            await axios.post(RETRIEVE, { err: err })
-          }
-        }
-        /*if there isnt a description section between the last name and this name, push to spira
-        and start a new requirement*/
-        else if (requirement.Name) {
-          requirements.push(requirement)
-          let indent = styles.indexOf(item.styleBuiltIn)
-          if (!indent) {
-            indent = styles.indexOf(item.style)
-          }
-          requirement = {
-            Name: item.text.replaceAll("\r", ""), Description: "",
-            RequirementTypeId: 2, IndentLevel: indent
-          }
-        }
-        //this should only happen on the first (valid) line parsed
-        else {
-          requirement.Name = item.text.replaceAll("\r", "")
-        }
-        continue
-      }
-      else {
-        if (!descStart) {
-          descStart = item
-        }
-      }
-      /*if a line is the last line in the selection/body
-       & the current requirement object has least a name, push the last requirement*/
-      if (i == body.items.length - 1 && requirement.Name) {
-        if (item.text && descStart) {
-          descEnd = item
-          let descRange = descStart.expandToOrNullObject(descEnd)
-          await context.sync();
-          //descRange is null if the descEnd is not valid to extend the descStart
-          if (!descRange) {
-            descRange = descStart
-          }
-          let descHtml = descRange.getHtml();
-          await context.sync();
-          requirement.Description = descHtml.m_value.replaceAll("\r", "")
-        }
-        requirements.push(requirement)
-      }
-    }
-    if (validateHierarchy(requirements)) {
-      await axios.post(RETRIEVE, [...requirements, descStart])
-      return requirements
-    }
-    return []
-  }
-  )
 }
 
 const parseTestCases = async (lines) => {
