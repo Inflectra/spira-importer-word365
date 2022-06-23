@@ -202,7 +202,8 @@ const loginAttempt = async () => {
 
 // Send a requirement to Spira using the requirements API
 const pushRequirements = async () => {
-  await updateSelectionArray();
+  await updateSelectionArray();   
+  let images = await retrieveImages();
   let requirements = await parseRequirements();
   //requirements = [{Name, Description, RequirementTypeId, IndentLevel}]
   let lastIndent = 0;
@@ -223,6 +224,13 @@ const pushRequirements = async () => {
   try {
     //image parsing needs to be re-integrated here and in the try/catch block in the for loop.
     let firstCall = await axios.post(outdentCall, firstReq);
+    //picks out <img> tags from html string (requirement description)
+    let imgRegex = /<img(.|\n)*("|\s)>/g
+    let placeholders = [...firstReq.Description.matchAll(imgRegex)]
+    for (let i=0; i<placeholders.length; i++){
+      pushImage(firstCall.data, images[0])
+      images.shift();
+    }
   }
   catch (err) {
     /*shows the requirement which failed to add. This should work if it fails in the middle of 
@@ -244,6 +252,12 @@ const pushRequirements = async () => {
       let call = await axios.post(apiCall, { Name: item.Name, Description: item.Description, RequirementTypeId: 2 });
       await indentRequirement(apiCall, call.data.RequirementId, item.IndentLevel - lastIndent)
       lastIndent = item.IndentLevel;
+      let imgRegex = /<img(.|\n)*("|\s)>/g
+      let placeholders = [...item.Description.matchAll(imgRegex)]
+      for (let i=0; i<placeholders.length; i++){
+        pushImage(call.data, images[0])
+        images.shift();
+      }
     }
     catch (err) {
       /*shows the requirement which failed to add. This should work if it fails in the middle of 
@@ -399,6 +413,7 @@ post response from creation, you need to GET the artifact from the spira API eac
 PUT due to the Concurrency date being checked by API.*/
 //this function can be optimized to make 1 put request per artifact, rather than 1 per image
 const pushImage = async (Artifact, image) => {
+  await axios.post(RETRIEVE, {arti: Artifact})
   let pid = Artifact.ProjectId
   //image = {base64: "", name: "", lineNum: int}
   /*upload images and build link of image location in spira 
@@ -441,7 +456,7 @@ const pushImage = async (Artifact, image) => {
       console.log(err)
     }
     // now replace the placeholder in the description with img tags
-    let placeholderRegex = /\[inline[\d]*\.jpg\]/g
+    let placeholderRegex = /<img(.|\n)*("|\s)\>/g
     //gets an array of all the placeholders for images. 
     let placeholders = [...fullArtifactObj.Description.matchAll(placeholderRegex)]
     /*placeholders[0][0] is the first matched instance - because you need to GET for each change
