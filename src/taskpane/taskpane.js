@@ -73,7 +73,7 @@ Testing Functions
 //basic testing function for validating code snippet behaviour.
 export async function test() {
   await axios.post(RETRIEVE, { "uh": "oh" })
-  let newReqs = await newParseRequirements();
+  let newReqs = await parseRequirements();
   await axios.post(RETRIEVE, { newReqs: newReqs })
   // return Word.run(async (context) => {
   //   let body = context.document.getSelection().split(['\r']);
@@ -204,6 +204,7 @@ const loginAttempt = async () => {
 const pushRequirements = async () => {
   await updateSelectionArray();
   let requirements = await parseRequirements();
+  //requirements = [{Name, Description, RequirementTypeId, IndentLevel}]
   let lastIndent = 0;
   /*if someone has selected an area with no properly formatted text, show an error explaining
   that and then return this function to prevent sending an empty request.*/
