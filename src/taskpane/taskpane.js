@@ -202,7 +202,9 @@ const loginAttempt = async () => {
 
 // Send a requirement to Spira using the requirements API
 const pushRequirements = async () => {
-  await updateSelectionArray();   
+  // Disable the Send to Spira button until the requirements have sent
+  document.getElementById("send-to-spira-button").disabled = true;
+  await updateSelectionArray();
   let images = await retrieveImages();
   let requirements = await parseRequirements();
   //requirements = [{Name, Description, RequirementTypeId, IndentLevel}]
@@ -221,16 +223,20 @@ const pushRequirements = async () => {
   //this call is for the purpose of resetting the indent level each time a set of reqs are sent
   const outdentCall = USER_OBJ.url + "/services/v6_0/RestService.svc/projects/" + pid +
     `/requirements/indent/-20?username=${USER_OBJ.username}&api-key=${USER_OBJ.password}`;
+  // Make progress bar appear
+  document.getElementById("progress-bar-progress").style.width = 0 %
+    document.getElementById("progress-bar").classList.remove("hidden");
   try {
     //image parsing needs to be re-integrated here and in the try/catch block in the for loop.
     let firstCall = await axios.post(outdentCall, firstReq);
     //picks out <img> tags from html string (requirement description)
     let imgRegex = /<img(.|\n)*("|\s)>/g
     let placeholders = [...firstReq.Description.matchAll(imgRegex)]
-    for (let i=0; i<placeholders.length; i++){
+    for (let i = 0; i < placeholders.length; i++) {
       pushImage(firstCall.data, images[0])
       images.shift();
     }
+    updateProgressBar(1, requirements.length);
   }
   catch (err) {
     /*shows the requirement which failed to add. This should work if it fails in the middle of 
@@ -254,10 +260,11 @@ const pushRequirements = async () => {
       lastIndent = item.IndentLevel;
       let imgRegex = /<img(.|\n)*("|\s)>/g
       let placeholders = [...item.Description.matchAll(imgRegex)]
-      for (let i=0; i<placeholders.length; i++){
+      for (let j = 0; j < placeholders.length; j++) {
         pushImage(call.data, images[0])
         images.shift();
       }
+      updateProgressBar(i + 1, requirements.length);
     }
     catch (err) {
       /*shows the requirement which failed to add. This should work if it fails in the middle of 
@@ -269,6 +276,9 @@ const pushRequirements = async () => {
       }, 8000)
     }
   }
+  // Hide progress bar again now that it's finished, and enable Send to Spira button
+  document.getElementById("progress-bar").classList.add("hidden");
+  document.getElementById("send-to-spira-button").disabled = false;
   return
 }
 
@@ -413,7 +423,7 @@ post response from creation, you need to GET the artifact from the spira API eac
 PUT due to the Concurrency date being checked by API.*/
 //this function can be optimized to make 1 put request per artifact, rather than 1 per image
 const pushImage = async (Artifact, image) => {
-  await axios.post(RETRIEVE, {arti: Artifact})
+  await axios.post(RETRIEVE, { arti: Artifact })
   let pid = Artifact.ProjectId
   //image = {base64: "", name: "", lineNum: int}
   /*upload images and build link of image location in spira 
@@ -637,6 +647,13 @@ const clearDropdownElement = (element_id) => {
   }
 }
 
+const updateProgressBar = (current, total) => {
+  const MAX_WIDTH = 80; //CURRENTLY HARDCODED TO BE the same as the width of the progress-bar CSS element
+  let width = current / total * MAX_WIDTH;
+  let bar = document.getElementById("progress-bar-progress");
+  bar.style.width = width + "%";
+}
+
 /********************
 Word/Office API calls
 ********************/
@@ -706,14 +723,14 @@ const parseRequirements = async () => {
       body = context.document.body.getRange();
       context.load(body, ['text', 'style', 'styleBuiltIn'])
       await context.sync();
-      await axios.post(RETRIEVE, {in: 'here'})
+      await axios.post(RETRIEVE, { in: 'here' })
     }
     body = body.split(['\r'])
     context.load(body)
     await context.sync();
     //body = {items: [{text, style, styleBuiltIn}, ...]}
     //check for next line with a style within the styles
-    await axios.post(RETRIEVE, {items: body.items})
+    await axios.post(RETRIEVE, { items: body.items })
     let descStart, descEnd;
     let requirements = []
     let requirement = { Name: "", Description: "", RequirementTypeId: 2, IndentLevel: 0 }

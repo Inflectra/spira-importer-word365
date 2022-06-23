@@ -223,6 +223,19 @@ ul {
     margin-top: 50px;
     overflow-y: auto;
 }
+#progress-bar {
+    margin-left: auto;
+    margin-right: auto;
+    outline: 1px solid black;
+    width: 80%;
+    background-color: rgb(218, 218, 218);
+}
+
+#progress-bar-progress {
+    width: 1%;
+    height: 12px;
+    background-color:rgb(96, 236, 96);
+}
 
 .styles-block {
     /*display:flex is assigned when the block is shown, display:none when hidden*/
