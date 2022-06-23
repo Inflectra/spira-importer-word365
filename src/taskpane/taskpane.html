@@ -1,0 +1,123 @@
+<!-- Copyright (c) Microsoft Corporation. All rights reserved. Licensed under the MIT License. -->
+<!-- This file shows how to design a first-run page that provides a welcome screen to the user about the features of the add-in. -->
+
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8" />
+    <meta http-equiv="X-UA-Compatible" content="IE=Edge" />
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Contoso Task Pane Add-in</title>
+
+    <!-- Office JavaScript API -->
+    <script type="text/javascript" src="https://appsforoffice.microsoft.com/lib/1.1/hosted/office.js"></script>
+
+    <!-- For more information on Fluent UI, visit https://developer.microsoft.com/fluentui#/. -->
+    <link rel="stylesheet"
+        href="https://static2.sharepointonline.com/files/fabric/office-ui-fabric-core/9.6.1/css/fabric.min.css" />
+    <!-- For more information on Office UI Fabric, visit https://developer.microsoft.com/fabric. -->
+    <link rel="stylesheet"
+        href="https://static2.sharepointonline.com/files/fabric/office-ui-fabric-js/1.2.0/css/fabric.components.min.css" />
+    <!-- Template styles -->
+    <link href="taskpane.css" rel="stylesheet" type="text/css" />
+</head>
+
+<body class="ms-font-m ms-welcome ms-Fabric">
+    <!--auth page-->
+    <div class="panel" id="panel-auth">
+
+        <p class="well">
+            Learn how to use this app via the <a id="lnk-help-login" href="#">mini help</a>, or read our <a
+                target="_blank"
+                href="https://spiradoc.inflectra.com/Unit-Testing-Integration/Using-Test-Runner-For-Excel/">full
+                documentation</a>.
+        </p>
+
+        <h3 class="mt-md mb-0">1. Connect to your Spira app</h3>
+        <h4 id="login-err-message" class="error-message hidden">Your credentials are invalid</h4>
+        <ul class="form">
+            <li class="form-pair">
+                <label class="form-label ms-Label" for="input-url">
+                    Spira URL:
+                </label>
+                <input class="form-input" id="input-url" name="URL" placeholder="https://<your-site-name>.com"
+                    type="text" />
+            </li>
+            <li class="form-pair">
+                <label class="form-label ms-Label" for="input-username">
+                    User Name:
+                </label>
+                <input class="form-input" id="input-username" name="user-name" placeholder="User Name" type="text" />
+            </li>
+            <li class="form-pair">
+                <label class="form-label ms-Label" for="input-password">
+                    RSS Token:
+                </label>
+                <input class="form-input" id="input-password" name="password" placeholder="{Your-RSS-Token}"
+                    type="password" />
+            </li>
+        </ul>
+
+        <div class="mt-md">
+            <button class="action ms-Button ms-Button--primary" id="btn-login"
+                title="Login using details filled out above" type="button">
+                Log In
+            </button>
+            <button class="ms-Button ms-Button--default" id="btn-help-login" title="View help screens" type="button">
+                Help
+            </button>
+            <!--Remove this before deployment-->
+            <button class="ms-Button ms-Button--default" id="dev-mode" title="View help screens" type="button">
+                DevMode
+            </button>
+        </div>
+    </div>
+    <!--Main screen-->
+    <div id="main-screen" class="hidden">
+        <header class="ms-welcome__header ms-bgColor-neutralLighter">
+            <img width="90" height="90" src="../../assets/logo-filled.png" alt="Contoso" title="Contoso" />
+            <h1 class="ms-font-su">Welcome</h1>
+        </header>
+        <section id="sideload-msg" class="ms-welcome__main">
+            <h2 class="ms-font-xl">Please sideload your add-in to see app body.</h2>
+        </section>
+        <div id="app-body" class="ms-welcome__main" style="display: none;">
+            <select id="project-select"></select>
+            <select id="artifact-select">
+                <option id="artifact-requirements" value="requirements">Requirements</option>
+                <option id="artifact-test-cases" value="test-cases">Test Cases</option>
+            </select>
+            <div role="button" id="log-out" class="ms-welcome__action ms-Button ms-Button--hero ms-font-xl">
+                <span class="ms-Button-label">log-out</span>
+            </div>
+            <div role="button" id="test" class="ms-welcome__action ms-Button ms-Button--hero ms-font-xl">
+                <span class="ms-Button-label">test</span>
+            </div>
+            <div role="button" id="send-artifacts" class="ms-welcome__action ms-Button ms-Button--hero ms-font-xl">
+                <span class="ms-Button-label">Send to Spira</span>
+            </div>
+            <div role="button" id="style-mappings-button"
+                class="ms-welcome__action ms-Button ms-Button--hero ms-font-xl">
+                <span class="ms-Button-label">Style Mappings</span>
+            </div>
+        </div>
+    </div>
+    <!--Style mappings page-->
+    <div id="style-mappings" class="styles-page hidden">
+        <h1>Select the styles used:</h1>
+        <select title="style-select1" id="style-select1" class="style-selector"></select>
+        <select title="style-select2" id="style-select2" class="style-selector"></select>
+        <select title="style-select3" id="style-select3" class="style-selector"></select>
+        <select title="style-select4" id="style-select4" class="style-selector"></select>
+        <select title="style-select5" id="style-select5" class="style-selector"></select>
+        <div role="button" id="confirm-style-mappings" class="ms-welcome__action ms-Button ms-Button--hero ms-font-xl">
+            <span class="ms-Button-label">Confirm</span>
+        </div>
+        <div role="button" id="cancel-style-mappings" class="ms-welcome__action ms-Button ms-Button--hero ms-font-xl">
+            <span class="ms-Button-label">Cancel</span>
+        </div>
+    </div>
+</body>
+
+</html>
