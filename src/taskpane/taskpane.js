@@ -74,7 +74,8 @@ Testing Functions
 export async function test() {
   await axios.post(RETRIEVE, { "uh": "oh" })
   let newReqs = await parseRequirements();
-  await axios.post(RETRIEVE, { newReqs: newReqs })
+  let text = convertToListElems(newReqs[0].Description);
+  await axios.post(RETRIEVE, { elements: text })
   // return Word.run(async (context) => {
   //   let body = context.document.getSelection().split(['\r']);
   //   let styles = retrieveStyles('req-');
@@ -753,7 +754,7 @@ const parseRequirements = async () => {
           let descHtml = descRange.getHtml();
           await context.sync();
           //m_value is the actual string of the html
-          requirement.Description = descHtml.m_value.replaceAll("\r", "")
+          requirement.Description = await filterDescription(descHtml.m_value.replaceAll("\r", ""));
           try {
             requirements.push(requirement)
             let indent = styles.indexOf(item.styleBuiltIn)
@@ -816,7 +817,7 @@ const parseRequirements = async () => {
           }
           let descHtml = descRange.getHtml();
           await context.sync();
-          requirement.Description = descHtml.m_value.replaceAll("\r", "")
+          requirement.Description = await filterDescription(descHtml.m_value.replaceAll("\r", ""));
         }
         requirements.push(requirement)
       }
@@ -1113,4 +1114,48 @@ x number of 'lines' from the global SELECTION object.*/
 
 const rowCheck = (firstRow, lineRow) => {
   //for loop, compare inner items at i
+}
+
+/* Takes a single <p> to </p> element and turns it into a list element if it has the necessary class*/
+const convertToListElem = (pElem) => {  
+  let orderedRegEx = />.{1,2}<span/g;
+  if (pElem.includes("class=MsoListParagraphCxSpFirst")) { //Case for if the element is the first element in a list
+    //Must add extra html element codes at the beginning and end of the list to wrap the list elements together.
+    if (!pElem.includes("·")) { // Checks for if it should start an ordered or unordered list
+      pElem = "<ol>" + pElem;
+    }
+    else { 
+      pElem = "<ul>" + pElem;
+    }
+    pElem = pElem.replace("<p ", "<li ").replace("</p>", "</li>").replaceAll(orderedRegEx, "><span");
+    pElem = pElem.replaceAll("&nbsp;", "");
+  }
+  else if (pElem.includes("class=MsoListParagraphCxSpMiddle")) { //Case for if the element is within the same list.
+    pElem = pElem.replace("<p ", "<li ").replace("</p>", "</li>").replaceAll(orderedRegEx, "><span");
+    pElem = pElem.replaceAll("&nbsp;", "");
+  }
+  else if (pElem.includes("class=MsoListParagraphCxSpLast")) { //Case for if the element is the last element in a list.
+    pElem = pElem.replace("<p ", "<li ").replace("</p>", "</li>").replaceAll(orderedRegEx, "><span");
+    pElem = pElem.replaceAll("&nbsp;", "");
+    if (!pElem.includes("·")) {
+      pElem += "</ol>"
+    }
+    else {
+      pElem += "</ol>"
+    }
+  }
+  //Case for if the element is not part of a list is handled by just returning it back.
+  return pElem;
+}
+
+/* Filters a string and changes any word-outputted lists to properly formatted html lists. INDENTING IS NOT YET IMPLEMENTED*/
+const filterDescription = async (description) => {
+  let startRegEx = /(<p )(.|\n|\s|\r)*?(<\/p>)/gu;
+  let elementsObj = [...description.matchAll(startRegEx)];
+/* Use elementsObj[i][0] in order to reach the matched strings. */
+  for (let i = 0; i < elementsObj.length; i++) {
+    let elem = elementsObj[i][0];
+    description = description.replace(elem, convertToListElem(elem));
+  }
+  return description
 }
