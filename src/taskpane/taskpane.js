@@ -941,7 +941,7 @@ const newParseTestCases = async () => {
         let testSteps = []
         //this is true when the "Header rows?" box is checked
         let headerCheck = document.getElementById("header-check").checked
-        if (headerCheck){
+        if (headerCheck) {
           //if the user says there are header rows, remove the first row of the table being parsed.
           testStepTable.shift();
         }
@@ -949,7 +949,7 @@ const newParseTestCases = async () => {
         for (let [i, row] of testStepTable.entries()) {
           //skips lines with empty descriptions to prevent pushing empty steps (returns null if no match)
           let emptyStepRegex = /<p(.)*?>\&nbsp\;<\/p>/g
-          
+
           if (row[parseInt(styles[2].slice(-1)) - 1].match(emptyStepRegex)) {
             continue
           }
@@ -1239,12 +1239,7 @@ const convertToListElem = (pElem) => {
   let orderedRegEx = />.{1,2}<span/g;
   if (pElem.includes("class=MsoListParagraphCxSpFirst")) { //Case for if the element is the first element in a list
     //Must add extra html element codes at the beginning and end of the list to wrap the list elements together.
-    if (!pElem.includes("·")) { // Checks for if it should start an ordered or unordered list
-      pElem = "<ol>" + pElem;
-    }
-    else {
-      pElem = "<ul>" + pElem;
-    }
+    pElem = listDelimiter(pElem, true); // starts a list
     pElem = pElem.replace("<p ", "<li ").replace("</p>", "</li>").replaceAll(orderedRegEx, "><span");
     pElem = pElem.replaceAll("&nbsp;", "");
   }
@@ -1253,32 +1248,15 @@ const convertToListElem = (pElem) => {
     pElem = pElem.replaceAll("&nbsp;", "");
   }
   else if (pElem.includes("class=MsoListParagraphCxSpLast")) { //Case for if the element is the last element in a list.
-    let unordered = pElem.includes("·"); // Makes sure the function still knows it is an unordered list after replacing the dot
+    pElem = listDelimiter(pElem, false); // ends a list
     pElem = pElem.replace("<p ", "<li ").replace("</p>", "</li>").replaceAll(orderedRegEx, "><span");
     pElem = pElem.replaceAll("&nbsp;", "");
-    if (!unordered) {
-      pElem += "</ol>"
-    }
-    else {
-      pElem += "</ul>"
-    }
   }
   else if (pElem.includes("class=MsoListParagraph")) { //Case for if the element is the only element in the list
-    let unordered = pElem.includes("·"); // Makes sure the function still knows it is an unordered list after replacing the dot
-    if (!unordered) { // Checks for if it should start an ordered or unordered list
-      pElem = "<ol>" + pElem;
-    }
-    else {
-      pElem = "<ul>" + pElem;
-    }
+    pElem = listDelimiter(pElem, true); // starts a list
+    pElem = listDelimiter(pElem, false); // ends a list
     pElem = pElem.replace("<p ", "<li ").replace("</p>", "</li>").replaceAll(orderedRegEx, "><span");
     pElem = pElem.replaceAll("&nbsp;", "");
-    if (!unordered) { //Checks for how it should end the list
-      pElem += "</ol>"
-    }
-    else {
-      pElem += "</ul>"
-    }
   }
   //Case for if the element is not part of a list is handled by just returning it back.
   return pElem;
@@ -1288,7 +1266,7 @@ const convertToListElem = (pElem) => {
 const filterDescription = async (description) => {
   let startRegEx = /(<p )(.|\n|\s|\r)*?(<\/p>)/gu;
   let elemList = [...description.matchAll(startRegEx)];
-  description = convertToIndentedList(description, elemList);
+  description = await convertToIndentedList(description, elemList);
   return description
 }
 
@@ -1296,11 +1274,68 @@ const filterDescription = async (description) => {
    Then it keeps track of the current indent level as it loops through the array, processing the elements
    through convertToListElem and adding an extra <ul> or <ol> as necessary to properly turn them into html 
    lists. */
-const convertToIndentedList = (description, elemList) => {
+const convertToIndentedList = async (description, elemList) => {
+  let indentLevel = 0;
   for (let i = 0; i < elemList.length; i++) {
     /* Use elemList[i][0] in order to reach the matched strings. */
     let elem = elemList[i][0];
-    description = description.replace(elem, convertToListElem(elem));
+    await axios.post(RETRIEVE, { entire_element: elem });
+    let alteredElem = "" + elem;
+    let result = alteredElem.match(/style='margin-left:(\d)\.(\d)in/);
+    if (result) {
+      let curIndentLevel = (parseInt(result[1]) * 2 + parseInt(result[2]) * 0.2) - 1
+      while (curIndentLevel > indentLevel) {
+        await axios.post(RETRIEVE, { growing: "indent" });
+        alteredElem = listDelimiter(alteredElem, true);
+        indentLevel++;
+      }
+      while (curIndentLevel < indentLevel) {
+        await axios.post(RETRIEVE, { shrinking: "indent" });
+        alteredElem = listDelimiter(alteredElem, false, true);
+        indentLevel--;
+      }
+      await axios.post(RETRIEVE, { match: result[0], indentLevel: curIndentLevel, ordered: !elem.includes("·") });
+    }
+    else {
+      let curIndentLevel = 0;
+      while (curIndentLevel < indentLevel) {
+        await axios.post(RETRIEVE, { shrinking: "indent" });
+        alteredElem = listDelimiter(alteredElem, false, true);
+        indentLevel--;
+      }
+    }
+    description = description.replace(elem, convertToListElem(alteredElem));
   }
   return description;
+}
+
+/* Adds a <ul> or <ol> element based on the parameters and if the element is an unordered or ordered list. */
+const listDelimiter = (elem, start, endPrefix) => {
+  if (start) {
+    if (elem.includes(">·<span") || elem.includes(">o<span") || elem.includes(">§<span")) { // Checks for if it should start an unordered or ordered list
+      elem = "<ul>" + elem;
+    }
+    else {
+      elem = "<ol>" + elem;
+    }
+  }
+  else {
+    if (endPrefix) { //case for when it needs to end the previous list element instead of the current one
+      if (elem.includes(">·<span") || elem.includes(">o<span") || elem.includes(">§<span")) { // Checks for if it should end an unordered or ordered list
+        elem = "</ul>" + elem;
+      }
+      else {
+        elem = "</ol>" + elem;
+      }
+    }
+    else {
+      if (elem.includes(">·<span") || elem.includes(">o<span") || elem.includes(">§<span")) { // Checks for if it should end an unordered or ordered list
+        elem = elem + "</ul>";
+      }
+      else {
+        elem = elem + "</ol>";
+      }
+    }
+  }
+  return elem;
 }
