@@ -252,7 +252,7 @@ const pushTestCases = async () => {
     if (!folder) { // If the folder doesn't exist yet, make it and then make the 
       let newFolder = {}
       newFolder.TestCaseFolderId = await pushTestCaseFolder(testCase.folderName, testCase.folderDescription);
-      newFolder.folderName = testCase.folderName;
+      newFolder.Name = testCase.folderName;
       folder = newFolder
       testCaseFolders.push(newFolder);
     }
@@ -944,7 +944,7 @@ const newParseTestCases = async () => {
         for (let row of testStepTable) {
           //skips lines with empty descriptions to prevent pushing empty steps (returns null if no match)
           let emptyStepRegex = /<p(.)*?>\&nbsp\;<\/p>/g
-          if(row[parseInt(styles[2].slice(-1)) - 1].match(emptyStepRegex)){
+          if (row[parseInt(styles[2].slice(-1)) - 1].match(emptyStepRegex)) {
             continue
           }
           testStep = { Description: row[parseInt(styles[2].slice(-1)) - 1], ExpectedResult: row[parseInt(styles[3].slice(-1)) - 1], SampleData: row[parseInt(styles[4].slice(-1)) - 1] }
