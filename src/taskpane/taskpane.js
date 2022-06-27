@@ -146,8 +146,8 @@ const pushRequirements = async () => {
   const outdentCall = USER_OBJ.url + "/services/v6_0/RestService.svc/projects/" + pid +
     `/requirements/indent/-20?username=${USER_OBJ.username}&api-key=${USER_OBJ.password}`;
   // Make progress bar appear
-  document.getElementById("progress-bar-progress").style.width = 0 %
-    document.getElementById("progress-bar").classList.remove("hidden");
+  document.getElementById("progress-bar-progress").style.width = "0%";
+  document.getElementById("progress-bar").classList.remove("hidden");
   try {
     //image parsing needs to be re-integrated here and in the try/catch block in the for loop.
     let firstCall = await axios.post(outdentCall, firstReq);
@@ -237,9 +237,12 @@ const indentRequirement = async (apiCall, id, indent) => {
 */
 const pushTestCases = async () => {
   let images = await retrieveImages();
+  document.getElementById("send-to-spira-button").disabled = true;
   await updateSelectionArray();
   // testCases = {folderName: "", Name: "", testSteps: [{Description, expected result, sample data}, ...]}
   let testCases = await newParseTestCases();
+  document.getElementById("progress-bar-progress").style.width = "0%";
+  document.getElementById("progress-bar").classList.remove("hidden");
   //if parseTestCases fails due to bad table styles, stops execution of the function
   if (!testCases) {
     return
@@ -267,7 +270,10 @@ const pushTestCases = async () => {
         images.shift();
       }
     }
+    updateProgressBar(i + 1, testCases.length);
   }
+  document.getElementById("progress-bar").classList.add("hidden");
+  document.getElementById("send-to-spira-button").disabled = false;
 }
 
 const retrieveTestCaseFolders = async () => {
@@ -348,7 +354,7 @@ const pushImage = async (Artifact, image, testCaseId) => {
   else {
     pid = document.getElementById("project-select").value
   }
-  await axios.post(RETRIEVE, {pid: pid})
+  await axios.post(RETRIEVE, { pid: pid })
   //image = {base64: "", name: "", lineNum: int}
   /*upload images and build link of image location in spira 
   ({USER_OBJ.url}/{projectID}/Attachment/{AttachmentID}.aspx)*/
@@ -431,7 +437,7 @@ const pushImage = async (Artifact, image, testCaseId) => {
       //do nothing
       console.log(err)
     }
-    await axios.post(RETRIEVE, {place: "Before placeholder"})
+    await axios.post(RETRIEVE, { place: "Before placeholder" })
     // now replace the placeholder in the description with img tags
     let placeholderRegex = /<img(.|\n|\r)*?("|\s)>/g
     //gets an array of all the placeholders for images. 
@@ -441,14 +447,14 @@ const pushImage = async (Artifact, image, testCaseId) => {
     order they appear throughout the document.*/
     fullArtifactObj.Description = fullArtifactObj.Description.replace(placeholders[0][0], `<img alt=${image.name} src=${imgLink}><br />`)
     //PUT artifact with new description (including img tags now)
-    axios.post(RETRIEVE, {arti: fullArtifactObj})
+    axios.post(RETRIEVE, { arti: fullArtifactObj })
     let putArtifact = USER_OBJ.url + "/services/v6_0/RestService.svc/projects/" + pid +
       `/test-cases/${fullArtifactObj.TestCaseId}/test-steps?username=${USER_OBJ.username}&api-key=${USER_OBJ.password}`;
     try {
       await axios.put(putArtifact, fullArtifactObj)
     }
     catch (err) {
-      await axios.post(RETRIEVE, {err: err})
+      await axios.post(RETRIEVE, { err: err })
       //do nothing
       console.log(err)
     }
@@ -720,7 +726,7 @@ const parseRequirements = async () => {
           let descHtml = descRange.getHtml();
           await context.sync();
           //m_value is the actual string of the html
-          requirement.Description = await filterDescription(descHtml.m_value.replaceAll("\r", ""));
+          requirement.Description = await filterForLists(descHtml.m_value.replaceAll("\r", ""));
           try {
             requirements.push(requirement)
             let indent = styles.indexOf(item.styleBuiltIn)
@@ -782,7 +788,7 @@ const parseRequirements = async () => {
           }
           let descHtml = descRange.getHtml();
           await context.sync();
-          requirement.Description = await filterDescription(descHtml.m_value.replaceAll("\r", ""));
+          requirement.Description = await filterForLists(descHtml.m_value.replaceAll("\r", ""));
         }
         requirements.push(requirement)
       }
@@ -935,7 +941,7 @@ const newParseTestCases = async () => {
             testCase.folderDescription = descHtml.m_value.replaceAll("\r", "")
           }
           else {
-            testCase.testCaseDescription = descHtml.m_value.replaceAll("\r", "")
+            testCase.testCaseDescription = await filterForLists(descHtml.m_value.replaceAll("\r", "")); // filter for LISTS!!!
           }
           if (item.style == styles[0] || item.styleBuiltIn == styles[0]) {
             if (testCase.Name) {
@@ -1020,6 +1026,8 @@ const newParseTestCases = async () => {
           let descHtml = descRange.getHtml();
           await context.sync();
           testCase.testCaseDescription = descHtml.m_value.replaceAll("\r", "")
+          await context.sync()
+          testCase.testCaseDescription = await filterForLists(descHtml.m_value.replaceAll("\r", ""))
         }
         //dont push a nameless testCase.
         if (testCase.Name) {
@@ -1305,7 +1313,7 @@ const convertToListElem = (pElem) => {
 }
 
 /* Filters a string and changes any word-outputted lists to properly formatted html lists. INDENTING IS NOT YET IMPLEMENTED*/
-const filterDescription = async (description) => {
+const filterForLists = async (description) => {
   let startRegEx = /(<p )(.|\n|\s|\r)*?(<\/p>)/gu;
   let elemList = [...description.matchAll(startRegEx)];
   description = await convertToIndentedList(description, elemList);
