@@ -236,6 +236,7 @@ const indentRequirement = async (apiCall, id, indent) => {
   Sends all of the test case folders and test cases found in the selection to the Spira instance
 */
 const pushTestCases = async () => {
+  let images = await retrieveImages();
   await updateSelectionArray();
   // testCases = {folderName: "", Name: "", testSteps: [{Description, expected result, sample data}, ...]}
   let testCases = await newParseTestCases();
@@ -260,21 +261,15 @@ const pushTestCases = async () => {
     let testCaseId = await pushTestCase(testCase.Name, testCase.testCaseDescription, folder.TestCaseFolderId);
     // now make the testSteps
     for (let j = 0; j < testCase.testSteps.length; j++) {
-      await pushTestStep(testCaseId, testCase.testSteps[j]);
+      let step = await pushTestStep(testCaseId, testCase.testSteps[j]);
+      if (images[0]) {
+        await pushImage(step, images[0]);
+        images.shift();
+      }
     }
   }
-
-
-  // CURRENTLY USED FOR TESTING
-  // let folderResponse = await pushTestCaseFolder("Test Folder", "First Functional Folder Test");
-  // let testCaseResponse = await pushTestCase("test case", folderResponse)
-  // try {
-  //   let call1 = await axios.post("http://localhost:5000/retrieve", { Folder: folderResponse, TestCase: testCaseResponse })
-  // }
-  // catch (err) {
-  //   console.log(err);
-  // }
 }
+
 const retrieveTestCaseFolders = async () => {
   let projectId = document.getElementById('project-select').value;
   let apiCall = USER_OBJ.url + "/services/v6_0/RestService.svc/projects/" + projectId +
@@ -292,11 +287,12 @@ const pushTestStep = async (testCaseId, testStep) => {
   try {
     //testStep = {Description: "", SampleData: "", ExpectedResult: ""}
     //we dont need the response from this - so no assigning to variable.
-    await axios.post(apiCall, {
+    let stepCall = await axios.post(apiCall, {
       Description: testStep.Description,
       SampleData: testStep.SampleData,
       ExpectedResult: testStep.ExpectedResult
     })
+    return stepCall.data
   }
   catch (err) {
     console.log(err)
@@ -345,7 +341,13 @@ post response from creation, you need to GET the artifact from the spira API eac
 PUT due to the Concurrency date being checked by API.*/
 //this function can be optimized to make 1 put request per artifact, rather than 1 per image
 const pushImage = async (Artifact, image) => {
-  let pid = Artifact.ProjectId
+  let pid
+  if (Artifact.ProjectId) {
+    pid = Artifact.ProjectId
+  }
+  else {
+    pid = document.getElementById("project-select").value
+  }
   //image = {base64: "", name: "", lineNum: int}
   /*upload images and build link of image location in spira 
   ({USER_OBJ.url}/{projectID}/Attachment/{AttachmentID}.aspx)*/
@@ -361,6 +363,15 @@ const pushImage = async (Artifact, image) => {
       })
       imgLink = USER_OBJ.url + `/${pid}/Attachment/${imageCall.data.AttachmentId}.aspx`
     }
+    //checks if the artifact is a test step
+    else if (Artifact.TestStepId) {
+      let imageCall = await axios.post(imageApiCall, {
+        FilenameOrUrl: image.name, BinaryData: image.base64,
+        AttachedArtifacts: [{ ArtifactId: Artifact.TestStepId, ArtifactTypeId: 7 }]
+      })
+      imgLink = USER_OBJ.url + `/${pid}/Attachment/${imageCall.data.AttachmentId}.aspx`
+    }
+    //test steps have TestCaseId's, so checks for TestStepId first.
     else if (Artifact.TestCaseId) {
       let imageCall = await axios.post(imageApiCall, {
         FilenameOrUrl: image.name, BinaryData: image.base64,
@@ -397,6 +408,40 @@ const pushImage = async (Artifact, image) => {
     //PUT artifact with new description (including img tags now)
     let putArtifact = USER_OBJ.url + "/services/v6_0/RestService.svc/projects/" + pid +
       `/requirements?username=${USER_OBJ.username}&api-key=${USER_OBJ.password}`;
+    try {
+      await axios.put(putArtifact, fullArtifactObj)
+    }
+    catch (err) {
+      //do nothing
+      console.log(err)
+    }
+  }
+  else if (Artifact.TestStepId) {
+    try {
+      //this needs to have a different way of getting TestCaseId
+      //makes a get request for the target artifact which will be updated to contain an image
+      let getArtifact = USER_OBJ.url + "/services/v6_0/RestService.svc/projects/" + pid +
+        `/test-cases/${Artifact.TestCaseId}/test-steps/${Artifact.TestStepId}?username=${USER_OBJ.username}&api-key=${USER_OBJ.password}`;
+      let getArtifactCall = await superagent.get(getArtifact).set('accept', 'application/json').set('Content-Type', 'application/json');
+      //This is the body of the get response in its entirety.
+      fullArtifactObj = getArtifactCall.body
+    }
+    catch (err) {
+      //do nothing
+      console.log(err)
+    }
+    await axios.post(RETRIEVE, { "In": "Test step id" })
+    // now replace the placeholder in the description with img tags
+    let placeholderRegex = /<img(.|\n)*("|\s)\>/g
+    //gets an array of all the placeholders for images. 
+    let placeholders = [...fullArtifactObj.Description.matchAll(placeholderRegex)]
+    /*placeholders[0][0] is the first matched instance - because you need to GET for each change
+    this should work each time - each placeholder should have 1 equivalent image in the same
+    order they appear throughout the document.*/
+    fullArtifactObj.Description = fullArtifactObj.Description.replace(placeholders[0][0], `<img alt=${image.name} src=${imgLink}><br />`)
+    //PUT artifact with new description (including img tags now)
+    let putArtifact = USER_OBJ.url + "/services/v6_0/RestService.svc/projects/" + pid +
+      `/test-cases/${Artifact.TestCaseId}/test-steps?username=${USER_OBJ.username}&api-key=${USER_OBJ.password}`;
     try {
       await axios.put(putArtifact, fullArtifactObj)
     }
@@ -865,26 +910,24 @@ const newParseTestCases = async () => {
       await context.sync();
     }
     body = body.split(['\r'])
-    context.load(body)
+    context.load(body, ['text', 'style', 'styleBuiltIn'])
     await context.sync();
     let descStart, descEnd;
     for (let [i, item] of body.items.entries()) {
       let itemtext = item.text.replaceAll("\r", "")
       //checks if the line is a style which is mapped to the style mappings
       if (styles.includes(item.style) || styles.includes(item.styleBuiltIn)) {
+        await axios.post(RETRIEVE, {start: descStart, style: item.style})
         if (descStart) {
           descEnd = body.items[i - 1]
           let descRange = descStart.expandToOrNullObject(descEnd);
+          context.load(descRange)
           await context.sync();
           /*if the descRange returns null (doesnt populate a range), assume the range
           is only the starting line.*/
-          if (!Object.keys(descRange).includes('text')) {
-            descRange = descStart
-          }
           let descHtml = descRange.getHtml();
           await context.sync()
           descStart = undefined; descEnd = undefined;
-
           //if the current item is a folder name, update folder name and initialize new testCase
           if (!testCase.Name) {
             testCase.folderDescription = descHtml.m_value.replaceAll("\r", "")
@@ -967,14 +1010,12 @@ const newParseTestCases = async () => {
       //if it is the last line, add description if relevant, then push to testCases
       if (i == (body.items.length - 1)) {
         if (descStart) {
-          descEnd = body.items[i - 1]
+          await axios.post(RETRIEVE, {in: "Here"})
+          descEnd = body.items[i]
           let descRange = descStart.expandToOrNullObject(descEnd);
           await context.sync();
           /*if the descRange returns null (doesnt populate a range), assume the range
           is only the starting line.*/
-          if (!Object.keys(descRange).includes('text')) {
-            descRange = descStart
-          }
           let descHtml = descRange.getHtml();
           await context.sync()
           testCase.testCaseDescription = descHtml.m_value.replaceAll("\r", "")
