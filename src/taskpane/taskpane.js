@@ -939,11 +939,17 @@ const newParseTestCases = async () => {
         tableCounter++
         let testStep = { Description: "", ExpectedResult: "", SampleData: "" }
         let testSteps = []
-
+        //this is true when the "Header rows?" box is checked
+        let headerCheck = document.getElementById("header-check").checked
+        if (headerCheck){
+          //if the user says there are header rows, remove the first row of the table being parsed.
+          testStepTable.shift();
+        }
         //take testStepTable and put into test steps
-        for (let row of testStepTable) {
+        for (let [i, row] of testStepTable.entries()) {
           //skips lines with empty descriptions to prevent pushing empty steps (returns null if no match)
           let emptyStepRegex = /<p(.)*?>\&nbsp\;<\/p>/g
+          
           if (row[parseInt(styles[2].slice(-1)) - 1].match(emptyStepRegex)) {
             continue
           }
