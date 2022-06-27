@@ -47,7 +47,7 @@ const setDefaultDisplay = () => {
 }
 
 const setEventListeners = () => {
-  // document.getElementById('test').onclick = () => test();
+  document.getElementById('test').onclick = () => test();
   document.getElementById('btn-login').onclick = () => loginAttempt();
   document.getElementById('dev-mode').onclick = () => devmode();
   document.getElementById('send-to-spira').onclick = () => pushArtifacts();
@@ -72,86 +72,7 @@ Testing Functions
 *****************/
 //basic testing function for validating code snippet behaviour.
 export async function test() {
-  await axios.post(RETRIEVE, { "uh": "oh" })
-  let newReqs = await parseRequirements();
-  let text = convertToListElems(newReqs[0].Description);
-  await axios.post(RETRIEVE, { elements: text })
-  // return Word.run(async (context) => {
-  //   let body = context.document.getSelection().split(['\r']);
-  //   let styles = retrieveStyles('req-');
-  //   context.load(body, ['text', 'style', 'styleBuiltIn'])
-  //   await context.sync();
-  //   //body = {items: [{text, style, styleBuiltIn}, ...]}
-  //   //check for next line with a style within the styles
-  //   let descStart, descEnd;
-  //   let requirements = []
-  //   let requirement = { Name: "", Description: "", RequirementTypeId: 1 }
-  //   //need to use .entries to get index within a for .. of loop.
-  //   for (let [i, item] of body.items.entries()) {
-  //     if (styles.includes(item.styleBuiltIn) || styles.includes(item.style)) {
-  //       //if a description has a starting range already, assign descEnd to the previous line
-  //       if (descStart) {
-  //         descEnd = body.items[i - 1]
-  //         //creates an entre "description range" to be gotten as html.
-  //         let descRange = descStart.expandToOrNullObject(descEnd)
-  //         await context.sync();
-  //         //descRange is null if the descEnd is not valid to extend the descStart
-  //         if (!descRange) {
-  //           descRange = descStart
-  //         }
-  //         //clears these fields so it is known the description has been added to its requirement
-  //         descStart = undefined
-  //         descEnd = undefined
-  //         let descHtml = descRange.getHtml();
-  //         await context.sync();
-  //         //m_value is the actual string of the html
-  //         requirement.Description = descHtml.m_value
-  //         try {
-  //           requirements.push(requirement)
-  //           requirement = { Name: item.text, Description: "", RequirementTypeId: 1 }
-  //         }
-  //         catch (err) {
-  //           await axios.post(RETRIEVE, { err: err })
-  //         }
-  //       }
-  //       /*if there isnt a description section between the last name and this name, push to spira
-  //       and start a new requirement*/
-  //       else if (requirement.Name){
-  //         requirements.push(requirement)
-  //         requirement = { Name: item.text, Description: "", RequirementTypeId: 1 }
-  //       }
-  //       else {
-  //         requirement.Name = item.text
-  //       }
-  //       continue
-  //     }
-  //     else {
-  //       if (!descStart) {
-  //         descStart = item
-  //       }
-  //     }
-  //     /*if a line is the last line in the selection/body
-  //      & the current requirement object has least a name, push the last requirement*/
-  //     if (i == body.items.length -1 && requirement.Name){
-  //       if(item.text && descStart){
-  //         descEnd = item
-  //         let descRange = descStart.expandToOrNullObject(descEnd)
-  //         await context.sync();
-  //         //descRange is null if the descEnd is not valid to extend the descStart
-  //         if (!descRange) {
-  //           descRange = descStart
-  //         }
-  //         let descHtml = descRange.getHtml();
-  //         await context.sync();
-  //         requirement.Description = descHtml.m_value
-  //       }
-  //       requirements.push(requirement)
-  //     }
-  //   }
-  //   await axios.post(RETRIEVE, [...requirements, descStart])
-  //   return requirements
-  // }
-  // )
+  let bruh = await newParseTestCases();
 }
 /**************
 Spira API calls
@@ -424,7 +345,6 @@ post response from creation, you need to GET the artifact from the spira API eac
 PUT due to the Concurrency date being checked by API.*/
 //this function can be optimized to make 1 put request per artifact, rather than 1 per image
 const pushImage = async (Artifact, image) => {
-  await axios.post(RETRIEVE, { arti: Artifact })
   let pid = Artifact.ProjectId
   //image = {base64: "", name: "", lineNum: int}
   /*upload images and build link of image location in spira 
@@ -493,7 +413,7 @@ const pushImage = async (Artifact, image) => {
   }
 }
 
-/******************** 
+/********************
 HTML DOM Manipulation
 ********************/
 
@@ -724,14 +644,12 @@ const parseRequirements = async () => {
       body = context.document.body.getRange();
       context.load(body, ['text', 'style', 'styleBuiltIn'])
       await context.sync();
-      await axios.post(RETRIEVE, { in: 'here' })
     }
     body = body.split(['\r'])
     context.load(body)
     await context.sync();
     //body = {items: [{text, style, styleBuiltIn}, ...]}
     //check for next line with a style within the styles
-    await axios.post(RETRIEVE, { items: body.items })
     let descStart, descEnd;
     let requirements = []
     let requirement = { Name: "", Description: "", RequirementTypeId: 2, IndentLevel: 0 }
@@ -823,7 +741,6 @@ const parseRequirements = async () => {
       }
     }
     if (validateHierarchy(requirements)) {
-      await axios.post(RETRIEVE, [...requirements, descStart])
       return requirements
     }
     return []
@@ -922,6 +839,145 @@ const pushArtifacts = async () => {
   else {
     await pushTestCases();
   }
+}
+
+const newParseTestCases = async () => {
+  /*Currently I am returning empty test cases with no names / testCaseDescriptions. Test steps partly work - 
+  there is an issue if the table cell has multiple lines. Its iterating through to the end at least so 
+  that is progress. */
+  return Word.run(async (context) => {
+    let tableCounter = 0
+    let testCases = []
+    let styles = retrieveStyles('test-')
+    let testCase = { folderName: "", folderDescription: "", Name: "", testCaseDescription: "", testSteps: [] }
+    //tables = 3d array [table][test step][column]
+    let tables = await retrieveTables();
+    //this checks to make sure tables selected have at least 1 description within them. 
+    if (!validateTestSteps(tables, styles[2])) {
+      return false
+    }
+    let body = context.document.getSelection();
+    context.load(body, ['text', 'style', 'styleBuiltIn'])
+    await context.sync();
+    //if there is no selection, select the whole body
+    if (!body.text) {
+      body = context.document.body.getRange();
+      context.load(body, ['text', 'style', 'styleBuiltIn'])
+      await context.sync();
+    }
+    body = body.split(['\r'])
+    context.load(body)
+    await context.sync();
+    let descStart, descEnd;
+    for (let [i, item] of body.items.entries()) {
+      let itemtext = item.text.replaceAll("\r", "")
+      //checks if the line is a style which is mapped to the style mappings
+      if (styles.includes(item.style) || styles.includes(item.styleBuiltIn)) {
+        if (descStart) {
+          descEnd = body.items[i - 1]
+          let descRange = descStart.expandToOrNullObject(descEnd);
+          await context.sync();
+          /*if the descRange returns null (doesnt populate a range), assume the range
+          is only the starting line.*/
+          if (!Object.keys(descRange).includes('text')) {
+            descRange = descStart
+          }
+          let descHtml = descRange.getHtml();
+          await context.sync()
+          await axios.post(RETRIEVE, { html: descHtml, line: item.text })
+          descStart = undefined; descEnd = undefined;
+
+          //if the current item is a folder name, update folder name and initialize new testCase
+          if (!testCase.Name) {
+            testCase.folderDescription = descHtml.m_value.replaceAll("\r", "")
+          }
+          else {
+            testCase.testCaseDescription = descHtml.m_value.replaceAll("\r", "")
+          }
+          if (item.style == styles[0] || item.styleBuiltIn == styles[0]) {
+            if (testCase.Name) {
+              testCases.push(testCase)
+            }
+            testCase = { folderName: itemtext, folderDescription: "", Name: "", testCaseDescription: "", testSteps: [] }
+          }
+          else {
+            if (testCase.Name) {
+              testCases.push(testCase)
+              //makes a new testCase object with the old folderName in case there is not a new one.
+              testCase = { folderName: testCases[testCases.length - 1].folderName, folderDescription: "", Name: "", testCaseDescription: "", testSteps: [] }
+            }
+            testCase.Name = itemtext
+          }
+        }
+        /*if there is already a test case name and a a new test case / folder name is detected,
+        push the test case to testCases array, then empty the test case object*/
+        else if (testCase.Name) {
+          testCases.push(testCase)
+          //if the currently checked line has styles[0] as its style, put the folder name as the items text
+          if (item.style == styles[0] || item.styleBuiltIn == styles[0]) {
+            testCase = { folderName: item.text, folderDescription: "", Name: "", testCaseDescription: "", testSteps: [] }
+          }
+          //else it must have styles[1] (folder name mapping) as its style, so set as new test case's name
+          else {
+            testCase = { folderName: testCases[testCases.length - 1].folderName, folderDescription: "", Name: item.text, testCaseDescription: "", testSteps: [] }
+          }
+        }
+        else {
+          if (item.style == styles[0] || item.styleBuiltIn == styles[0]) {
+            testCase.folderName = item.text
+          }
+          //else it must have styles[1] (test case name mapping) as its style, so set as new test case's name
+          else {
+            testCase.Name = item.text
+          }
+        }
+      }
+      //this conditional verifies that the text that was found is the next table.
+      else if (tables[0] && item.text == tables[0][0][parseInt(styles[2].slice(-1)) - 1]?.concat("\t") && item.text.slice(-1) == "\t") {
+        //This procs when there is a table and the first description equals item.text
+        //testStepTable = 2d array [row][column]
+        let testStepTable = await newParseTestSteps(tableCounter);
+        //table counter lets parseTestSteps know which table is currently being parsed
+        tableCounter++
+        let testStep = { Description: "", ExpectedResult: "", SampleData: "" }
+        let testSteps = []
+
+        //take testStepTable and put into test steps
+        for (let row of testStepTable) {
+          testStep = { Description: row[parseInt(styles[2].slice(-1)) - 1], ExpectedResult: row[parseInt(styles[3].slice(-1)) - 1], SampleData: row[parseInt(styles[4].slice(-1)) - 1] }
+          testSteps.push(testStep)
+        }
+        testCase.testSteps = testSteps
+        //removes the table that has been processed from this functions local reference
+        tables.shift();
+      }
+      //second part of this conditional gates tables from becoming the description start
+      else if (!descStart && item.text.slice(-1) != "\t") {
+        descStart = item
+      }
+      //if it is the last line, add description if relevant, then push to testCases
+      if (i == (body.items.length - 1)) {
+        if (descStart) {
+          descEnd = body.items[i - 1]
+          let descRange = descStart.expandToOrNullObject(descEnd);
+          await context.sync();
+          /*if the descRange returns null (doesnt populate a range), assume the range
+          is only the starting line.*/
+          if (!Object.keys(descRange).includes('text')) {
+            descRange = descStart
+          }
+          let descHtml = descRange.getHtml();
+          await context.sync()
+          testCase.testCaseDescription = descHtml.m_value.replaceAll("\r", "")
+        }
+        //dont push a nameless testCase.
+        if (testCase.Name) {
+          testCases.push(testCase)
+        }
+      }
+    }
+    return testCases
+  })
 }
 
 const parseTestCases = async (lines) => {
