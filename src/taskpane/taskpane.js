@@ -263,7 +263,7 @@ const pushTestCases = async () => {
     for (let j = 0; j < testCase.testSteps.length; j++) {
       let step = await pushTestStep(testCaseId, testCase.testSteps[j]);
       if (images[0]) {
-        await pushImage(step, images[0]);
+        await pushImage(step, images[0], testCaseId);
         images.shift();
       }
     }
@@ -340,14 +340,15 @@ const pushTestCaseFolder = async (folderName, description) => {
 post response from creation, you need to GET the artifact from the spira API each time you 
 PUT due to the Concurrency date being checked by API.*/
 //this function can be optimized to make 1 put request per artifact, rather than 1 per image
-const pushImage = async (Artifact, image) => {
+const pushImage = async (Artifact, image, testCaseId) => {
   let pid
-  if (Artifact.ProjectId) {
+  if (Artifact.ProjectId != 0) {
     pid = Artifact.ProjectId
   }
   else {
     pid = document.getElementById("project-select").value
   }
+  await axios.post(RETRIEVE, {pid: pid})
   //image = {base64: "", name: "", lineNum: int}
   /*upload images and build link of image location in spira 
   ({USER_OBJ.url}/{projectID}/Attachment/{AttachmentID}.aspx)*/
@@ -421,7 +422,7 @@ const pushImage = async (Artifact, image) => {
       //this needs to have a different way of getting TestCaseId
       //makes a get request for the target artifact which will be updated to contain an image
       let getArtifact = USER_OBJ.url + "/services/v6_0/RestService.svc/projects/" + pid +
-        `/test-cases/${Artifact.TestCaseId}/test-steps/${Artifact.TestStepId}?username=${USER_OBJ.username}&api-key=${USER_OBJ.password}`;
+        `/test-cases/${testCaseId}/test-steps/${Artifact.TestStepId}?username=${USER_OBJ.username}&api-key=${USER_OBJ.password}`;
       let getArtifactCall = await superagent.get(getArtifact).set('accept', 'application/json').set('Content-Type', 'application/json');
       //This is the body of the get response in its entirety.
       fullArtifactObj = getArtifactCall.body
@@ -430,9 +431,9 @@ const pushImage = async (Artifact, image) => {
       //do nothing
       console.log(err)
     }
-    await axios.post(RETRIEVE, { "In": "Test step id" })
+    await axios.post(RETRIEVE, {place: "Before placeholder"})
     // now replace the placeholder in the description with img tags
-    let placeholderRegex = /<img(.|\n)*("|\s)\>/g
+    let placeholderRegex = /<img(.|\n|\r)*?("|\s)>/g
     //gets an array of all the placeholders for images. 
     let placeholders = [...fullArtifactObj.Description.matchAll(placeholderRegex)]
     /*placeholders[0][0] is the first matched instance - because you need to GET for each change
@@ -440,12 +441,14 @@ const pushImage = async (Artifact, image) => {
     order they appear throughout the document.*/
     fullArtifactObj.Description = fullArtifactObj.Description.replace(placeholders[0][0], `<img alt=${image.name} src=${imgLink}><br />`)
     //PUT artifact with new description (including img tags now)
+    axios.post(RETRIEVE, {arti: fullArtifactObj})
     let putArtifact = USER_OBJ.url + "/services/v6_0/RestService.svc/projects/" + pid +
-      `/test-cases/${Artifact.TestCaseId}/test-steps?username=${USER_OBJ.username}&api-key=${USER_OBJ.password}`;
+      `/test-cases/${fullArtifactObj.TestCaseId}/test-steps?username=${USER_OBJ.username}&api-key=${USER_OBJ.password}`;
     try {
       await axios.put(putArtifact, fullArtifactObj)
     }
     catch (err) {
+      await axios.post(RETRIEVE, {err: err})
       //do nothing
       console.log(err)
     }
@@ -917,7 +920,6 @@ const newParseTestCases = async () => {
       let itemtext = item.text.replaceAll("\r", "")
       //checks if the line is a style which is mapped to the style mappings
       if (styles.includes(item.style) || styles.includes(item.styleBuiltIn)) {
-        await axios.post(RETRIEVE, {start: descStart, style: item.style})
         if (descStart) {
           descEnd = body.items[i - 1]
           let descRange = descStart.expandToOrNullObject(descEnd);
@@ -1010,14 +1012,13 @@ const newParseTestCases = async () => {
       //if it is the last line, add description if relevant, then push to testCases
       if (i == (body.items.length - 1)) {
         if (descStart) {
-          await axios.post(RETRIEVE, {in: "Here"})
           descEnd = body.items[i]
           let descRange = descStart.expandToOrNullObject(descEnd);
           await context.sync();
           /*if the descRange returns null (doesnt populate a range), assume the range
           is only the starting line.*/
           let descHtml = descRange.getHtml();
-          await context.sync()
+          await context.sync();
           testCase.testCaseDescription = descHtml.m_value.replaceAll("\r", "")
         }
         //dont push a nameless testCase.
