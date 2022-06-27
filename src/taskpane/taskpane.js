@@ -995,6 +995,59 @@ const parseTestCases = async (lines) => {
   return testCases
 }
 
+const newParseTestSteps = async (tableIndex) => {
+  return Word.run(async (context) => {
+    //validates a selection or full document
+    let selection = context.document.getSelection();
+    context.load(selection, ['text'])
+    await context.sync();
+    let tables, body;
+    if (!selection.text) {
+      tables = context.document.body.tables
+      body = context.document.body.getRange().split(["\r"]);
+      context.load(tables);
+      context.load(body, ['text', 'inlinePictures']);
+      await context.sync();
+    }
+    else {
+      tables = context.document.getSelection().tables;
+      body = context.document.getSelection().split(['\r']);
+      context.load(tables);
+      context.load(body, ['text', 'inlinePictures']);
+      await context.sync();
+    }
+
+    //tables.items[0].values[0].length is the length of each row.
+    let length = tables.items[tableIndex].values[0].length;
+    for (let item of body.items) {
+      if (item.text.slice(-1) == "\t") {
+        let html = tables.items[tableIndex].getRange().getHtml();
+        await context.sync();
+        //filter out all <p> -> </p> tag instances 
+        //ungreedy *? tag for matching only to the first, global ungreedy single-line tags at end of regex
+        let tableRegex = /(<p )(.|\n|\s|\r)*?(<\/p>)/gus
+        //this will give me all the text within a table separated by regex - then i can use i % length and i/length to know my place in the "table"
+        let elements = [...html.m_value.matchAll(tableRegex)]
+        let formattedStrings = []
+        for (let [i, element] of elements.entries()) {
+          //makes sure the first index exists, if not creates it as an empty array, then pushes as 2d array
+          if (formattedStrings[Math.floor(i / length)]) {
+            formattedStrings[Math.floor(i / length)][i % length] = (element[0])
+          }
+          else {
+            formattedStrings[Math.floor(i / length)] = []
+            formattedStrings[Math.floor(i / length)][i % length] = (element[0])
+          }
+        }
+        //we should get the row length of the table
+        //formattedStrings mimics the table structure as a 2d array string
+        await axios.post(RETRIEVE, { table: formattedStrings })
+        return formattedStrings
+      }
+    }
+  })
+}
+
 const parseTestSteps = (table) => {
   let styles = retrieveStyles('test-')
   let testSteps = []
