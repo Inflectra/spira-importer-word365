@@ -1117,14 +1117,14 @@ const rowCheck = (firstRow, lineRow) => {
 }
 
 /* Takes a single <p> to </p> element and turns it into a list element if it has the necessary class*/
-const convertToListElem = (pElem) => {  
+const convertToListElem = (pElem) => {
   let orderedRegEx = />.{1,2}<span/g;
   if (pElem.includes("class=MsoListParagraphCxSpFirst")) { //Case for if the element is the first element in a list
     //Must add extra html element codes at the beginning and end of the list to wrap the list elements together.
     if (!pElem.includes("·")) { // Checks for if it should start an ordered or unordered list
       pElem = "<ol>" + pElem;
     }
-    else { 
+    else {
       pElem = "<ul>" + pElem;
     }
     pElem = pElem.replace("<p ", "<li ").replace("</p>", "</li>").replaceAll(orderedRegEx, "><span");
@@ -1135,13 +1135,31 @@ const convertToListElem = (pElem) => {
     pElem = pElem.replaceAll("&nbsp;", "");
   }
   else if (pElem.includes("class=MsoListParagraphCxSpLast")) { //Case for if the element is the last element in a list.
+    let unordered = pElem.includes("·"); // Makes sure the function still knows it is an unordered list after replacing the dot
     pElem = pElem.replace("<p ", "<li ").replace("</p>", "</li>").replaceAll(orderedRegEx, "><span");
     pElem = pElem.replaceAll("&nbsp;", "");
-    if (!pElem.includes("·")) {
+    if (!unordered) {
       pElem += "</ol>"
     }
     else {
+      pElem += "</ul>"
+    }
+  }
+  else if (pElem.includes("class=MsoListParagraph")) { //Case for if the element is the only element in the list
+    let unordered = pElem.includes("·"); // Makes sure the function still knows it is an unordered list after replacing the dot
+    if (!unordered) { // Checks for if it should start an ordered or unordered list
+      pElem = "<ol>" + pElem;
+    }
+    else {
+      pElem = "<ul>" + pElem;
+    }
+    pElem = pElem.replace("<p ", "<li ").replace("</p>", "</li>").replaceAll(orderedRegEx, "><span");
+    pElem = pElem.replaceAll("&nbsp;", "");
+    if (!unordered) { //Checks for how it should end the list
       pElem += "</ol>"
+    }
+    else {
+      pElem += "</ul>"
     }
   }
   //Case for if the element is not part of a list is handled by just returning it back.
@@ -1151,11 +1169,20 @@ const convertToListElem = (pElem) => {
 /* Filters a string and changes any word-outputted lists to properly formatted html lists. INDENTING IS NOT YET IMPLEMENTED*/
 const filterDescription = async (description) => {
   let startRegEx = /(<p )(.|\n|\s|\r)*?(<\/p>)/gu;
-  let elementsObj = [...description.matchAll(startRegEx)];
-/* Use elementsObj[i][0] in order to reach the matched strings. */
-  for (let i = 0; i < elementsObj.length; i++) {
-    let elem = elementsObj[i][0];
+  let elemList = [...description.matchAll(startRegEx)];
+  description = convertToIndentedList(description, elemList);
+  return description
+}
+
+/* Scans each element in an array of 'strings' for "style='margin-left:#.0in" where the # is the indent level 
+   Then it keeps track of the current indent level as it loops through the array, processing the elements
+   through convertToListElem and adding an extra <ul> or <ol> as necessary to properly turn them into html 
+   lists. */
+const convertToIndentedList = (description, elemList) => {
+  for (let i = 0; i < elemList.length; i++) {
+    /* Use elemList[i][0] in order to reach the matched strings. */
+    let elem = elemList[i][0];
     description = description.replace(elem, convertToListElem(elem));
   }
-  return description
+  return description;
 }
