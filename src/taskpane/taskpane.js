@@ -238,7 +238,7 @@ const indentRequirement = async (apiCall, id, indent) => {
 const pushTestCases = async () => {
   await updateSelectionArray();
   // testCases = {folderName: "", Name: "", testSteps: [{Description, expected result, sample data}, ...]}
-  let testCases = await parseTestCases(SELECTION);
+  let testCases = await newParseTestCases();
   //if parseTestCases fails due to bad table styles, stops execution of the function
   if (!testCases) {
     return
@@ -685,7 +685,6 @@ const parseRequirements = async () => {
             }
           }
           catch (err) {
-            await axios.post(RETRIEVE, { err: err })
           }
         }
         /*if there isnt a description section between the last name and this name, push to spira
@@ -884,7 +883,6 @@ const newParseTestCases = async () => {
           }
           let descHtml = descRange.getHtml();
           await context.sync()
-          await axios.post(RETRIEVE, { html: descHtml, line: item.text })
           descStart = undefined; descEnd = undefined;
 
           //if the current item is a folder name, update folder name and initialize new testCase
@@ -915,7 +913,7 @@ const newParseTestCases = async () => {
           testCases.push(testCase)
           //if the currently checked line has styles[0] as its style, put the folder name as the items text
           if (item.style == styles[0] || item.styleBuiltIn == styles[0]) {
-            testCase = { folderName: item.text, folderDescription: "", Name: "", testCaseDescription: "", testSteps: [] }
+            testCase = { folderName: itemtext, folderDescription: "", Name: "", testCaseDescription: "", testSteps: [] }
           }
           //else it must have styles[1] (folder name mapping) as its style, so set as new test case's name
           else {
@@ -924,11 +922,11 @@ const newParseTestCases = async () => {
         }
         else {
           if (item.style == styles[0] || item.styleBuiltIn == styles[0]) {
-            testCase.folderName = item.text
+            testCase.folderName = itemtext
           }
           //else it must have styles[1] (test case name mapping) as its style, so set as new test case's name
           else {
-            testCase.Name = item.text
+            testCase.Name = itemtext
           }
         }
       }
@@ -944,6 +942,11 @@ const newParseTestCases = async () => {
 
         //take testStepTable and put into test steps
         for (let row of testStepTable) {
+          //skips lines with empty descriptions to prevent pushing empty steps (returns null if no match)
+          let emptyStepRegex = /<p(.)*?>\&nbsp\;<\/p>/g
+          if(row[parseInt(styles[2].slice(-1)) - 1].match(emptyStepRegex)){
+            continue
+          }
           testStep = { Description: row[parseInt(styles[2].slice(-1)) - 1], ExpectedResult: row[parseInt(styles[3].slice(-1)) - 1], SampleData: row[parseInt(styles[4].slice(-1)) - 1] }
           testSteps.push(testStep)
         }
@@ -1059,6 +1062,7 @@ const newParseTestSteps = async (tableIndex) => {
     await context.sync();
     let tables, body;
     if (!selection.text) {
+      //if there isnt a selection, insteasd parses the entire body
       tables = context.document.body.tables
       body = context.document.body.getRange().split(["\r"]);
       context.load(tables);
@@ -1097,7 +1101,6 @@ const newParseTestSteps = async (tableIndex) => {
         }
         //we should get the row length of the table
         //formattedStrings mimics the table structure as a 2d array string
-        await axios.post(RETRIEVE, { table: formattedStrings })
         return formattedStrings
       }
     }
