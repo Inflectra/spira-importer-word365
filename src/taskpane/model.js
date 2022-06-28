@@ -5,10 +5,6 @@
 
 
 
-
-
-
-
 /*
  *
  * ==========
@@ -28,16 +24,7 @@ var params = {
         requirements: 1,
         testCases: 2,
         testSteps: 7
-    },
-
-    fieldType: {
-
     }
-}
-
-// Main area for object templates for artifacts and such
-var templateFields = {
-
 }
 
 // Constructor function for globally accessible data that might change.
@@ -45,9 +32,22 @@ function Data() {
 
     this.user = {
         url: '',
+        username: '',
         api_key: '',
     }
 
+    this.currentProjectId = ""
     this.projects = [];
 
+    this.colors = {
+        primaryButton: '#0078d7',
+        selectedButton: '#0A0269',
+        progressBarProgress: '#60ec60',
+        progressBarBackground: '#dadada',
+        errorMessages: "#ff0000"
+    };
+}
+
+function tempDataStore() {
+    this.currentProjectId = '';
 }
