@@ -239,7 +239,7 @@ const pushTestCases = async () => {
   let images = await retrieveImages();
   document.getElementById("send-to-spira-button").disabled = true;
   await updateSelectionArray();
-  // testCases = {folderName: "", Name: "", testSteps: [{Description, expected result, sample data}, ...]}
+  // testCases = [{folderName: "", Name: "", testSteps: [{Description, expected result, sample data}, ...]}]
   let testCases = await newParseTestCases();
   document.getElementById("progress-bar-progress").style.width = "0%";
   document.getElementById("progress-bar").classList.remove("hidden");
@@ -261,12 +261,20 @@ const pushTestCases = async () => {
       testCaseFolders.push(newFolder);
     }
     // make the testCase and keep the Id for later
-    let testCaseId = await pushTestCase(testCase.Name, testCase.testCaseDescription, folder.TestCaseFolderId);
+    let testCaseArtifact = await pushTestCase(testCase.Name, testCase.testCaseDescription, folder.TestCaseFolderId);
+    //Uses this to determine how many images need to be placed within the document.
+    let placeholderRegex = /<img(.|\n|\r)*("|\s)\>/g
+    //gets an array of all the placeholders for images. 
+    let placeholders = [...testCase.testCaseDescription.matchAll(placeholderRegex)]
+    for (let j = 0; j < placeholders.length; j++) {
+      await pushImage(testCaseArtifact, images[0])
+      images.shift();
+    }
     // now make the testSteps
     for (let j = 0; j < testCase.testSteps.length; j++) {
-      let step = await pushTestStep(testCaseId, testCase.testSteps[j]);
+      let step = await pushTestStep(testCaseArtifact.TestCaseId, testCase.testSteps[j]);
       if (images[0]) {
-        await pushImage(step, images[0], testCaseId);
+        await pushImage(step, images[0], testCaseArtifact.TestCaseId);
         images.shift();
       }
     }
@@ -316,7 +324,7 @@ const pushTestCase = async (testCaseName, testCaseDescription, testFolderId) => 
       Description: testCaseDescription,
       TestCaseFolderId: testFolderId
     })
-    return testCaseResponse.data.TestCaseId;
+    return testCaseResponse.data;
   }
   catch (err) {
     console.log(err);
@@ -351,10 +359,10 @@ const pushImage = async (Artifact, image, testCaseId) => {
   if (Artifact.ProjectId != 0) {
     pid = Artifact.ProjectId
   }
+  //Test steps do not populate ProjectId on POST while other artifact types do. 
   else {
     pid = document.getElementById("project-select").value
   }
-  await axios.post(RETRIEVE, { pid: pid })
   //image = {base64: "", name: "", lineNum: int}
   /*upload images and build link of image location in spira 
   ({USER_OBJ.url}/{projectID}/Attachment/{AttachmentID}.aspx)*/
@@ -384,6 +392,7 @@ const pushImage = async (Artifact, image, testCaseId) => {
         FilenameOrUrl: image.name, BinaryData: image.base64,
         AttachedArtifacts: [{ ArtifactId: Artifact.TestCaseId, ArtifactTypeId: 2 }]
       })
+      imgLink = USER_OBJ.url + `/${pid}/Attachment/${imageCall.data.AttachmentId}.aspx`
     }
   }
   catch (err) {
@@ -405,13 +414,13 @@ const pushImage = async (Artifact, image, testCaseId) => {
       console.log(err)
     }
     // now replace the placeholder in the description with img tags
-    let placeholderRegex = /<img(.|\n)*("|\s)\>/g
+    let placeholderRegex = /<img(.|\n|\r)*("|\s)\>/g
     //gets an array of all the placeholders for images. 
     let placeholders = [...fullArtifactObj.Description.matchAll(placeholderRegex)]
     /*placeholders[0][0] is the first matched instance - because you need to GET for each change
     this should work each time - each placeholder should have 1 equivalent image in the same
     order they appear throughout the document.*/
-    fullArtifactObj.Description = fullArtifactObj.Description.replace(placeholders[0][0], `<img alt=${image.name} src=${imgLink}><br />`)
+    fullArtifactObj.Description = fullArtifactObj.Description.replace(placeholders[0][0], `<img alt=${image?.name} src=${imgLink}><br />`)
     //PUT artifact with new description (including img tags now)
     let putArtifact = USER_OBJ.url + "/services/v6_0/RestService.svc/projects/" + pid +
       `/requirements?username=${USER_OBJ.username}&api-key=${USER_OBJ.password}`;
@@ -437,7 +446,6 @@ const pushImage = async (Artifact, image, testCaseId) => {
       //do nothing
       console.log(err)
     }
-    await axios.post(RETRIEVE, { place: "Before placeholder" })
     // now replace the placeholder in the description with img tags
     let placeholderRegex = /<img(.|\n|\r)*?("|\s)>/g
     //gets an array of all the placeholders for images. 
@@ -445,26 +453,58 @@ const pushImage = async (Artifact, image, testCaseId) => {
     /*placeholders[0][0] is the first matched instance - because you need to GET for each change
     this should work each time - each placeholder should have 1 equivalent image in the same
     order they appear throughout the document.*/
-    fullArtifactObj.Description = fullArtifactObj.Description.replace(placeholders[0][0], `<img alt=${image.name} src=${imgLink}><br />`)
+    fullArtifactObj.Description = fullArtifactObj.Description.replace(placeholders[0][0], `<img alt=${image?.name} src=${imgLink}><br />`)
     //PUT artifact with new description (including img tags now)
-    axios.post(RETRIEVE, { arti: fullArtifactObj })
     let putArtifact = USER_OBJ.url + "/services/v6_0/RestService.svc/projects/" + pid +
       `/test-cases/${fullArtifactObj.TestCaseId}/test-steps?username=${USER_OBJ.username}&api-key=${USER_OBJ.password}`;
     try {
       await axios.put(putArtifact, fullArtifactObj)
     }
     catch (err) {
-      await axios.post(RETRIEVE, { err: err })
       //do nothing
       console.log(err)
     }
   }
   else if (Artifact.TestCaseId) {
-    //handle test cases
+    try {
+      //handle test cases
+      //makes a get request for the target artifact which will be updated to contain an image
+      let getArtifact = USER_OBJ.url + "/services/v6_0/RestService.svc/projects/" + pid +
+        `/test-cases/${Artifact.TestCaseId}?username=${USER_OBJ.username}&api-key=${USER_OBJ.password}`;
+      let getArtifactCall = await superagent.get(getArtifact).set('accept', 'application/json').set('Content-Type', 'application/json');
+      //This is the body of the get response in its entirety.
+      fullArtifactObj = getArtifactCall.body
+    }
+    catch (err) {
+      //do nothing
+      console.log(err)
+    }
+    //crashing HERE
+    //dsajdhsjkda
+    //dhasdjkl
+    // now replace the placeholder in the description with img tags
+    let placeholderRegex = /<img(.|\n|\r)*("|\s)\>/g
+    //gets an array of all the placeholders for images. 
+    let placeholders = [...fullArtifactObj.Description.matchAll(placeholderRegex)]
+    /*placeholders[0][0] is the first matched instance - because you need to GET for each change
+    this should work each time - each placeholder should have 1 equivalent image in the same
+    order they appear throughout the document.*/
+    fullArtifactObj.Description = fullArtifactObj.Description.replace(placeholders[0][0], `<img alt=${image?.name} src=${imgLink}><br />`)
+    //PUT artifact with new description (including img tags now)
+    let putArtifact = USER_OBJ.url + "/services/v6_0/RestService.svc/projects/" + pid +
+      `/test-cases?username=${USER_OBJ.username}&api-key=${USER_OBJ.password}`;
+    try {
+      await axios.put(putArtifact, fullArtifactObj)
+    }
+    catch (err) {
+      //do nothing
+      console.log(err)
+    }
   }
   else {
     //handle error (should never reach here, but if it does it should be handled)
   }
+  return
 }
 
 /********************
@@ -941,7 +981,14 @@ const newParseTestCases = async () => {
             testCase.folderDescription = descHtml.m_value.replaceAll("\r", "")
           }
           else {
-            testCase.testCaseDescription = await filterForLists(descHtml.m_value.replaceAll("\r", "")); // filter for LISTS!!!
+            //removes tables picked up in the description and adds proper HTML lists
+            let filteredDescription = await filterForLists(descHtml.m_value.replaceAll("\r", "")); // filter for LISTS!!!
+            let tableRegex = /<table(.|\n|\r)*?\/table>/g
+            let descriptionTables = [...filteredDescription.matchAll(tableRegex)]
+            for (let j = 0; j < descriptionTables.length; j++) {
+              filteredDescription = filteredDescription.replace(descriptionTables[j][0], "")
+            }
+            testCase.testCaseDescription = filteredDescription
           }
           if (item.style == styles[0] || item.styleBuiltIn == styles[0]) {
             if (testCase.Name) {
@@ -1025,9 +1072,14 @@ const newParseTestCases = async () => {
           is only the starting line.*/
           let descHtml = descRange.getHtml();
           await context.sync();
-          testCase.testCaseDescription = descHtml.m_value.replaceAll("\r", "")
-          await context.sync()
-          testCase.testCaseDescription = await filterForLists(descHtml.m_value.replaceAll("\r", ""))
+          let filteredDescription = await filterForLists(descHtml.m_value.replaceAll("\r", ""))
+          //This removes tables picked up in the description
+          let tableRegex = /<table(.|\n|\r)*?\/table>/g
+          let descriptionTables = [...filteredDescription.matchAll(tableRegex)]
+          for (let j = 0; j < descriptionTables.length; j++) {
+            filteredDescription = filteredDescription.replace(descriptionTables[j][0], "")
+          }
+          testCase.testCaseDescription = filteredDescription
         }
         //dont push a nameless testCase.
         if (testCase.Name) {
@@ -1329,27 +1381,22 @@ const convertToIndentedList = async (description, elemList) => {
   for (let i = 0; i < elemList.length; i++) {
     /* Use elemList[i][0] in order to reach the matched strings. */
     let elem = elemList[i][0];
-    await axios.post(RETRIEVE, { entire_element: elem });
     let alteredElem = "" + elem;
     let result = alteredElem.match(/style='margin-left:(\d)\.(\d)in/);
     if (result) {
       let curIndentLevel = (parseInt(result[1]) * 2 + parseInt(result[2]) * 0.2) - 1
       while (curIndentLevel > indentLevel) {
-        await axios.post(RETRIEVE, { growing: "indent" });
         alteredElem = listDelimiter(alteredElem, true);
         indentLevel++;
       }
       while (curIndentLevel < indentLevel) {
-        await axios.post(RETRIEVE, { shrinking: "indent" });
         alteredElem = listDelimiter(alteredElem, false, true);
         indentLevel--;
       }
-      await axios.post(RETRIEVE, { match: result[0], indentLevel: curIndentLevel, ordered: !elem.includes("·") });
     }
     else {
       let curIndentLevel = 0;
       while (curIndentLevel < indentLevel) {
-        await axios.post(RETRIEVE, { shrinking: "indent" });
         alteredElem = listDelimiter(alteredElem, false, true);
         indentLevel--;
       }
