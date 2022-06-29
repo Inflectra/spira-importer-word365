@@ -50,6 +50,7 @@ function Data() {
         userCredentials: "?username={username}&api-key={api-key}"
     }
 
+    //function to clear user object for logout
     this.clearUser = () => {
         this.user = {
             url: '',
@@ -75,3 +76,5 @@ function Data() {
 function tempDataStore() {
     this.currentProjectId = '';
 }
+
+export {Data, tempDataStore, params}
