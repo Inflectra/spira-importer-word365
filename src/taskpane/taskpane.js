@@ -16,7 +16,7 @@ const superagent = require('superagent');
 //makes sure put requests uses the proper content-type header
 axios.defaults.headers.put['Content-Type'] = "application/json"
 axios.defaults.headers.put['accept'] = "application/json"
-import {Data, tempDataStore, params, templates, ERROR_MESSAGES} from './model'
+import { Data, tempDataStore, params, templates, ERROR_MESSAGES } from './model'
 
 // Global selection array, used throughout
 /*This is a global variable because the word API call functions are unable to return
@@ -672,6 +672,29 @@ const updateProgressBar = (current, total) => {
   let width = current / total * MAX_WIDTH;
   let bar = document.getElementById("progress-bar-progress");
   bar.style.width = width + "%";
+}
+
+const displayError = (key, timeOut, failedArtifact) => {
+  if (timeOut) {
+    document.getElementById(ERROR_MESSAGES[key].htmlId).textContent = ERROR_MESSAGES[key].message;
+    document.getElementById(ERROR_MESSAGES[key].htmlId).style.display = 'flex';
+    setTimeout(() => {
+      document.getElementById(ERROR_MESSAGES[key].htmlId).style.display = 'none';
+    }, ERROR_MESSAGES.stdTimeOut);
+  }
+  else if (failedArtifact) { // This is a special case error message for better quality errors when sending artifacts
+    document.getElementById(ERROR_MESSAGES[key].htmlId).textContent =
+      `The request to the API has failed on requirement: '${failedArtifact.Name}'. All, if any previous requirements should be in Spira.`;
+    document.getElementById(ERROR_MESSAGES[key].htmlId).style.display = 'flex';
+  }
+  else {
+    document.getElementById(ERROR_MESSAGES[key].htmlId).textContent = ERROR_MESSAGES[key].message;
+    document.getElementById(ERROR_MESSAGES[key].htmlId).style.display = 'flex';
+  }
+}
+
+const clearErrors = () => {
+
 }
 
 /********************
