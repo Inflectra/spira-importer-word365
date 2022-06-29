@@ -9,6 +9,7 @@
 Initialization Functions
 ***********************/
 
+var model = new Data();
 const axios = require('axios')
 const superagent = require('superagent');
 //ignore it saying defaults doesnt exist, it does and using default does not work.
@@ -78,6 +79,8 @@ export async function test() {
 Spira API calls
 **************/
 
+// REFACTOR IN PROGRESS 
+// Replaced USER_OBJ with the new model.user.(field) format
 const loginAttempt = async () => {
   /*disable the login button to prevent someone from pressing it multiple times, this can
   overpopulate the products selector with duplicate sets.*/
@@ -103,8 +106,13 @@ const loginAttempt = async () => {
       document.getElementById('main-screen').classList.remove('hidden');
       document.getElementById('main-screen').style.display = 'flex';
       document.getElementById("btn-login").disabled = false
+      // As far as the refactor got
+      model.user.url = finalUrl || url;
+      model.user.username = username;
+      model.user.api_key = rssToken
       //save user credentials in global object to use in future requests
-      USER_OBJ = {
+      // SOON TO BE DELETED, now using object model
+      USER_OBJ = {  //
         url: finalUrl || url, username: username, password: rssToken
       }
       //populate the products dropdown with the response body.
@@ -143,8 +151,8 @@ const pushRequirements = async () => {
   let pid = document.getElementById('project-select').value;
   let firstReq = requirements[0];
   //this call is for the purpose of resetting the indent level each time a set of reqs are sent
-  const outdentCall = USER_OBJ.url + "/services/v6_0/RestService.svc/projects/" + pid +
-    `/requirements/indent/-20?username=${USER_OBJ.username}&api-key=${USER_OBJ.password}`;
+  const outdentCall = model.user.url + "/services/v6_0/RestService.svc/projects/" + pid +
+    `/requirements/indent/-20?username=${model.user.username}&api-key=${model.user.api_key}`;
   // Make progress bar appear
   document.getElementById("progress-bar-progress").style.width = "0%";
   document.getElementById("progress-bar").classList.remove("hidden");
@@ -172,8 +180,8 @@ const pushRequirements = async () => {
   //this handles the rest of the requirements calls which are indented relative to the first.
   for (let i = 1; i < requirements.length; i++) {
     let item = requirements[i];
-    const apiCall = USER_OBJ.url + "/services/v6_0/RestService.svc/projects/" + pid +
-      `/requirements?username=${USER_OBJ.username}&api-key=${USER_OBJ.password}`;
+    const apiCall = model.user.url + "/services/v6_0/RestService.svc/projects/" + pid +
+      `/requirements?username=${model.user.username}&api-key=${model.user.api_key}`;
     // try catch block to stop application crashing and show error message if call fails
     try {
       //indent requirement working perfectly
@@ -286,8 +294,8 @@ const pushTestCases = async () => {
 
 const retrieveTestCaseFolders = async () => {
   let projectId = document.getElementById('project-select').value;
-  let apiCall = USER_OBJ.url + "/services/v6_0/RestService.svc/projects/" + projectId +
-    `/test-folders?username=${USER_OBJ.username}&api-key=${USER_OBJ.password}`;
+  let apiCall = model.user.url + "/services/v6_0/RestService.svc/projects/" + projectId +
+    `/test-folders?username=${model.user.username}&api-key=${model.user.api_key}`;
   let callResponse = await superagent.get(apiCall).set('accept', "application/json").set('Content-Type', "application/json")
   return callResponse.body
 }
@@ -296,8 +304,8 @@ const pushTestStep = async (testCaseId, testStep) => {
   /*pushTestCase should call this passing in the created testCaseId and iterate through passing
   in that test cases test steps.*/
   let projectId = document.getElementById('project-select').value;
-  let apiCall = USER_OBJ.url + "/services/v6_0/RestService.svc/projects/" + projectId +
-    `/test-cases/${testCaseId}/test-steps?username=${USER_OBJ.username}&api-key=${USER_OBJ.password}`;
+  let apiCall = model.user.url + "/services/v6_0/RestService.svc/projects/" + projectId +
+    `/test-cases/${testCaseId}/test-steps?username=${model.user.username}&api-key=${model.user.api_key}`;
   try {
     //testStep = {Description: "", SampleData: "", ExpectedResult: ""}
     //we dont need the response from this - so no assigning to variable.
@@ -318,8 +326,8 @@ const pushTestStep = async (testCaseId, testStep) => {
 const pushTestCase = async (testCaseName, testCaseDescription, testFolderId) => {
   let projectId = document.getElementById("project-select").value
   try {
-    var testCaseResponse = await axios.post(`${USER_OBJ.url}/services/v6_0/RestService.svc/projects/${projectId}/test-cases?username=${USER_OBJ.username}
-      &api-key=${USER_OBJ.password}`, {
+    var testCaseResponse = await axios.post(`${model.user.url}/services/v6_0/RestService.svc/projects/${projectId}/test-cases?username=${model.user.username}
+      &api-key=${model.user.api_key}`, {
       Name: testCaseName,
       Description: testCaseDescription,
       TestCaseFolderId: testFolderId
@@ -336,8 +344,8 @@ const pushTestCase = async (testCaseName, testCaseDescription, testFolderId) => 
 */
 const pushTestCaseFolder = async (folderName, description) => {
   let projectId = document.getElementById('project-select').value;
-  let apiCall = USER_OBJ.url + "/services/v6_0/RestService.svc/projects/" + projectId +
-    `/test-folders?username=${USER_OBJ.username}&api-key=${USER_OBJ.password}`;
+  let apiCall = model.user.url + "/services/v6_0/RestService.svc/projects/" + projectId +
+    `/test-folders?username=${model.user.username}&api-key=${model.user.api_key}`;
   try {
     let folderCall = await axios.post(apiCall, {
       Name: folderName,
@@ -365,18 +373,18 @@ const pushImage = async (Artifact, image, testCaseId) => {
   }
   //image = {base64: "", name: "", lineNum: int}
   /*upload images and build link of image location in spira 
-  ({USER_OBJ.url}/{projectID}/Attachment/{AttachmentID}.aspx)*/
+  ({model.user.url}/{projectID}/Attachment/{AttachmentID}.aspx)*/
   //Add AttachmentURL to each imageObject after they are uploaded
   let imgLink;
-  let imageApiCall = USER_OBJ.url + "/services/v6_0/RestService.svc/projects/"
-    + pid + `/documents/file?username=${USER_OBJ.username}&api-key=${USER_OBJ.password}`
+  let imageApiCall = model.user.url + "/services/v6_0/RestService.svc/projects/"
+    + pid + `/documents/file?username=${model.user.username}&api-key=${model.user.api_key}`
   try {
     if (Artifact.RequirementId) {
       let imageCall = await axios.post(imageApiCall, {
         FilenameOrUrl: image.name, BinaryData: image.base64,
         AttachedArtifacts: [{ ArtifactId: Artifact.RequirementId, ArtifactTypeId: 1 }]
       })
-      imgLink = USER_OBJ.url + `/${pid}/Attachment/${imageCall.data.AttachmentId}.aspx`
+      imgLink = model.user.url + `/${pid}/Attachment/${imageCall.data.AttachmentId}.aspx`
     }
     //checks if the artifact is a test step
     else if (Artifact.TestStepId) {
@@ -384,7 +392,7 @@ const pushImage = async (Artifact, image, testCaseId) => {
         FilenameOrUrl: image.name, BinaryData: image.base64,
         AttachedArtifacts: [{ ArtifactId: Artifact.TestStepId, ArtifactTypeId: 7 }]
       })
-      imgLink = USER_OBJ.url + `/${pid}/Attachment/${imageCall.data.AttachmentId}.aspx`
+      imgLink = model.user.url + `/${pid}/Attachment/${imageCall.data.AttachmentId}.aspx`
     }
     //test steps have TestCaseId's, so checks for TestStepId first.
     else if (Artifact.TestCaseId) {
@@ -392,7 +400,7 @@ const pushImage = async (Artifact, image, testCaseId) => {
         FilenameOrUrl: image.name, BinaryData: image.base64,
         AttachedArtifacts: [{ ArtifactId: Artifact.TestCaseId, ArtifactTypeId: 2 }]
       })
-      imgLink = USER_OBJ.url + `/${pid}/Attachment/${imageCall.data.AttachmentId}.aspx`
+      imgLink = model.user.url + `/${pid}/Attachment/${imageCall.data.AttachmentId}.aspx`
     }
   }
   catch (err) {
@@ -403,8 +411,8 @@ const pushImage = async (Artifact, image, testCaseId) => {
   if (Artifact.RequirementId) {
     try {
       //makes a get request for the target artifact which will be updated to contain an image
-      let getArtifact = USER_OBJ.url + "/services/v6_0/RestService.svc/projects/" + pid +
-        `/requirements/${Artifact.RequirementId}?username=${USER_OBJ.username}&api-key=${USER_OBJ.password}`;
+      let getArtifact = model.user.url + "/services/v6_0/RestService.svc/projects/" + pid +
+        `/requirements/${Artifact.RequirementId}?username=${model.user.username}&api-key=${model.user.api_key}`;
       let getArtifactCall = await superagent.get(getArtifact).set('accept', 'application/json').set('Content-Type', 'application/json');
       //This is the body of the get response in its entirety.
       fullArtifactObj = getArtifactCall.body
@@ -422,8 +430,8 @@ const pushImage = async (Artifact, image, testCaseId) => {
     order they appear throughout the document.*/
     fullArtifactObj.Description = fullArtifactObj.Description.replace(placeholders[0][0], `<img alt=${image?.name} src=${imgLink}><br />`)
     //PUT artifact with new description (including img tags now)
-    let putArtifact = USER_OBJ.url + "/services/v6_0/RestService.svc/projects/" + pid +
-      `/requirements?username=${USER_OBJ.username}&api-key=${USER_OBJ.password}`;
+    let putArtifact = model.user.url + "/services/v6_0/RestService.svc/projects/" + pid +
+      `/requirements?username=${model.user.username}&api-key=${model.user.api_key}`;
     try {
       await axios.put(putArtifact, fullArtifactObj)
     }
@@ -436,8 +444,8 @@ const pushImage = async (Artifact, image, testCaseId) => {
     try {
       //this needs to have a different way of getting TestCaseId
       //makes a get request for the target artifact which will be updated to contain an image
-      let getArtifact = USER_OBJ.url + "/services/v6_0/RestService.svc/projects/" + pid +
-        `/test-cases/${testCaseId}/test-steps/${Artifact.TestStepId}?username=${USER_OBJ.username}&api-key=${USER_OBJ.password}`;
+      let getArtifact = model.user.url + "/services/v6_0/RestService.svc/projects/" + pid +
+        `/test-cases/${testCaseId}/test-steps/${Artifact.TestStepId}?username=${model.user.username}&api-key=${model.user.api_key}`;
       let getArtifactCall = await superagent.get(getArtifact).set('accept', 'application/json').set('Content-Type', 'application/json');
       //This is the body of the get response in its entirety.
       fullArtifactObj = getArtifactCall.body
@@ -455,8 +463,8 @@ const pushImage = async (Artifact, image, testCaseId) => {
     order they appear throughout the document.*/
     fullArtifactObj.Description = fullArtifactObj.Description.replace(placeholders[0][0], `<img alt=${image?.name} src=${imgLink}><br />`)
     //PUT artifact with new description (including img tags now)
-    let putArtifact = USER_OBJ.url + "/services/v6_0/RestService.svc/projects/" + pid +
-      `/test-cases/${fullArtifactObj.TestCaseId}/test-steps?username=${USER_OBJ.username}&api-key=${USER_OBJ.password}`;
+    let putArtifact = model.user.url + "/services/v6_0/RestService.svc/projects/" + pid +
+      `/test-cases/${fullArtifactObj.TestCaseId}/test-steps?username=${model.user.username}&api-key=${model.user.api_key}`;
     try {
       await axios.put(putArtifact, fullArtifactObj)
     }
@@ -469,8 +477,8 @@ const pushImage = async (Artifact, image, testCaseId) => {
     try {
       //handle test cases
       //makes a get request for the target artifact which will be updated to contain an image
-      let getArtifact = USER_OBJ.url + "/services/v6_0/RestService.svc/projects/" + pid +
-        `/test-cases/${Artifact.TestCaseId}?username=${USER_OBJ.username}&api-key=${USER_OBJ.password}`;
+      let getArtifact = model.user.url + "/services/v6_0/RestService.svc/projects/" + pid +
+        `/test-cases/${Artifact.TestCaseId}?username=${model.user.username}&api-key=${model.user.api_key}`;
       let getArtifactCall = await superagent.get(getArtifact).set('accept', 'application/json').set('Content-Type', 'application/json');
       //This is the body of the get response in its entirety.
       fullArtifactObj = getArtifactCall.body
@@ -491,8 +499,8 @@ const pushImage = async (Artifact, image, testCaseId) => {
     order they appear throughout the document.*/
     fullArtifactObj.Description = fullArtifactObj.Description.replace(placeholders[0][0], `<img alt=${image?.name} src=${imgLink}><br />`)
     //PUT artifact with new description (including img tags now)
-    let putArtifact = USER_OBJ.url + "/services/v6_0/RestService.svc/projects/" + pid +
-      `/test-cases?username=${USER_OBJ.username}&api-key=${USER_OBJ.password}`;
+    let putArtifact = model.user.url + "/services/v6_0/RestService.svc/projects/" + pid +
+      `/test-cases?username=${model.user.username}&api-key=${model.user.api_key}`;
     try {
       await axios.put(putArtifact, fullArtifactObj)
     }
