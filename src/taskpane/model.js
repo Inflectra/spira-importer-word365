@@ -50,6 +50,16 @@ function Data() {
         userCredentials: "?username={username}&api-key={api-key}"
     }
 
+    this.clearUser = () => {
+        this.user = {
+            url: '',
+            username: '',
+            api_key: '',
+            //this will be populated on login.
+            userCredentials: "?username={username}&api-key={api-key}"
+        }
+    }
+
     this.currentProjectId = ""
     this.projects = [];
 

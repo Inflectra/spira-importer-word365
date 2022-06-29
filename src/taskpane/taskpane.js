@@ -9,18 +9,20 @@
 Initialization Functions
 ***********************/
 
-var model = new Data();
+
 const axios = require('axios')
 const superagent = require('superagent');
 //ignore it saying defaults doesnt exist, it does and using default does not work.
 //makes sure put requests uses the proper content-type header
 axios.defaults.headers.put['Content-Type'] = "application/json"
 axios.defaults.headers.put['accept'] = "application/json"
+import * as components from './model'
 
 // Global selection array, used throughout
 /*This is a global variable because the word API call functions are unable to return
 values from within due to the required syntax of returning a Word.run((callback) =>{}) 
 function. */
+var model = new components.Data();
 var SELECTION = [];
 //setting a user object to maintain credentials when using other parts of the add-in
 var USER_OBJ = { url: "", username: "", password: "" }
@@ -109,7 +111,7 @@ const loginAttempt = async () => {
       model.user.url = finalUrl || url;
       model.user.username = username;
       model.user.api_key = rssToken;
-      model.userCredentials = `?username=${username}&api-key=${rssToken}`;
+      model.user.userCredentials = `?username=${username}&api-key=${rssToken}`;
       //populate the products dropdown & model object with the response body.
       populateProjects(response.body)
       //On successful login, hide error message if its visible
@@ -530,6 +532,7 @@ const populateProjects = (projects) => {
 
 const logout = () => {
   USER_OBJ = { url: "", username: "", password: "" };
+  model.clearUser();
   document.getElementById('main-screen').classList.add('hidden');
   //display: flex is set after hidden is removed, may want to make this only use style.display
   document.getElementById('main-screen').style.display = "none";
