@@ -22,7 +22,7 @@ import {Data, tempDataStore, params} from './model'
 /*This is a global variable because the word API call functions are unable to return
 values from within due to the required syntax of returning a Word.run((callback) =>{}) 
 function. */
-var model = new components.Data();
+var model = new Data();
 var SELECTION = [];
 //setting a user object to maintain credentials when using other parts of the add-in
 var USER_OBJ = { url: "", username: "", password: "" }
@@ -92,13 +92,12 @@ const loginAttempt = async () => {
   let username = document.getElementById("input-username").value
   let rssToken = document.getElementById("input-password").value
   //allows user to enter URL with trailing slash or not.
-  let apiBase = "/services/v6_0/RestService.svc/projects"
   if (url[url.length - 1] == "/") {
     //url cannot be changed as it is tied to the HTML DOM input object, so creates a new variable
     var finalUrl = url.substring(0, url.length - 1)
   }
   //formatting the URL as it should be to populate products / validate user credentials
-  let validatingURL = finalUrl || url + apiBase + `?username=${username}&api-key=${rssToken}`;
+  let validatingURL = finalUrl || url + params.apiComponents.loginCall + `?username=${username}&api-key=${rssToken}`;
   try {
     //call the products API to populate relevant products
     var response = await superagent.get(validatingURL).set('accept', 'application/json').set("Content-Type", "application/json")
@@ -531,7 +530,6 @@ const populateProjects = (projects) => {
 }
 
 const logout = () => {
-  USER_OBJ = { url: "", username: "", password: "" };
   model.clearUser();
   document.getElementById('main-screen').classList.add('hidden');
   //display: flex is set after hidden is removed, may want to make this only use style.display
