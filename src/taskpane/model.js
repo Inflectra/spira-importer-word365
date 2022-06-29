@@ -39,22 +39,23 @@ var params = {
     }
 }
 
+var templates = {
 //Constructor functions for requirements and test cases
-function Requirement() {
-    this.name = "";
-    this.description = "";
-    this.typeId = 2; // This is the requirement typeId we use when sending to Spira
-    this.indentLevel = 0;
-}
+    Requirement:  function(){
+        this.name = "";
+        this.description = "";
+        this.typeId = 2; // This is the requirement typeId we use when sending to Spira
+        this.indentLevel = 0; 
+    },
 
-function TestCase() {
-    this.folderName = "";
-    this.folderDescription = "";
-    this.name = "";
-    this.testCaseDescription = "";
-    this.testSteps = [];
+    TestCase: function() {
+        this.folderName = "";
+        this.folderDescription = "";
+        this.name = "";
+        this.testCaseDescription = "";
+        this.testSteps = [];
+    }
 }
-
 // Constructor function for globally accessible data that might change.
 function Data() {
 
@@ -93,4 +94,4 @@ function tempDataStore() {
     this.currentProjectId = '';
 }
 
-export {Data, tempDataStore, params}
+export {Data, tempDataStore, params, templates}
