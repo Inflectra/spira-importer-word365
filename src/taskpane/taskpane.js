@@ -16,7 +16,7 @@ const superagent = require('superagent');
 //makes sure put requests uses the proper content-type header
 axios.defaults.headers.put['Content-Type'] = "application/json"
 axios.defaults.headers.put['accept'] = "application/json"
-import {Data, tempDataStore, params, templates} from './model'
+import {Data, tempDataStore, params, templates, ERROR_MESSAGES} from './model'
 
 // Global selection array, used throughout
 /*This is a global variable because the word API call functions are unable to return

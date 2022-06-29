@@ -94,4 +94,12 @@ function tempDataStore() {
     this.currentProjectId = '';
 }
 
-export {Data, tempDataStore, params, templates}
+var ERROR_MESSAGES = {
+    loginErr: {htmlId: "login-err", message: "Your credentials are invalid"},
+    empty: {htmlId: "empty-err", message: "You currently have no valid text selected or within the body of the document. if this is incorrect, check your style mappings and set them as the relevant styles."},
+    hierarchy: {htmlId: "hierarchy-err", message: "Your style heirarchy is invalid for the selected area. Please make sure requirements only indent 1 additional level from the previous requirement as specified in the indent level style selectors above."},
+    table: {htmlId: "table-err", message: "Your description column for one or more tables only includes empty cells or does not exist. If you do not want to send test steps - do not select tables in your document. If you do, check your selection and try again."},
+    duplicateStyles: {htmlId: "duplicate-styles-err", message: "You currently have multiple mappings set to the same style. Please only use each style once."}
+}
+
+export {Data, tempDataStore, params, templates, ERROR_MESSAGES}
