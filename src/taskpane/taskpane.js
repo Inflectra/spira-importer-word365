@@ -42,11 +42,7 @@ const setDefaultDisplay = () => {
   document.getElementById("app-body").style.display = "flex";
   document.getElementById("req-style-mappings").style.display = 'none';
   document.getElementById("test-style-mappings").style.display = 'none';
-  document.getElementById("empty-err").style.display = 'none';
-  document.getElementById("failed-req-err").style.display = 'none'
-  document.getElementById("send-to-spira").style.display = 'none'
-  document.getElementById("hierarchy-err").style.display = "none"
-  document.getElementById('table-err').style.display = 'none'
+  document.getElementById("send-to-spira").style.display = 'none' 
 }
 
 const setEventListeners = () => {
@@ -114,13 +110,13 @@ const loginAttempt = async () => {
       //populate the products dropdown & model object with the response body.
       populateProjects(response.body)
       //On successful login, hide error message if its visible
-      document.getElementById("login-err-message").classList.add('hidden')
+      clearErrors();
       return
     }
   }
   catch (err) {
     //if the response throws an error, show an error message
-    document.getElementById("login-err-message").classList.remove('hidden');
+    displayError("login"); 
     document.getElementById("btn-login").disabled = false;
     return
   }
@@ -677,24 +673,27 @@ const updateProgressBar = (current, total) => {
 const displayError = (key, timeOut, failedArtifact) => {
   if (timeOut) {
     document.getElementById(ERROR_MESSAGES[key].htmlId).textContent = ERROR_MESSAGES[key].message;
-    document.getElementById(ERROR_MESSAGES[key].htmlId).style.display = 'flex';
+    // document.getElementById(ERROR_MESSAGES[key].htmlId).style.display = 'flex';
     setTimeout(() => {
-      document.getElementById(ERROR_MESSAGES[key].htmlId).style.display = 'none';
+      document.getElementById(ERROR_MESSAGES[key].htmlId).textContent = "";
     }, ERROR_MESSAGES.stdTimeOut);
   }
   else if (failedArtifact) { // This is a special case error message for better quality errors when sending artifacts
     document.getElementById(ERROR_MESSAGES[key].htmlId).textContent =
       `The request to the API has failed on requirement: '${failedArtifact.Name}'. All, if any previous requirements should be in Spira.`;
-    document.getElementById(ERROR_MESSAGES[key].htmlId).style.display = 'flex';
+    // document.getElementById(ERROR_MESSAGES[key].htmlId).style.display = 'flex';
   }
   else {
     document.getElementById(ERROR_MESSAGES[key].htmlId).textContent = ERROR_MESSAGES[key].message;
-    document.getElementById(ERROR_MESSAGES[key].htmlId).style.display = 'flex';
+    // document.getElementById(ERROR_MESSAGES[key].htmlId).style.display = 'flex';
   }
 }
 
 const clearErrors = () => {
-
+  let errs = Object.values(ERROR_MESSAGES.allIds);
+  for (let i = 0; i < errs.length; i++) {
+    document.getElementById(errs[i]).textContent = "";
+  }
 }
 
 /********************
