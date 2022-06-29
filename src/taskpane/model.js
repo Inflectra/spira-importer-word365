@@ -24,6 +24,18 @@ var params = {
         requirements: 1,
         testCases: 2,
         testSteps: 7
+    },
+    apiComponents: {
+        loginCall: "/services/v6_0/RestService.svc/projects",
+        apiBase: "/services/v6_0/RestService.svc/projects/",
+        postOrPutRequirement: "/requirements",
+        getRequirement: "/requirements/",
+        postOrPutTestCase: "/test-cases",
+        getTestCase: "/test-cases/",
+        postOrPutTestStep: "/test-steps/",
+        getTestStep: "/test-steps",
+        postOrGetTestFolders: "/test-folders",
+        postImage: "/documents/file",
     }
 }
 
@@ -34,6 +46,8 @@ function Data() {
         url: '',
         username: '',
         api_key: '',
+        //this will be populated on login.
+        userCredentials: "?username={username}&api-key={api-key}"
     }
 
     this.currentProjectId = ""

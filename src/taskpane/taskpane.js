@@ -106,16 +106,11 @@ const loginAttempt = async () => {
       document.getElementById('main-screen').classList.remove('hidden');
       document.getElementById('main-screen').style.display = 'flex';
       document.getElementById("btn-login").disabled = false
-      // As far as the refactor got
       model.user.url = finalUrl || url;
       model.user.username = username;
-      model.user.api_key = rssToken
-      //save user credentials in global object to use in future requests
-      // SOON TO BE DELETED, now using object model
-      USER_OBJ = {  //
-        url: finalUrl || url, username: username, password: rssToken
-      }
-      //populate the products dropdown with the response body.
+      model.user.api_key = rssToken;
+      model.userCredentials = `?username=${username}&api-key=${rssToken}`;
+      //populate the products dropdown & model object with the response body.
       populateProjects(response.body)
       //On successful login, hide error message if its visible
       document.getElementById("login-err-message").classList.add('hidden')
@@ -520,6 +515,7 @@ HTML DOM Manipulation
 ********************/
 
 const populateProjects = (projects) => {
+  model.projects = projects
   let dropdown = document.getElementById('project-select')
   projects.forEach((project) => {
     /*creates an option for each product which displays the name
