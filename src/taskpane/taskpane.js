@@ -17,6 +17,9 @@ const superagent = require('superagent');
 axios.defaults.headers.put['Content-Type'] = "application/json"
 axios.defaults.headers.put['accept'] = "application/json"
 import { Data, tempDataStore, params, templates, ERROR_MESSAGES } from './model'
+import {
+  sendArtifacts
+} from './server'
 
 // Global selection array, used throughout
 /*This is a global variable because the word API call functions are unable to return
@@ -25,7 +28,6 @@ function. */
 var model = new Data();
 var SELECTION = [];
 //setting a user object to maintain credentials when using other parts of the add-in
-var USER_OBJ = { url: "", username: "", password: "" }
 var RETRIEVE = "http://localhost:5000/retrieve"
 
 Office.onReady((info) => {
@@ -71,7 +73,7 @@ Testing Functions
 *****************/
 //basic testing function for validating code snippet behaviour.
 export async function test() {
-  let bruh = await newParseTestCases();
+  let bruh = await sendArtifacts(params.artifactEnums.requirements);
 }
 /**************
 Spira API calls
@@ -511,6 +513,15 @@ const pushImage = async (Artifact, image, testCaseId) => {
 HTML DOM Manipulation
 ********************/
 
+// these will be called for login and send to spira buttons
+const disableButton = (htmlId) => {
+  document.getElementById(htmlId).disabled = true
+}
+
+const enableButton = (htmlId) => {
+  document.getElementById(htmlId).disabled = false
+}
+
 const populateProjects = (projects) => {
   model.projects = projects
   let dropdown = document.getElementById('project-select')
@@ -753,6 +764,8 @@ export async function updateSelectionArray() {
     return
   })
 }
+
+
 
 const parseRequirements = async () => {
   return Word.run(async (context) => {
@@ -1463,3 +1476,5 @@ const listDelimiter = (elem, start, endPrefix) => {
   }
   return elem;
 }
+
+export { retrieveImages, disableButton }

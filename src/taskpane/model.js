@@ -28,15 +28,23 @@ var params = {
     apiComponents: {
         loginCall: "/services/v6_0/RestService.svc/projects",
         apiBase: "/services/v6_0/RestService.svc/projects/",
-        postOrPutRequirement: "/requirements",
-        getRequirement: "/requirements/",
-        postOrPutTestCase: "/test-cases",
+        postOrPutRequirement: "requirements",
+        getRequirement: "requirements/",
+        postOrPutTestCase: "test-cases",
         getTestCase: "/test-cases/",
         postOrPutTestStep: "/test-steps/",
         getTestStep: "/test-steps",
         postOrGetTestFolders: "/test-folders",
         postImage: "/documents/file",
+        //these fields will be populated when the full URL is made for this
+        imageSrc: "/{project-id}/Attachent/{AttachmentId}.aspx",
+        //this is the initial outdent value for the first requirement sent (-20)
+        initialOutdent: "indent/-20",
+        //have to replace {project-id} with tempDataStore.currentProjectId
+        outdentCall: "/requirements/{project-id}/outdent",
+        indentCall: "/requirements/{project-id}/indent",
     }
+
 }
 
 var templates = {
@@ -54,11 +62,24 @@ var templates = {
         this.name = "";
         this.testCaseDescription = "";
         this.testSteps = [];
+    },
+
+    TestStep: function() {
+        this.Description = "",
+        this.ExpectedResult = "",
+        this.SampleData = ""
+    },
+
+    Image: function(base64, name, lineNum) {
+        this.base64 = base64,
+        this.name = name,
+        this.lineNum = lineNum
     }
 }
+
 // Constructor function for globally accessible data that might change.
 function Data() {
-
+    //global user object
     this.user = {
         url: '',
         username: '',
@@ -67,18 +88,13 @@ function Data() {
         userCredentials: "?username={username}&api-key={api-key}"
     }
 
-    //function to clear user object for logout
+    //function to clear global user object for logout
     this.clearUser = () => {
-        this.user = {
-            url: '',
-            username: '',
-            api_key: '',
-            //this will be populated on login.
-            userCredentials: "?username={username}&api-key={api-key}"
-        }
+        /*object desctructuring makes this not a reference value, new created Data object
+        should be immediately discarded by trash collector*/
+        this.user = {...new Data().user}
     }
 
-    this.currentProjectId = ""
     this.projects = [];
 
     this.colors = {
@@ -90,8 +106,8 @@ function Data() {
     };
 }
 
-function tempDataStore() {
-    this.currentProjectId = '';
+function tempDataStore(projectId) {
+    this.currentProjectId = projectId;
 }
 
 var ERROR_MESSAGES = {
