@@ -6,7 +6,13 @@ axios.defaults.headers.put['Content-Type'] = "application/json"
 axios.defaults.headers.put['accept'] = "application/json"
 
 import { Data, tempDataStore, params, templates } from './model.js'
-import { disableButton, retrieveStyles, validateHierarchy, filterForLists } from './taskpane.js';
+import {
+  disableButton,
+  retrieveStyles,
+  validateHierarchy,
+  filterForLists,
+  validateTestSteps
+} from './taskpane.js';
 
 var RETRIEVE = "http://localhost:5000/retrieve"
 
@@ -33,7 +39,7 @@ const parseArtifacts = async (ArtifactTypeId) => {
     /********************** 
      Start image formatting
     ***********************/
-    let imageLines = []
+    var imageLines = []
     //i represents each "line" delimited by \r tags
     for (let i = 0; i < splitSelection.items.length; i++) {
       //this checks if there are any images at all on a given line
@@ -44,7 +50,7 @@ const parseArtifacts = async (ArtifactTypeId) => {
         }
       }
     }
-    let imageObjects = [];
+    var imageObjects = [];
     let images = selection.inlinePictures;
     for (let i = 0; i < images.items.length; i++) {
       let base64 = images.items[i].getBase64ImageSrc();
@@ -159,12 +165,13 @@ const parseArtifacts = async (ArtifactTypeId) => {
                */
               requirement.Description = await filterForLists(descHtml.m_value.replaceAll("\r", ""));
             }
-            axios.post(RETRIEVE, {req: requirement})
+            axios.post(RETRIEVE, { req: requirement })
             requirements.push(requirement)
           }
         }
         if (!validateHierarchy(requirements)) {
           requirements = false
+          document.getElementById("send-to-spira-button")
           //throw hierarchy error and exit
         }
         //if the heirarchy is invalid, clear requirements and throw error
@@ -172,24 +179,36 @@ const parseArtifacts = async (ArtifactTypeId) => {
         break
       }
       case (params.artifactEnums.testCases): {
-        await axios.post(RETRIEVE, { bruh: "why is it in here" })
-        break
+        let tableCounter = 0
+        let testCases = []
+        let styles = retrieveStyles('test-')
+        let testCase = new templates.TestCase()
+        await axios.post(RETRIEVE, { init: "working" })
+        /********************
+         * Parsing out tables
+         ********************/
+        let selectionTables = selection.tables
+        context.load(selectionTables)
+        await context.sync();
+        //tables = 3d array [table][test step][column], only contains text
+        var tables = [];
+        for (let i = 0; i < selectionTables.items.length; i++) {
+          let table = selectionTables.items[i].values;
+          tables.push(table)
+        }
+        /*May not need this, but it is the images in the FIRST TABLE. If i need it I 
+        will make it procedural for each given table when images are placed in spira.*/
+        let tableImages = selectionTables.items[0].getRange().inlinePictures;
+        context.load(tableImages)
+        await context.sync();
+        if (!validateTestSteps(tables, styles[2]))
+          break
       }
     }
   })
 }
 
-//returns the Word API range object for the selected range or full body to be centrally stored
-//A different version of this will be used for google docs.
-const getUserSelection = async () => {
-  return Word.run(async (context) => {
-    //multiple variables cannot maintain their object typing / prototype so this is scrapped
-    return [selection, splitSelection]
-  })
-}
-
 
 export {
-  parseArtifacts,
-  getUserSelection
+  parseArtifacts
 }

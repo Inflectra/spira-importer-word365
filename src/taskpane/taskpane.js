@@ -73,7 +73,7 @@ Testing Functions
 *****************/
 //basic testing function for validating code snippet behaviour.
 export async function test() {
-  let bruh = await parseArtifacts(params.artifactEnums.requirements);
+  let bruh = await parseArtifacts(params.artifactEnums.testCases);
 }
 /**************
 Spira API calls
@@ -1327,7 +1327,7 @@ const usedStyles = async () => {
 const validateHierarchy = (requirements) => {
   //requirements = [{Name: str, Description: str, IndentLevel: int}, ...]
   //the first requirement must always be indent level 0 (level 1 in UI terms)
-  axios.post(RETRIEVE, { valid: requirements[0].IndentLevel})
+  axios.post(RETRIEVE, { valid: requirements[0].IndentLevel })
   if (requirements[0].IndentLevel != 0) {
     return false
   }
@@ -1461,4 +1461,10 @@ const listDelimiter = (elem, start, endPrefix, ordered) => {
   return elem;
 }
 
-export { disableButton, retrieveStyles, validateHierarchy, filterForLists }
+export {
+  disableButton,
+  retrieveStyles,
+  validateHierarchy,
+  filterForLists,
+  validateTestSteps
+}
