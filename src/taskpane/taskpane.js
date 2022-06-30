@@ -1477,4 +1477,4 @@ const listDelimiter = (elem, start, endPrefix) => {
   return elem;
 }
 
-export { retrieveImages, disableButton }
+export { retrieveImages, disableButton, retrieveStyles }
