@@ -44,14 +44,14 @@ const setDefaultDisplay = () => {
   document.getElementById("app-body").style.display = "flex";
   document.getElementById("req-style-mappings").style.display = 'none';
   document.getElementById("test-style-mappings").style.display = 'none';
-  document.getElementById("send-to-spira").style.display = 'none' 
+  document.getElementById("send-to-spira").style.display = 'none'
 }
 
 const setEventListeners = () => {
   document.getElementById('test').onclick = () => test();
   document.getElementById('btn-login').onclick = () => loginAttempt();
   document.getElementById('dev-mode').onclick = () => devmode();
-  document.getElementById('send-to-spira').onclick = () => pushArtifacts();
+  document.getElementById('send-to-spira-button').onclick = () => pushArtifacts();
   document.getElementById('log-out').onclick = () => logout();
   document.getElementById("select-requirements").onclick = () => openStyleMappings("req-");
   document.getElementById("select-test-cases").onclick = () => openStyleMappings("test-");
@@ -118,7 +118,7 @@ const loginAttempt = async () => {
   }
   catch (err) {
     //if the response throws an error, show an error message
-    displayError("login"); 
+    displayError("login");
     document.getElementById("btn-login").disabled = false;
     return
   }
@@ -136,10 +136,8 @@ const pushRequirements = async () => {
   /*if someone has selected an area with no properly formatted text, show an error explaining
   that and then return this function to prevent sending an empty request.*/
   if (requirements.length == 0) {
-    document.getElementById("empty-err").style.display = 'flex';
-    setTimeout(() => {
-      document.getElementById('empty-err').style.display = 'none';
-    }, 8000)
+    //Something in parseRequirements is breaking so it wouldn't even get here
+    displayError("empty", true);
     return
   }
   let pid = document.getElementById('project-select').value;
@@ -148,8 +146,7 @@ const pushRequirements = async () => {
   const outdentCall = model.user.url + "/services/v6_0/RestService.svc/projects/" + pid +
     `/requirements/indent/-20?username=${model.user.username}&api-key=${model.user.api_key}`;
   // Make progress bar appear
-  document.getElementById("progress-bar-progress").style.width = "0%";
-  document.getElementById("progress-bar").classList.remove("hidden");
+  showProgressBar();
   try {
     //image parsing needs to be re-integrated here and in the try/catch block in the for loop.
     let firstCall = await axios.post(outdentCall, firstReq);
@@ -165,11 +162,12 @@ const pushRequirements = async () => {
   catch (err) {
     /*shows the requirement which failed to add. This should work if it fails in the middle of 
     sending a set of requirements*/
-    document.getElementById("failed-req-error").textContent = `The request to the API has failed on requirement: '${item.Name}'. All, if any previous requirements should be in Spira.`
-    document.getElementById("failed-req-error").style.display = "flex";
-    setTimeout(() => {
-      document.getElementById('failed-req-error').style.display = 'none';
-    }, 8000)
+    displayError("failedReq", false, item);
+    // document.getElementById("failed-req-error").textContent = `The request to the API has failed on requirement: '${item.Name}'. All, if any previous requirements should be in Spira.`
+    // document.getElementById("failed-req-error").style.display = "flex";
+    // setTimeout(() => {
+    //   document.getElementById('failed-req-error').style.display = 'none';
+    // }, 8000)
   }
   //this handles the rest of the requirements calls which are indented relative to the first.
   for (let i = 1; i < requirements.length; i++) {
@@ -193,15 +191,16 @@ const pushRequirements = async () => {
     catch (err) {
       /*shows the requirement which failed to add. This should work if it fails in the middle of 
       sending a set of requirements*/
-      document.getElementById("failed-req-error").textContent = `The request to the API has failed on requirement: '${item.Name}'. All, if any previous requirements should be in Spira.`
-      document.getElementById("failed-req-error").style.display = "flex";
-      setTimeout(() => {
-        document.getElementById('failed-req-error').style.display = 'none';
-      }, 8000)
+      displayError("failedReq", false, item);
+      // document.getElementById("failed-req-error").textContent = `The request to the API has failed on requirement: '${item.Name}'. All, if any previous requirements should be in Spira.`
+      // document.getElementById("failed-req-error").style.display = "flex";
+      // setTimeout(() => {
+      //   document.getElementById('failed-req-error').style.display = 'none';
+      // }, 8000)
     }
   }
   // Hide progress bar again now that it's finished, and enable Send to Spira button
-  document.getElementById("progress-bar").classList.add("hidden");
+  hideProgressBar();
   document.getElementById("send-to-spira-button").disabled = false;
   return
 }
@@ -243,12 +242,12 @@ const pushTestCases = async () => {
   await updateSelectionArray();
   // testCases = [{folderName: "", Name: "", testSteps: [{Description, expected result, sample data}, ...]}]
   let testCases = await newParseTestCases();
-  document.getElementById("progress-bar-progress").style.width = "0%";
-  document.getElementById("progress-bar").classList.remove("hidden");
   //if parseTestCases fails due to bad table styles, stops execution of the function
   if (!testCases) {
+    document.getElementById("send-to-spira-button").disabled = false;
     return
   }
+  showProgressBar();
   // testCaseFolders = [{Name: "", TestCaseFolderId: int}, ...]
   let testCaseFolders = await retrieveTestCaseFolders();
   for (let i = 0; i < testCases.length; i++) {
@@ -282,7 +281,7 @@ const pushTestCases = async () => {
     }
     updateProgressBar(i + 1, testCases.length);
   }
-  document.getElementById("progress-bar").classList.add("hidden");
+  hideProgressBar();
   document.getElementById("send-to-spira-button").disabled = false;
 }
 
@@ -556,6 +555,7 @@ const openStyleMappings = async (pageTag) => {
   /*hides the send button when they select an artifact type, so if they had completed
   style mappings for one or the other then change the artifact type they are required to enter
   their style mappings again.*/
+  clearErrors();
   document.getElementById("send-to-spira").style.display = "none"
   //checks the current selected artifact type then loads the appropriate menu
   if (pageTag == "req-") {
@@ -624,31 +624,23 @@ const confirmStyleMappings = async (pageTag) => {
       if (!styles.includes(setting)) {
         styles.push(setting)
       }
-      //gives an error explaining they have empty style mappings and cannot proceed.
+      //gives an error explaining they have duplicate style mappings and cannot proceed.
       else {
-        document.getElementById("duplicate-styles-err").classList.remove("hidden")
-        setTimeout(() => {
-          document.getElementById("duplicate-styles-err").classList.add("hidden")
-        }, 8000)
+        displayError("duplicateStyles", true)
         //hides the final button if it is already displayed when a user inputs invalid styles.
         document.getElementById("send-to-spira").style.display = "none"
         return
       }
       Office.context.document.settings.set(pageTag + 'style' + i.toString(), setting);
     }
-    //gives an error explaining they have duplicate style mappings which conflict.
+    //gives an error explaining they have empty style mappings which conflict.
     else {
-      document.getElementById("empty-styles-err").classList.remove("hidden")
-      setTimeout(() => {
-        document.getElementById("empty-styles-err").classList.add("hidden")
-      }, 8000)
-      document.getElementById("send-to-spira").style.display = "none"
+      displayError("emptyStyles", true)
       return
     }
   }
   //hides error on successful confirm
-  document.getElementById("duplicate-styles-err").classList.add("hidden")
-  document.getElementById("empty-styles-err").classList.add("hidden")
+  clearErrors();
   //this saves the settings
   Office.context.document.settings.saveAsync()
   //show the send to spira button after this is clicked and all style selectors are populated.
@@ -681,6 +673,16 @@ const updateProgressBar = (current, total) => {
   bar.style.width = width + "%";
 }
 
+const showProgressBar = () => {
+  document.getElementById("progress-bar-progress").style.width = "0%";
+  document.getElementById("progress-bar").classList.remove("hidden");
+}
+
+const hideProgressBar = () => {
+  document.getElementById("progress-bar-progress").style.width = "0%";
+  document.getElementById("progress-bar").classList.add("hidden");
+}
+
 const displayError = (key, timeOut, failedArtifact) => {
   if (timeOut) {
     document.getElementById(ERROR_MESSAGES[key].htmlId).textContent = ERROR_MESSAGES[key].message;
@@ -692,6 +694,9 @@ const displayError = (key, timeOut, failedArtifact) => {
   else if (failedArtifact) { // This is a special case error message for better quality errors when sending artifacts
     document.getElementById(ERROR_MESSAGES[key].htmlId).textContent =
       `The request to the API has failed on requirement: '${failedArtifact.Name}'. All, if any previous requirements should be in Spira.`;
+    setTimeout(() => {
+      document.getElementById(ERROR_MESSAGES[key].htmlId).textContent = "";
+    }, ERROR_MESSAGES.stdTimeOut);
     // document.getElementById(ERROR_MESSAGES[key].htmlId).style.display = 'flex';
   }
   else {
@@ -875,6 +880,9 @@ const parseRequirements = async () => {
     }
     if (validateHierarchy(requirements)) {
       return requirements
+    }
+    else {
+      displayError("hierarchy", true);
     }
     return []
   }
@@ -1362,11 +1370,11 @@ const validateTestSteps = (tables, descStyle) => {
     }
     //if there is a table containing no test step descriptions, throws an error and stops execution
     if (!atLeastOneDesc) {
-      document.getElementById('table-err').style.display = "flex"
+      displayError("table");
       return false
     }
   }
-  document.getElementById('table-err').style.display = "none"
+  clearErrors();
   return true
 }
 /*first row is the first row of the table being checked - line row is the accompanying
@@ -1441,12 +1449,14 @@ const convertToIndentedList = async (description, elemList) => {
         indentLevel--;
       }
     }
+    await axios.post(RETRIEVE, {elem: elem , "changed elem": alteredElem});
     description = description.replace(elem, convertToListElem(alteredElem));
   }
   return description;
 }
 
 /* Adds a <ul> or <ol> element based on the parameters and if the element is an unordered or ordered list. */
+/* endPrefix = true means that it should put the </ul> or </ol> BEFORE the element instead of after. */
 const listDelimiter = (elem, start, endPrefix) => {
   if (start) {
     if (elem.includes(">·<span") || elem.includes(">o<span") || elem.includes(">§<span")) { // Checks for if it should start an unordered or ordered list
