@@ -1376,36 +1376,31 @@ const rowCheck = (firstRow, lineRow) => {
 
 /* Takes a single <p> to </p> element and turns it into a list element if it has the necessary class*/
 const convertToListElem = (pElem) => {
-  let ordered = !(pElem.includes(">·<span") || pElem.includes(">o<span") || pElem.includes(">§<span"));
-  let orderedRegEx = />.{1,2}<span/g;
-  if (pElem.includes("class=MsoListParagraphCxSpFirst")) { //Case for if the element is the first element in a list
+  let listElem = pElem + "";
+  let ordered = !(listElem.includes(">·<span") || listElem.includes(">o<span") || listElem.includes(">§<span"));
+  let orderedRegEx = params.regexs.orderedRegEx;
+  if (listElem.includes("class=MsoListParagraphCxSpFirst")) { //Case for if the element is the first element in a list
     //Must add extra html element codes at the beginning and end of the list to wrap the list elements together.
-    pElem = listDelimiter(pElem, true, false, ordered); // starts a list
-    pElem = pElem.replace("<p ", "<li ").replace("</p>", "</li>").replaceAll(orderedRegEx, "><span");
-    pElem = pElem.replaceAll("&nbsp;", "");
+    listElem = listDelimiter(listElem, true, false, ordered); // starts a list
   }
-  else if (pElem.includes("class=MsoListParagraphCxSpMiddle")) { //Case for if the element is within the same list.
-    pElem = pElem.replace("<p ", "<li ").replace("</p>", "</li>").replaceAll(orderedRegEx, "><span");
-    pElem = pElem.replaceAll("&nbsp;", "");
+  else if (listElem.includes("class=MsoListParagraphCxSpLast")) { //Case for if the element is the last element in a list.
+    listElem = listDelimiter(listElem, false, false, ordered); // ends a list
   }
-  else if (pElem.includes("class=MsoListParagraphCxSpLast")) { //Case for if the element is the last element in a list.
-    pElem = listDelimiter(pElem, false, false, ordered); // ends a list
-    pElem = pElem.replace("<p ", "<li ").replace("</p>", "</li>").replaceAll(orderedRegEx, "><span");
-    pElem = pElem.replaceAll("&nbsp;", "");
+  else if (listElem.includes("class=MsoListParagraph ")) { //Case for if the element is the only element in the list
+    listElem = listDelimiter(listElem, true, false, ordered); // starts a list
+    listElem = listDelimiter(listElem, false, false, ordered); // ends a list
   }
-  else if (pElem.includes("class=MsoListParagraph")) { //Case for if the element is the only element in the list
-    pElem = listDelimiter(pElem, true, false, ordered); // starts a list
-    pElem = listDelimiter(pElem, false, false, ordered); // ends a list
-    pElem = pElem.replace("<p ", "<li ").replace("</p>", "</li>").replaceAll(orderedRegEx, "><span");
-    pElem = pElem.replaceAll("&nbsp;", "");
+  if (listElem.includes("class=MsoListParagraph")) { // This will happen for every element that is part of a list
+    listElem = listElem.replace("<p ", "<li ").replace("</p>", "</li>").replaceAll(orderedRegEx, "><span");
+    listElem = listElem.replaceAll("&nbsp;", "");
   }
   //Case for if the element is not part of a list is handled by just returning it back.
-  return { elem: pElem, ordered: ordered };
+  return { elem: listElem, ordered: ordered };
 }
 
 /* Filters a string and changes any word-outputted lists to properly formatted html lists. INDENTING IS NOT YET IMPLEMENTED*/
 const filterForLists = (description) => {
-  let startRegEx = /(<p )(.|\n|\s|\r)*?(<\/p>)/gu;
+  let startRegEx = params.regexs.paragraphRegex;
   let elemList = [...description.matchAll(startRegEx)];
   description = convertToIndentedList(description, elemList);
   return description
@@ -1421,10 +1416,9 @@ const convertToIndentedList = (description, elemList) => {
   for (let i = 0; i < elemList.length; i++) {
     /* Use elemList[i][0] in order to reach the matched strings. */
     let elem = elemList[i][0];
-    let alteredElem = "" + elem;
-    let match = alteredElem.match(/style='margin-left:(\d)\.(\d)in/);
-    let result = convertToListElem(alteredElem);
-    alteredElem = result.elem;
+    let match = elem.match(params.regexs.marginRegEx);
+    let result = convertToListElem(elem);
+    let alteredElem = result.elem;
     let ordered = result.ordered;
     if (match) {
       let curIndentLevel = (parseInt(match[1]) * 2 + parseInt(match[2]) * 0.2) - 1
@@ -1436,6 +1430,7 @@ const convertToIndentedList = (description, elemList) => {
         alteredElem = listDelimiter(alteredElem, false, true, lastOrdered);
         indentLevel--;
       }
+      lastOrdered = ordered;
     }
     else {
       let curIndentLevel = 0;

@@ -48,8 +48,10 @@ var params = {
     tableRegex: /<table(.|\n|\r)*?\/table>/g,
     bodyRegex: /<body(.|\n|\r|\s)*?<\/body>/gu,
     bodyTagRegex: /<(\/)??body(.|\n|\r|\s)*?>/gu,
-    paragraphRegex: /(<p )(.|\n|\s|\r)*?(<\/p>)/gus,
-    emptyParagraphRegex: /<p(.)*?>\&nbsp\;<\/p>/g
+    paragraphRegex: /(<p )(.|\n|\s|\r)*?(<\/p>)/gu,
+    emptyParagraphRegex: /<p(.)*?>\&nbsp\;<\/p>/g,
+    orderedRegEx: />.{1,2}<span/g,
+    marginRegEx: /style='margin-left:(\d)\.(\d)in/
   }
 }
 
