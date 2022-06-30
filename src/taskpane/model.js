@@ -53,7 +53,7 @@ var templates = {
         this.name = "";
         this.description = "";
         this.typeId = 2; // This is the requirement typeId we use when sending to Spira
-        this.indentLevel = 0;
+        this.IndentLevel = 0;
     },
 
     TestCase: function () {

@@ -6,11 +6,11 @@ axios.defaults.headers.put['Content-Type'] = "application/json"
 axios.defaults.headers.put['accept'] = "application/json"
 
 import { Data, tempDataStore, params, templates } from './model.js'
-import { disableButton, retrieveStyles } from './taskpane.js';
+import { disableButton, retrieveStyles, validateHierarchy, filterForLists } from './taskpane.js';
 
 var RETRIEVE = "http://localhost:5000/retrieve"
 
-const sendArtifacts = async (ArtifactTypeId) => {
+const parseArtifacts = async (ArtifactTypeId) => {
   return Word.run(async (context) => {
     disableButton("send-to-spira-button");
     /***************************
@@ -22,7 +22,6 @@ const sendArtifacts = async (ArtifactTypeId) => {
     context.load(selection, ['text', 'inlinePictures', 'style', 'styleBuiltIn']);
     context.load(splitSelection, ['text', 'inlinePictures', 'style', 'styleBuiltIn'])
     await context.sync();
-    await axios.post(RETRIEVE, { text: selection.text })
     //If there is no selected area, parse the full body of the document instead
     if (!selection.text) {
       selection = context.document.body.getRange();
@@ -59,21 +58,123 @@ const sendArtifacts = async (ArtifactTypeId) => {
     /**********************
      Start Artifact Parsing
     ***********************/
+    const bodyRegex = /<body(.)*?<\/body>/gu
     switch (ArtifactTypeId) {
-      //this will parse the data assuming the user wants artifacts to be imported.
+      //this will parse the data assuming the user wants requirements to be imported.
       case (params.artifactEnums.requirements): {
         /*this returns the styles in an array to be referenced 
         against text in the document*/
         let styles = retrieveStyles('req-');
         let descStart, descEnd;
-        let requirements = [];
+        //var for later unscoped access to this variable when artifacts are sent to spira
+        var requirements = [];
+        let body = splitSelection;
         let requirement = new templates.Requirement()
-        for (let [i, item] of splitSelection.items.entries()) {
-
+        for (let [i, item] of body.items.entries()) {
+          //style stores custom styles while styleBuiltIn only stores default styles
+          if (styles.includes(item.styleBuiltIn) || styles.includes(item.style)) {
+            /*this wraps up the description of the previous requirement, pushes to
+            requirements array, and creates a new requirement object*/
+            if (descStart) {
+              descEnd = body.items[i - 1]
+              await axios.post(RETRIEVE, { in: "DescStart condiiton" })
+              /*creates a description range given the beginning 
+              and end as delimited by lines with mapped styles*/
+              let descRange = descStart.expandToOrNullObject(descEnd)
+              await context.sync();
+              //descRange is null if the descEnd is not valid to extend the descStart
+              if (!descRange) {
+                descRange = descStart
+              }
+              //clears these fields so it is known the description has been added to its requirement
+              descStart = undefined
+              descEnd = undefined
+              let descHtml = descRange.getHtml();
+              await context.sync();
+              //m_value is the actual string of the html
+              /**
+               * filter against regex here and remove body tags
+               */
+              requirement.Description = await filterForLists(descHtml.m_value.replaceAll("\r", ""));
+              requirements.push(requirement)
+              /*gets the requirement of the to be created requirement based
+               on its index in the styles array.*/
+              let indent = styles.indexOf(item.styleBuiltIn)
+              if (!indent) {
+                indent = styles.indexOf(item.style)
+              }
+              //creates new requirement and populates relevant fields 
+              requirement = new templates.Requirement();
+              requirement.Name = item.text.replaceAll("\r", "")
+              requirement.IndentLevel = indent
+            }
+            else if (requirement.Name) {
+              requirements.push(requirement)
+              /*gets the requirement of the to be created requirement based
+               on its index in the styles array.*/
+              let indent = styles.indexOf(item.styleBuiltIn)
+              if (!indent) {
+                indent = styles.indexOf(item.style)
+              }
+              //creates new requirement and populates relevant fields 
+              requirement = new templates.Requirement();
+              requirement.Name = item.text.replaceAll("\r", "")
+              requirement.IndentLevel = indent
+            }
+            //This should only happen for the first indent level 1 line parsed
+            else {
+              requirement.Name = item.text.replaceAll("\r", "")
+            }
+          }
+          else {
+            if (!descStart) {
+              await axios.post(RETRIEVE, { desc: "Start made" })
+              descStart = item
+            }
+          }
+          /*if a line is the last line in the selection/body
+          & the current requirement object has least a name,
+          & the name is not the current line's text 
+          push the last requirement*/
+          if (i == body.items.length - 1 && requirement.Name && item.text != requirement.Name) {
+            if (item.text) {
+              let descRange;
+              //if it has a start - expand the range to the end of the description block
+              if (descStart) {
+                descEnd = item
+                descRange = descStart.expandToOrNullObject(descEnd)
+              }
+              else {
+                descRange = item
+              }
+              await context.sync()
+              //this covers if the expandToOrNullObject returns null
+              if (!descRange) {
+                descRange = descStart
+              }
+              let descHtml = descRange.getHtml();
+              await context.sync();
+              /**
+               * Filter against regex here as well - also need to remove body tags
+               */
+              requirement.Description = await filterForLists(descHtml.m_value.replaceAll("\r", ""));
+            }
+            axios.post(RETRIEVE, {req: requirement})
+            requirements.push(requirement)
+          }
         }
+        if (!validateHierarchy(requirements)) {
+          requirements = false
+          //throw hierarchy error and exit
+        }
+        //if the heirarchy is invalid, clear requirements and throw error
+        await axios.post(RETRIEVE, { reqs: requirements })
+        break
       }
-
-
+      case (params.artifactEnums.testCases): {
+        await axios.post(RETRIEVE, { bruh: "why is it in here" })
+        break
+      }
     }
   })
 }
@@ -82,13 +183,13 @@ const sendArtifacts = async (ArtifactTypeId) => {
 //A different version of this will be used for google docs.
 const getUserSelection = async () => {
   return Word.run(async (context) => {
-
+    //multiple variables cannot maintain their object typing / prototype so this is scrapped
     return [selection, splitSelection]
   })
 }
 
 
 export {
-  sendArtifacts,
+  parseArtifacts,
   getUserSelection
 }

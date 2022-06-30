@@ -18,7 +18,7 @@ axios.defaults.headers.put['Content-Type'] = "application/json"
 axios.defaults.headers.put['accept'] = "application/json"
 import { Data, tempDataStore, params, templates, ERROR_MESSAGES } from './model'
 import {
-  sendArtifacts
+  parseArtifacts
 } from './server'
 
 // Global selection array, used throughout
@@ -73,7 +73,7 @@ Testing Functions
 *****************/
 //basic testing function for validating code snippet behaviour.
 export async function test() {
-  let bruh = await sendArtifacts(params.artifactEnums.requirements);
+  let bruh = await parseArtifacts(params.artifactEnums.requirements);
 }
 /**************
 Spira API calls
@@ -1339,12 +1339,14 @@ const usedStyles = async () => {
 const validateHierarchy = (requirements) => {
   //requirements = [{Name: str, Description: str, IndentLevel: int}, ...]
   //the first requirement must always be indent level 0 (level 1 in UI terms)
+  axios.post(RETRIEVE, { valid: requirements[0].IndentLevel})
   if (requirements[0].IndentLevel != 0) {
     return false
   }
   let prevIndent = 0
   for (let i = 0; i < requirements.length; i++) {
     //if there is a jump in indent levels greater than 1, fails validation
+    axios.post(RETRIEVE, { stuff: prevIndent, stuff2: requirements[i].IndentLevel })
     if (requirements[i].IndentLevel > prevIndent + 1) {
       return false
     }
@@ -1454,8 +1456,7 @@ const convertToIndentedList = async (description, elemList) => {
         indentLevel--;
       }
     }
-    await axios.post(RETRIEVE, {elem: elem , "changed elem": alteredElem});
-    description = description.replace(elem, alteredElem);
+    description = description.replace(elem, convertToListElem(alteredElem));
   }
   return description;
 }
@@ -1472,4 +1473,4 @@ const listDelimiter = (elem, start, endPrefix, ordered) => {
   return elem;
 }
 
-export { retrieveImages, disableButton, retrieveStyles }
+export { disableButton, retrieveStyles, validateHierarchy, filterForLists }
