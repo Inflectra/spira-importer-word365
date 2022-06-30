@@ -43,8 +43,14 @@ var params = {
     //have to replace {project-id} with tempDataStore.currentProjectId
     outdentCall: "/requirements/{project-id}/outdent",
     indentCall: "/requirements/{project-id}/indent",
+  },
+  regexs: {
+    tableRegex: /<table(.|\n|\r)*?\/table>/g,
+    bodyRegex: /<body(.|\n|\r|\s)*?<\/body>/gu,
+    bodyTagRegex: /<(\/)??body(.|\n|\r|\s)*?>/gu,
+    paragraphRegex: /(<p )(.|\n|\s|\r)*?(<\/p>)/gus,
+    emptyParagraphRegex: /<p(.)*?>\&nbsp\;<\/p>/g
   }
-
 }
 
 var templates = {

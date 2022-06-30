@@ -14,6 +14,8 @@ import {
   validateTestSteps
 } from './taskpane.js';
 
+/*LINES THAT NEED ATTENTION: 103 165 204 */
+
 var RETRIEVE = "http://localhost:5000/retrieve"
 
 const parseArtifacts = async (ArtifactTypeId) => {
@@ -64,7 +66,8 @@ const parseArtifacts = async (ArtifactTypeId) => {
     /**********************
      Start Artifact Parsing
     ***********************/
-    const bodyRegex = /<body(.)*?<\/body>/gu
+    const bodyRegex = /<body(.|\n|\r|\s)*?<\/body>/gu
+    const bodyTagRegex = /<(\/)??body(.|\n|\r|\s)*?>/gu
     switch (ArtifactTypeId) {
       //this will parse the data assuming the user wants requirements to be imported.
       case (params.artifactEnums.requirements): {
@@ -176,7 +179,7 @@ const parseArtifacts = async (ArtifactTypeId) => {
         }
         //if the heirarchy is invalid, clear requirements and throw error
         await axios.post(RETRIEVE, { reqs: requirements })
-        break
+        return requirements
       }
       case (params.artifactEnums.testCases): {
         let tableCounter = 0
@@ -201,8 +204,99 @@ const parseArtifacts = async (ArtifactTypeId) => {
         let tableImages = selectionTables.items[0].getRange().inlinePictures;
         context.load(tableImages)
         await context.sync();
-        if (!validateTestSteps(tables, styles[2]))
-          break
+        if (!validateTestSteps(tables, styles[2])) {
+          /*
+          *throw error
+          */
+        }
+        /*part of this portion isnt DRY, but due to not being able to pass Word 
+        objects between functions cant be made into its own function*/
+        for (let [i, item] of splitSelection.items.entries()) {
+          //this just removes excess tags
+          let itemtext = item.text.replaceAll("\r", "")
+          if (styles.includes(item.style) || styles.includes(item.styleBuiltIn)) {
+            if (descStart) {
+              descEnd = splitSelection.items[i - 1]
+              let descRange = descStart.expandToOrNullObject(descEnd);
+              context.load(descRange)
+              await context.sync();
+              /*if the descRange returns null (doesnt populate a range), assume the range
+              is only the starting line.*/
+              let descHtml = descRange.getHtml();
+              await context.sync()
+              descStart = undefined; descEnd = undefined;
+              if (!testCase.Name) {
+                testCase.folderDescription = descHtml.m_value.replaceAll("\r", "")
+              }
+              else {
+                //removes tables picked up in the description and adds proper HTML lists
+                let filteredDescription = filterForLists(descHtml.m_value.replaceAll("\r", "")); // filter for LISTS!!!
+                let tableRegex = /<table(.|\n|\r)*?\/table>/g
+                /*descriptionBody parses out the body, Tables
+                 matches all tables to be removed as well*/
+                let descriptionBody = filteredDescription.match(bodyRegex)[0]
+                let descriptionTables = [...descriptionBody.matchAll(tableRegex)]
+                for (let j = 0; j < descriptionTables.length; j++) {
+                  filteredDescription = filteredDescription.replace(descriptionTables[j][0], "")
+                }
+                testCase.testCaseDescription = filteredDescription
+              }
+              if (item.style == styles[0] || item.styleBuiltIn == styles[0]) {
+                if (testCase.Name) {
+                  testCases.push(testCase)
+                }
+                testCase = { folderName: itemtext, folderDescription: "", Name: "", testCaseDescription: "", testSteps: [] }
+              }
+              else {
+                if (testCase.Name) {
+                  testCases.push(testCase)
+                  //makes a new testCase object with the old folderName in case there is not a new one.
+                  testCase = { folderName: testCases[testCases.length - 1].folderName, folderDescription: "", Name: "", testCaseDescription: "", testSteps: [] }
+                }
+                testCase.Name = itemtext
+              }
+            }
+          }
+          else if (tables[0] && item.text == tables[0][0][parseInt(styles[2].slice(-1)) - 1]?.concat("\t") && item.text.slice(-1) == "\t") {
+            //This procs when there is a table and the first description equals item.text
+            //testStepTable = 2d array [row][column]
+            let testStepTable;
+            /**************************
+             *start parseTestStepsLogic*
+            ***************************/
+            //this is the length of a row, needed for organizing the tables for parsing
+            let length = selectionTables.items[tableCounter].values[0].length
+            let testStepRegex = /(<p )(.|\n|\s|\r)*?(<\/p>)/gus
+            /************************
+            *end parseTestStepsLogic*
+            ************************/
+            //table counter lets parseTestSteps know which table is currently being parsed
+            tableCounter++
+            let testStep = new templates.TestStep();
+            let testSteps = []
+            //this is true when the "Header rows?" box is checked
+            let headerCheck = document.getElementById("header-check").checked
+            if (headerCheck) {
+              //if the user says there are header rows, remove the first row of the table being parsed.
+              testStepTable.shift();
+            }
+            //take testStepTable and put into test steps
+            for (let [i, row] of testStepTable.entries()) {
+              //skips lines with empty descriptions to prevent pushing empty steps (returns null if no match)
+              let emptyStepRegex = /<p(.)*?>\&nbsp\;<\/p>/g
+
+              if (row[parseInt(styles[2].slice(-1)) - 1].match(emptyStepRegex)) {
+                continue
+              }
+              testStep = { Description: row[parseInt(styles[2].slice(-1)) - 1], ExpectedResult: row[parseInt(styles[3].slice(-1)) - 1], SampleData: row[parseInt(styles[4].slice(-1)) - 1] }
+              testSteps.push(testStep)
+            }
+            testCase.testSteps = testSteps
+            //removes the table that has been processed from this functions local reference
+            tables.shift();
+          }
+        }
+        break
       }
     }
   })
