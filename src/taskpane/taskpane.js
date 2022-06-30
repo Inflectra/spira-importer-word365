@@ -1386,10 +1386,11 @@ const rowCheck = (firstRow, lineRow) => {
 
 /* Takes a single <p> to </p> element and turns it into a list element if it has the necessary class*/
 const convertToListElem = (pElem) => {
+  let ordered = !(pElem.includes(">·<span") || pElem.includes(">o<span") || pElem.includes(">§<span"));
   let orderedRegEx = />.{1,2}<span/g;
   if (pElem.includes("class=MsoListParagraphCxSpFirst")) { //Case for if the element is the first element in a list
     //Must add extra html element codes at the beginning and end of the list to wrap the list elements together.
-    pElem = listDelimiter(pElem, true); // starts a list
+    pElem = listDelimiter(pElem, true, false, ordered); // starts a list
     pElem = pElem.replace("<p ", "<li ").replace("</p>", "</li>").replaceAll(orderedRegEx, "><span");
     pElem = pElem.replaceAll("&nbsp;", "");
   }
@@ -1398,18 +1399,18 @@ const convertToListElem = (pElem) => {
     pElem = pElem.replaceAll("&nbsp;", "");
   }
   else if (pElem.includes("class=MsoListParagraphCxSpLast")) { //Case for if the element is the last element in a list.
-    pElem = listDelimiter(pElem, false); // ends a list
+    pElem = listDelimiter(pElem, false, false, ordered); // ends a list
     pElem = pElem.replace("<p ", "<li ").replace("</p>", "</li>").replaceAll(orderedRegEx, "><span");
     pElem = pElem.replaceAll("&nbsp;", "");
   }
   else if (pElem.includes("class=MsoListParagraph")) { //Case for if the element is the only element in the list
-    pElem = listDelimiter(pElem, true); // starts a list
-    pElem = listDelimiter(pElem, false); // ends a list
+    pElem = listDelimiter(pElem, true, false, ordered); // starts a list
+    pElem = listDelimiter(pElem, false, false, ordered); // ends a list
     pElem = pElem.replace("<p ", "<li ").replace("</p>", "</li>").replaceAll(orderedRegEx, "><span");
     pElem = pElem.replaceAll("&nbsp;", "");
   }
   //Case for if the element is not part of a list is handled by just returning it back.
-  return pElem;
+  return {elem: pElem, ordered: ordered };
 }
 
 /* Filters a string and changes any word-outputted lists to properly formatted html lists. INDENTING IS NOT YET IMPLEMENTED*/
@@ -1426,64 +1427,48 @@ const filterForLists = async (description) => {
    lists. */
 const convertToIndentedList = async (description, elemList) => {
   let indentLevel = 0;
+  let lastOrdered = false;
   for (let i = 0; i < elemList.length; i++) {
     /* Use elemList[i][0] in order to reach the matched strings. */
     let elem = elemList[i][0];
     let alteredElem = "" + elem;
-    let result = alteredElem.match(/style='margin-left:(\d)\.(\d)in/);
-    if (result) {
-      let curIndentLevel = (parseInt(result[1]) * 2 + parseInt(result[2]) * 0.2) - 1
+    let match = alteredElem.match(/style='margin-left:(\d)\.(\d)in/);
+    let result = convertToListElem(alteredElem);
+    alteredElem = result.elem;
+    let ordered = result.ordered;
+    if (match) {
+      let curIndentLevel = (parseInt(match[1]) * 2 + parseInt(match[2]) * 0.2) - 1
       while (curIndentLevel > indentLevel) {
-        alteredElem = listDelimiter(alteredElem, true);
+        alteredElem = listDelimiter(alteredElem, true, false, ordered);
         indentLevel++;
       }
       while (curIndentLevel < indentLevel) {
-        alteredElem = listDelimiter(alteredElem, false, true);
+        alteredElem = listDelimiter(alteredElem, false, true, lastOrdered);
         indentLevel--;
       }
     }
     else {
       let curIndentLevel = 0;
       while (curIndentLevel < indentLevel) {
-        alteredElem = listDelimiter(alteredElem, false, true);
+        alteredElem = listDelimiter(alteredElem, false, true, lastOrdered);
         indentLevel--;
       }
     }
     await axios.post(RETRIEVE, {elem: elem , "changed elem": alteredElem});
-    description = description.replace(elem, convertToListElem(alteredElem));
+    description = description.replace(elem, alteredElem);
   }
   return description;
 }
 
 /* Adds a <ul> or <ol> element based on the parameters and if the element is an unordered or ordered list. */
 /* endPrefix = true means that it should put the </ul> or </ol> BEFORE the element instead of after. */
-const listDelimiter = (elem, start, endPrefix) => {
-  if (start) {
-    if (elem.includes(">·<span") || elem.includes(">o<span") || elem.includes(">§<span")) { // Checks for if it should start an unordered or ordered list
-      elem = "<ul>" + elem;
-    }
-    else {
-      elem = "<ol>" + elem;
-    }
-  }
-  else {
-    if (endPrefix) { //case for when it needs to end the previous list element instead of the current one
-      if (elem.includes(">·<span") || elem.includes(">o<span") || elem.includes(">§<span")) { // Checks for if it should end an unordered or ordered list
-        elem = "</ul>" + elem;
-      }
-      else {
-        elem = "</ol>" + elem;
-      }
-    }
-    else {
-      if (elem.includes(">·<span") || elem.includes(">o<span") || elem.includes(">§<span")) { // Checks for if it should end an unordered or ordered list
-        elem = elem + "</ul>";
-      }
-      else {
-        elem = elem + "</ol>";
-      }
-    }
-  }
+const listDelimiter = (elem, start, endPrefix, ordered) => {
+  // Checks for if is affecting an ordered or unordered list.
+  let orderedMarker = ordered ? "ol" : "ul";
+  // Checks if it is starting or ending a list
+  let listMarker = `<${start ? "" : "/"}${orderedMarker}>`
+  // Checks where it should position the list marker
+  elem = endPrefix || start ? `${listMarker}${elem}` : `${elem}${listMarker}`;
   return elem;
 }
 
