@@ -138,6 +138,7 @@ const pushRequirements = async () => {
   if (requirements.length == 0) {
     //Something in parseRequirements is breaking so it wouldn't even get here
     displayError("empty", true);
+    document.getElementById("send-to-spira-button").disabled = false;
     return
   }
   let pid = document.getElementById('project-select').value;
@@ -209,26 +210,15 @@ const pushRequirements = async () => {
 before this add-on begins to add more. (No way to find out indent level of the last requirement
   in a product from the Spira API (i think))*/
 const indentRequirement = async (apiCall, id, indent) => {
-  if (indent > 0) {
-    //loop for indenting requirement
-    for (let i = 0; i < indent; i++) {
-      try {
-        let call2 = await axios.post(apiCall.replace("requirements", `requirements/${id}/indent`), {});
-      }
-      catch (err) {
-        console.log(err)
-      }
+  apiCall = apiCall.replace("requirements", `requirements/${id}/${indent > 0 ? "indent" : "outdent"}`)
+  indent = Math.abs(indent);
+  //loop for indenting/outdenting requirement
+  for (let i = 0; i < indent; i++) {
+    try {
+      let call2 = await axios.post(apiCall, {});
     }
-  }
-  else {
-    //loop for outdenting requirement
-    for (let i = 0; i > indent; i--) {
-      try {
-        let call2 = await axios.post(apiCall.replace("requirements", `requirements/${id}/outdent`), {});
-      }
-      catch (err) {
-        console.log(err)
-      }
+    catch (err) {
+      console.log(err)
     }
   }
 }
@@ -684,24 +674,22 @@ const hideProgressBar = () => {
 }
 
 const displayError = (key, timeOut, failedArtifact) => {
+  let element = document.getElementById(ERROR_MESSAGES[key].htmlId);
   if (timeOut) {
-    document.getElementById(ERROR_MESSAGES[key].htmlId).textContent = ERROR_MESSAGES[key].message;
-    // document.getElementById(ERROR_MESSAGES[key].htmlId).style.display = 'flex';
+    element.textContent = ERROR_MESSAGES[key].message;
     setTimeout(() => {
-      document.getElementById(ERROR_MESSAGES[key].htmlId).textContent = "";
+      element.textContent = "";
     }, ERROR_MESSAGES.stdTimeOut);
   }
-  else if (failedArtifact) { // This is a special case error message for better quality errors when sending artifacts
-    document.getElementById(ERROR_MESSAGES[key].htmlId).textContent =
+  else if (failedArtifact) { // This is a special case error message for better debugging when sending artifacts
+    element.textContent =
       `The request to the API has failed on requirement: '${failedArtifact.Name}'. All, if any previous requirements should be in Spira.`;
     setTimeout(() => {
-      document.getElementById(ERROR_MESSAGES[key].htmlId).textContent = "";
+      element.textContent = "";
     }, ERROR_MESSAGES.stdTimeOut);
-    // document.getElementById(ERROR_MESSAGES[key].htmlId).style.display = 'flex';
   }
   else {
-    document.getElementById(ERROR_MESSAGES[key].htmlId).textContent = ERROR_MESSAGES[key].message;
-    // document.getElementById(ERROR_MESSAGES[key].htmlId).style.display = 'flex';
+    element.textContent = ERROR_MESSAGES[key].message;
   }
 }
 
@@ -811,7 +799,7 @@ const parseRequirements = async () => {
           let descHtml = descRange.getHtml();
           await context.sync();
           //m_value is the actual string of the html
-          requirement.Description = await filterForLists(descHtml.m_value.replaceAll("\r", ""));
+          requirement.Description = filterForLists(descHtml.m_value.replaceAll("\r", ""));
           try {
             requirements.push(requirement)
             let indent = styles.indexOf(item.styleBuiltIn)
@@ -873,7 +861,7 @@ const parseRequirements = async () => {
           }
           let descHtml = descRange.getHtml();
           await context.sync();
-          requirement.Description = await filterForLists(descHtml.m_value.replaceAll("\r", ""));
+          requirement.Description = filterForLists(descHtml.m_value.replaceAll("\r", ""));
         }
         requirements.push(requirement)
       }
@@ -1030,7 +1018,7 @@ const newParseTestCases = async () => {
           }
           else {
             //removes tables picked up in the description and adds proper HTML lists
-            let filteredDescription = await filterForLists(descHtml.m_value.replaceAll("\r", "")); // filter for LISTS!!!
+            let filteredDescription = filterForLists(descHtml.m_value.replaceAll("\r", "")); // filter for LISTS!!!
             let tableRegex = /<table(.|\n|\r)*?\/table>/g
             let descriptionTables = [...filteredDescription.matchAll(tableRegex)]
             for (let j = 0; j < descriptionTables.length; j++) {
@@ -1120,7 +1108,7 @@ const newParseTestCases = async () => {
           is only the starting line.*/
           let descHtml = descRange.getHtml();
           await context.sync();
-          let filteredDescription = await filterForLists(descHtml.m_value.replaceAll("\r", ""))
+          let filteredDescription = filterForLists(descHtml.m_value.replaceAll("\r", ""))
           //This removes tables picked up in the description
           let tableRegex = /<table(.|\n|\r)*?\/table>/g
           let descriptionTables = [...filteredDescription.matchAll(tableRegex)]
@@ -1412,14 +1400,14 @@ const convertToListElem = (pElem) => {
     pElem = pElem.replaceAll("&nbsp;", "");
   }
   //Case for if the element is not part of a list is handled by just returning it back.
-  return {elem: pElem, ordered: ordered };
+  return { elem: pElem, ordered: ordered };
 }
 
 /* Filters a string and changes any word-outputted lists to properly formatted html lists. INDENTING IS NOT YET IMPLEMENTED*/
-const filterForLists = async (description) => {
+const filterForLists = (description) => {
   let startRegEx = /(<p )(.|\n|\s|\r)*?(<\/p>)/gu;
   let elemList = [...description.matchAll(startRegEx)];
-  description = await convertToIndentedList(description, elemList);
+  description = convertToIndentedList(description, elemList);
   return description
 }
 
@@ -1427,7 +1415,7 @@ const filterForLists = async (description) => {
    Then it keeps track of the current indent level as it loops through the array, processing the elements
    through convertToListElem and adding an extra <ul> or <ol> as necessary to properly turn them into html 
    lists. */
-const convertToIndentedList = async (description, elemList) => {
+const convertToIndentedList = (description, elemList) => {
   let indentLevel = 0;
   let lastOrdered = false;
   for (let i = 0; i < elemList.length; i++) {
@@ -1456,7 +1444,7 @@ const convertToIndentedList = async (description, elemList) => {
         indentLevel--;
       }
     }
-    description = description.replace(elem, convertToListElem(alteredElem));
+    description = description.replace(elem, alteredElem);
   }
   return description;
 }
