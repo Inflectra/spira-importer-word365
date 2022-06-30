@@ -674,6 +674,8 @@ const hideProgressBar = () => {
 }
 
 const displayError = (key, timeOut, failedArtifact) => {
+  //We may want to update this to pass in the full object for better readability
+  //rather than just passing in the key. (ie. instead of key, pass ERROR_MESSAGES['key'])
   let element = document.getElementById(ERROR_MESSAGES[key].htmlId);
   if (timeOut) {
     element.textContent = ERROR_MESSAGES[key].message;

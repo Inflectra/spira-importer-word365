@@ -22,14 +22,19 @@ import {
 /*LINES THAT NEED ATTENTION: 103 165 204 */
 
 var RETRIEVE = "http://localhost:5000/retrieve"
+//params:
+//ArtifactTypeId: ID based on params.artifactEnums.{artifact-type}
 
+/*This function takes in an ArtifactTypeId and parses the selected text or full body
+of a document, returning digestable objects which can easily be used to send artifacts
+to spira.*/
 const parseArtifacts = async (ArtifactTypeId) => {
   return Word.run(async (context) => {
     disableButton("send-to-spira-button");
     /***************************
      Start range identification
      **************************/
-    let projectId = new tempDataStore(document.getElementById("project-select").value)
+    let projectId = document.getElementById("project-select").value
     let selection = context.document.getSelection();
     let splitSelection = context.document.getSelection().split(['\r']);
     context.load(selection, ['text', 'inlinePictures', 'style', 'styleBuiltIn']);
@@ -91,7 +96,6 @@ const parseArtifacts = async (ArtifactTypeId) => {
             requirements array, and creates a new requirement object*/
             if (descStart) {
               descEnd = body.items[i - 1]
-              await axios.post(RETRIEVE, { in: "DescStart condiiton" })
               /*creates a description range given the beginning 
               and end as delimited by lines with mapped styles*/
               let descRange = descStart.expandToOrNullObject(descEnd)
@@ -142,7 +146,6 @@ const parseArtifacts = async (ArtifactTypeId) => {
           }
           else {
             if (!descStart) {
-              await axios.post(RETRIEVE, { desc: "Start made" })
               descStart = item
             }
           }
@@ -173,16 +176,17 @@ const parseArtifacts = async (ArtifactTypeId) => {
                */
               requirement.Description = await filterForLists(descHtml.m_value.replaceAll("\r", ""));
             }
-            axios.post(RETRIEVE, { req: requirement })
             requirements.push(requirement)
           }
         }
         if (!validateHierarchy(requirements)) {
           requirements = false
           document.getElementById("send-to-spira-button").disable = false
+          displayError("heirarchy", true)
           //throw hierarchy error and exit
         }
         //if the heirarchy is invalid, clear requirements and throw error
+        sendArtifacts(params.artifactEnums.requirements, imageObjects, requirements, projectId)
         return requirements
       }
       case (params.artifactEnums.testCases): {
@@ -193,7 +197,6 @@ const parseArtifacts = async (ArtifactTypeId) => {
         let styles = retrieveStyles('test-')
         let testCase = new templates.TestCase()
         let descStart, descEnd;
-        await axios.post(RETRIEVE, { init: "working" })
         /********************
          * Parsing out tables
          ********************/
@@ -212,18 +215,15 @@ const parseArtifacts = async (ArtifactTypeId) => {
         context.load(tableImages)
         await context.sync();
         if (!validateTestSteps(tables, styles[2])) {
-          /*
-          *throw error
-          */
+          //validateTestSteps throws the error
+          return false
         }
         /*part of this portion isnt DRY, but due to not being able to pass Word 
         objects between functions cant be made into its own function*/
         for (let [i, item] of splitSelection.items.entries()) {
           //this just removes excess tags
           let itemtext = item.text.replaceAll("\r", "")
-          await axios.post(RETRIEVE, { count: i })
           if (styles.includes(item.style) || styles.includes(item.styleBuiltIn)) {
-            await axios.post(RETRIEVE, { in: "Here 2 times" })
             if (descStart) {
               descEnd = splitSelection.items[i - 1]
               let descRange = descStart.expandToOrNullObject(descEnd);
@@ -283,7 +283,6 @@ const parseArtifacts = async (ArtifactTypeId) => {
             }
             else {
               if (item.style == styles[0] || item.styleBuiltIn == styles[0]) {
-                await axios.post(RETRIEVE, {name: "being set"})
                 testCase.folderName = itemtext
               }
               //else it must have styles[1] (test case name mapping) as its style, so set as new test case's name
@@ -297,7 +296,7 @@ const parseArtifacts = async (ArtifactTypeId) => {
             //This procs when there is a table and the first description equals item.text
             //testStepTable = 2d array [row][column]
             /**************************
-             *start parseTestStepsLogic*
+             *start parseTestSteps Logic*
             ***************************/
             //this is the length of a row, needed for organizing the tables for parsing
             let length = selectionTables.items[tableCounter].values[0].length
@@ -323,7 +322,7 @@ const parseArtifacts = async (ArtifactTypeId) => {
             }
             let testStepTable = formattedStrings
             /************************
-            *end parseTestStepsLogic*
+            *end parseTestSteps Logic*
             ************************/
             //table counter lets parseTestSteps know which table is currently being parsed
             tableCounter++
@@ -351,9 +350,7 @@ const parseArtifacts = async (ArtifactTypeId) => {
             tables.shift();
           }
           else if (!descStart && (item.text.slice(-1) != "\t")) {
-            await axios.post(RETRIEVE, { descStart: "Yeah" })
             descStart = item
-            await axios.post(RETRIEVE, { descStart2: "Yeah" })
           }
           if (i == (splitSelection.items.length - 1)) {
             if (descStart) {
@@ -379,12 +376,27 @@ const parseArtifacts = async (ArtifactTypeId) => {
             }
           }
         }
-        await axios.post(RETRIEVE, { cases: testCases })
+        sendArtifacts(params.artifactEnums.testCases, imageObjects, testCases, projectId)
         return testCases
-        break
       }
     }
   })
+}
+//params:
+//images = [{base64: b64encoded string, name: "", lineNum: ""}]
+//ArtifactTypeId based on params.artifactEnums.{artifact-type}
+//Artifacts is the array of parsed artifacts ready for sending
+
+/*This function takes the already parsed artifacts and images and sends
+them to spira*/
+const sendArtifacts = (ArtifactTypeId, images, Artifacts, projectId) => {
+  //this checks if an empty artifact array is passed in (should never happen)
+  if (Artifacts.length == 0) {
+    //empty is the error message key for the model object.
+    displayError("empty", true);
+    document.getElementById("send-to-spira-button").disabled = false;
+    return
+  }
 }
 
 
