@@ -14,6 +14,11 @@ import {
   validateTestSteps
 } from './taskpane.js';
 
+/*Functions that have been integrated into parseArtifacts: pushArtifacts,
+ updateSelectionArray, retrieveImages, parseRequirements, retrieveTables,
+ parseTestCases, parseTestSteps
+ */
+
 /*LINES THAT NEED ATTENTION: 103 165 204 */
 
 var RETRIEVE = "http://localhost:5000/retrieve"
@@ -66,8 +71,8 @@ const parseArtifacts = async (ArtifactTypeId) => {
     /**********************
      Start Artifact Parsing
     ***********************/
-    const bodyRegex = /<body(.|\n|\r|\s)*?<\/body>/gu
-    const bodyTagRegex = /<(\/)??body(.|\n|\r|\s)*?>/gu
+    const bodyRegex = params.regexs.bodyRegex
+    const bodyTagRegex = params.regexs.bodyTagRegex
     switch (ArtifactTypeId) {
       //this will parse the data assuming the user wants requirements to be imported.
       case (params.artifactEnums.requirements): {
@@ -174,18 +179,20 @@ const parseArtifacts = async (ArtifactTypeId) => {
         }
         if (!validateHierarchy(requirements)) {
           requirements = false
-          document.getElementById("send-to-spira-button")
+          document.getElementById("send-to-spira-button").disable = false
           //throw hierarchy error and exit
         }
         //if the heirarchy is invalid, clear requirements and throw error
-        await axios.post(RETRIEVE, { reqs: requirements })
         return requirements
       }
       case (params.artifactEnums.testCases): {
+        /*when parsing multiple tables tableCounter serves as an index throughout all
+        parts of the function*/
         let tableCounter = 0
         let testCases = []
         let styles = retrieveStyles('test-')
         let testCase = new templates.TestCase()
+        let descStart, descEnd;
         await axios.post(RETRIEVE, { init: "working" })
         /********************
          * Parsing out tables
@@ -214,7 +221,9 @@ const parseArtifacts = async (ArtifactTypeId) => {
         for (let [i, item] of splitSelection.items.entries()) {
           //this just removes excess tags
           let itemtext = item.text.replaceAll("\r", "")
+          await axios.post(RETRIEVE, { count: i })
           if (styles.includes(item.style) || styles.includes(item.styleBuiltIn)) {
+            await axios.post(RETRIEVE, { in: "Here 2 times" })
             if (descStart) {
               descEnd = splitSelection.items[i - 1]
               let descRange = descStart.expandToOrNullObject(descEnd);
@@ -223,15 +232,16 @@ const parseArtifacts = async (ArtifactTypeId) => {
               /*if the descRange returns null (doesnt populate a range), assume the range
               is only the starting line.*/
               let descHtml = descRange.getHtml();
-              await context.sync()
+              await context.sync();
               descStart = undefined; descEnd = undefined;
               if (!testCase.Name) {
-                testCase.folderDescription = descHtml.m_value.replaceAll("\r", "")
+                //this doesnt need formatting
+                testCase.folderDescription = itemtext
               }
               else {
                 //removes tables picked up in the description and adds proper HTML lists
                 let filteredDescription = filterForLists(descHtml.m_value.replaceAll("\r", "")); // filter for LISTS!!!
-                let tableRegex = /<table(.|\n|\r)*?\/table>/g
+                let tableRegex = params.regexs.tableRegex
                 /*descriptionBody parses out the body, Tables
                  matches all tables to be removed as well*/
                 let descriptionBody = filteredDescription.match(bodyRegex)[0]
@@ -245,28 +255,73 @@ const parseArtifacts = async (ArtifactTypeId) => {
                 if (testCase.Name) {
                   testCases.push(testCase)
                 }
-                testCase = { folderName: itemtext, folderDescription: "", Name: "", testCaseDescription: "", testSteps: [] }
+                testCase = new templates.TestCase();
+                testCase.folderName = itemtext
               }
               else {
                 if (testCase.Name) {
                   testCases.push(testCase)
                   //makes a new testCase object with the old folderName in case there is not a new one.
-                  testCase = { folderName: testCases[testCases.length - 1].folderName, folderDescription: "", Name: "", testCaseDescription: "", testSteps: [] }
+                  testCase = new templates.TestCase();
+                  testCase.folderName = testCases[testCases.length - 1].folderName
                 }
                 testCase.Name = itemtext
               }
+            }
+            /*if there is already a test case name and a a new test case / folder name is detected,
+            push the test case to testCases array, then empty the test case object*/
+            else if (testCase.Name) {
+              testCases.push(testCase)
+              //if the currently checked line has styles[0] as its style, put the folder name as the items text
+              if (item.style == styles[0] || item.styleBuiltIn == styles[0]) {
+                testCase = { folderName: itemtext, folderDescription: "", Name: "", testCaseDescription: "", testSteps: [] }
+              }
+              //else it must have styles[1] (folder name mapping) as its style, so set as new test case's name
+              else {
+                testCase = { folderName: testCases[testCases.length - 1].folderName, folderDescription: "", Name: item.text, testCaseDescription: "", testSteps: [] }
+              }
+            }
+            else {
+              if (item.style == styles[0] || item.styleBuiltIn == styles[0]) {
+                await axios.post(RETRIEVE, {name: "being set"})
+                testCase.folderName = itemtext
+              }
+              //else it must have styles[1] (test case name mapping) as its style, so set as new test case's name
+              else {
+                testCase.Name = itemtext
+              }
+              continue
             }
           }
           else if (tables[0] && item.text == tables[0][0][parseInt(styles[2].slice(-1)) - 1]?.concat("\t") && item.text.slice(-1) == "\t") {
             //This procs when there is a table and the first description equals item.text
             //testStepTable = 2d array [row][column]
-            let testStepTable;
             /**************************
              *start parseTestStepsLogic*
             ***************************/
             //this is the length of a row, needed for organizing the tables for parsing
             let length = selectionTables.items[tableCounter].values[0].length
-            let testStepRegex = /(<p )(.|\n|\s|\r)*?(<\/p>)/gus
+            let tableElementRegex = params.regexs.paragraphRegex
+            for (let item of splitSelection.items) {
+              let html = selectionTables.items[tableCounter].getRange().getHtml();
+              await context.sync();
+              let elements = [...html.m_value.matchAll(tableElementRegex)]
+              var formattedStrings = []
+              for (let [i, element] of elements.entries()) {
+                //if the row exists, place the current element into its relevant box
+                if (formattedStrings[Math.floor(i / length)]) {
+                  /*element is a single match from elements - [0] is the full
+                   string of the match (as per RegExp String Iterator syntax)*/
+                  formattedStrings[Math.floor(i / length)][i % length] = (element[0])
+                }
+                //if a row doesnt exist, create it, then add the current element
+                else {
+                  formattedStrings[Math.floor(i / length)] = []
+                  formattedStrings[Math.floor(i / length)][i % length] = (element[0])
+                }
+              }
+            }
+            let testStepTable = formattedStrings
             /************************
             *end parseTestStepsLogic*
             ************************/
@@ -283,7 +338,7 @@ const parseArtifacts = async (ArtifactTypeId) => {
             //take testStepTable and put into test steps
             for (let [i, row] of testStepTable.entries()) {
               //skips lines with empty descriptions to prevent pushing empty steps (returns null if no match)
-              let emptyStepRegex = /<p(.)*?>\&nbsp\;<\/p>/g
+              let emptyStepRegex = params.regexs.emptyParagraphRegex
 
               if (row[parseInt(styles[2].slice(-1)) - 1].match(emptyStepRegex)) {
                 continue
@@ -295,7 +350,37 @@ const parseArtifacts = async (ArtifactTypeId) => {
             //removes the table that has been processed from this functions local reference
             tables.shift();
           }
+          else if (!descStart && (item.text.slice(-1) != "\t")) {
+            await axios.post(RETRIEVE, { descStart: "Yeah" })
+            descStart = item
+            await axios.post(RETRIEVE, { descStart2: "Yeah" })
+          }
+          if (i == (splitSelection.items.length - 1)) {
+            if (descStart) {
+              descEnd = splitSelection.items[i]
+              let descRange = descStart.expandToOrNullObject(descEnd);
+              await context.sync();
+              /*if the descRange returns null (doesnt populate a range), assume the range
+              is only the starting line.*/
+              let descHtml = descRange.getHtml();
+              await context.sync();
+              let filteredDescription = filterForLists(descHtml.m_value.replaceAll("\r", ""))
+              //This removes tables picked up in the description
+              let tableRegex = /<table(.|\n|\r)*?\/table>/g
+              let descriptionTables = [...filteredDescription.matchAll(tableRegex)]
+              for (let j = 0; j < descriptionTables.length; j++) {
+                filteredDescription = filteredDescription.replace(descriptionTables[j][0], "")
+              }
+              testCase.testCaseDescription = filteredDescription
+            }
+            //dont push a nameless testCase.
+            if (testCase.Name) {
+              testCases.push(testCase)
+            }
+          }
         }
+        await axios.post(RETRIEVE, { cases: testCases })
+        return testCases
         break
       }
     }
