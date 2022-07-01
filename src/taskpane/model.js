@@ -28,9 +28,9 @@ var params = {
   apiComponents: {
     loginCall: "/services/v6_0/RestService.svc/projects",
     apiBase: "/services/v6_0/RestService.svc/projects/",
-    postOrPutRequirement: "requirements",
-    getRequirement: "requirements/",
-    postOrPutTestCase: "test-cases",
+    postOrPutRequirement: "/requirements",
+    getRequirement: "/requirements/",
+    postOrPutTestCase: "/test-cases",
     getTestCase: "/test-cases/",
     postOrPutTestStep: "/test-steps/",
     getTestStep: "/test-steps",
@@ -39,19 +39,22 @@ var params = {
     //these fields will be populated when the full URL is made for this
     imageSrc: "/{project-id}/Attachent/{AttachmentId}.aspx",
     //this is the initial outdent value for the first requirement sent (-20)
-    initialOutdent: "indent/-20",
+    initialOutdent: "/indent/-20",
     //have to replace {project-id} with tempDataStore.currentProjectId
-    outdentCall: "/requirements/{project-id}/outdent",
-    indentCall: "/requirements/{project-id}/indent",
+    outdentCall: "/requirements/{requirement-id}/outdent",
+    indentCall: "/requirements/{requirement-id}/indent",
   },
   regexs: {
     tableRegex: /<table(.|\n|\r)*?\/table>/g,
+    //this parses out the entire body and its contents
     bodyRegex: /<body(.|\n|\r|\s)*?<\/body>/gu,
+    //this parses out the body tags for removal
     bodyTagRegex: /<(\/)??body(.|\n|\r|\s)*?>/gu,
     paragraphRegex: /(<p )(.|\n|\s|\r)*?(<\/p>)/gu,
     emptyParagraphRegex: /<p(.)*?>\&nbsp\;<\/p>/g,
     orderedRegEx: />.{1,7}<span/g,
-    marginRegEx: /style='margin-left:(\d)\.(\d)in/
+    marginRegEx: /style='margin-left:(\d)\.(\d)in/,
+    imageRegex: /<img(.|\n)*("|\s)>/g
   }
 }
 

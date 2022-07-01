@@ -10,8 +10,16 @@ import {
   disableButton,
   retrieveStyles,
   validateHierarchy,
-  validateTestSteps
+  validateTestSteps,
+  displayError,
+  pushImage,
+  showProgressBar,
+  updateProgressBar,
+  indentRequirement,
+  hideProgressBar
 } from './taskpane.js';
+
+//Lines for filterDescription: 126 191 259 278 404 
 
 /*
   Functions that should be moved over: 
@@ -26,16 +34,18 @@ import {
  parseTestCases, parseTestSteps
  */
 
-/*LINES THAT NEED ATTENTION: 103 165 204 */
+/*LINES THAT NEED ATTENTION: 121 175 214 */
 
 var RETRIEVE = "http://localhost:5000/retrieve"
+
 //params:
 //ArtifactTypeId: ID based on params.artifactEnums.{artifact-type}
+//model: user model object based on Data() model. (contains user credentials)
 
 /*This function takes in an ArtifactTypeId and parses the selected text or full body
 of a document, returning digestable objects which can easily be used to send artifacts
 to spira.*/
-const parseArtifacts = async (ArtifactTypeId) => {
+const parseArtifacts = async (ArtifactTypeId, model) => {
   return Word.run(async (context) => {
     disableButton("send-to-spira-button");
     /***************************
@@ -117,10 +127,17 @@ const parseArtifacts = async (ArtifactTypeId) => {
               let descHtml = descRange.getHtml();
               await context.sync();
               //m_value is the actual string of the html
-              /**
-               * filter against regex here and remove body tags
+              /******
+               * This block from "matches" all the way to filterForLists can be put into 1 function.
                */
-              requirement.Description = await filterForLists(descHtml.m_value.replaceAll("\r", ""));
+              //this gets the index of the 2 body tags in the HTML string
+              let matches = [...descHtml.m_value.matchAll(bodyTagRegex)]
+              /*this slices the body to be the beginning of the first
+               body tag to the beginning of the closing body tag*/
+              let htmlBody = descHtml.m_value.slice(matches[0].index, matches[1].index)
+              //this removes the first body tag, and then trims whitespace
+              htmlBody = htmlBody.replace(matches[0][0], "").trim()
+              requirement.Description = await filterForLists(htmlBody.replaceAll("\r", ""));
               requirements.push(requirement)
               /*gets the requirement of the to be created requirement based
                on its index in the styles array.*/
@@ -177,11 +194,15 @@ const parseArtifacts = async (ArtifactTypeId) => {
                 descRange = descStart
               }
               let descHtml = descRange.getHtml();
+              await axios.post(RETRIEVE, { in: "here" })
               await context.sync();
-              /**
-               * Filter against regex here as well - also need to remove body tags
-               */
-              requirement.Description = await filterForLists(descHtml.m_value.replaceAll("\r", ""));
+              let matches = [...descHtml.m_value.matchAll(bodyTagRegex)]
+              /*this slices the body to be the beginning of the first
+               body tag to the beginning of the closing body tag*/
+              let htmlBody = descHtml.m_value.slice(matches[0].index, matches[1].index)
+              //this removes the first body tag, and then trims whitespace
+              htmlBody = htmlBody.replace(matches[0][0], "").trim()
+              requirement.Description = await filterForLists(htmlBody.replaceAll("\r", ""));
             }
             requirements.push(requirement)
           }
@@ -189,11 +210,12 @@ const parseArtifacts = async (ArtifactTypeId) => {
         if (!validateHierarchy(requirements)) {
           requirements = false
           document.getElementById("send-to-spira-button").disable = false
+          //throw hierarchy error and exit function
           displayError("heirarchy", true)
-          //throw hierarchy error and exit
+          return
         }
         //if the heirarchy is invalid, clear requirements and throw error
-        sendArtifacts(params.artifactEnums.requirements, imageObjects, requirements, projectId)
+        sendArtifacts(params.artifactEnums.requirements, imageObjects, requirements, projectId, model)
         return requirements
       }
       case (params.artifactEnums.testCases): {
@@ -242,17 +264,36 @@ const parseArtifacts = async (ArtifactTypeId) => {
               await context.sync();
               descStart = undefined; descEnd = undefined;
               if (!testCase.Name) {
-                //this doesnt need formatting
-                testCase.folderDescription = itemtext
-              }
-              else {
-                //removes tables picked up in the description and adds proper HTML lists
-                let filteredDescription = filterForLists(descHtml.m_value.replaceAll("\r", "")); // filter for LISTS!!!
+                //this whole block will be replaced with filterDescription when that is done
+                let filteredDescription = filterForLists(descHtml.m_value.replaceAll("\r", ""));
                 let tableRegex = params.regexs.tableRegex
                 /*descriptionBody parses out the body, Tables
                  matches all tables to be removed as well*/
-                let descriptionBody = filteredDescription.match(bodyRegex)[0]
-                let descriptionTables = [...descriptionBody.matchAll(tableRegex)]
+                let bodyTags = [...descHtml.m_value.matchAll(bodyTagRegex)]
+                /*this slices the html to be the beginning of the first
+                 body tag to the beginning of the closing body tag*/
+                let htmlBody = descHtml.m_value.slice(bodyTags[0].index, bodyTags[1].index)
+                //this removes the first body tag, and then trims whitespace
+                htmlBody = htmlBody.replace(bodyTags[0][0], "").trim()
+                let descriptionTables = [...htmlBody.matchAll(tableRegex)]
+                for (let j = 0; j < descriptionTables.length; j++) {
+                  filteredDescription = filteredDescription.replace(descriptionTables[j][0], "")
+                }
+                testCase.folderDescription = filteredDescription
+              }
+              else {
+                //removes tables picked up in the description and adds proper HTML lists
+                let filteredDescription = filterForLists(descHtml.m_value.replaceAll("\r", ""));
+                let tableRegex = params.regexs.tableRegex
+                /*descriptionBody parses out the body, Tables
+                 matches all tables to be removed as well*/
+                let bodyTags = [...descHtml.m_value.matchAll(bodyTagRegex)]
+                /*this slices the html to be the beginning of the first
+                 body tag to the beginning of the closing body tag*/
+                let htmlBody = descHtml.m_value.slice(bodyTags[0].index, bodyTags[1].index)
+                //this removes the first body tag, and then trims whitespace
+                htmlBody = htmlBody.replace(bodyTags[0][0], "").trim()
+                let descriptionTables = [...htmlBody.matchAll(tableRegex)]
                 for (let j = 0; j < descriptionTables.length; j++) {
                   filteredDescription = filteredDescription.replace(descriptionTables[j][0], "")
                 }
@@ -383,7 +424,7 @@ const parseArtifacts = async (ArtifactTypeId) => {
             }
           }
         }
-        sendArtifacts(params.artifactEnums.testCases, imageObjects, testCases, projectId)
+        sendArtifacts(params.artifactEnums.testCases, imageObjects, testCases, projectId, model)
         return testCases
       }
     }
@@ -396,13 +437,68 @@ const parseArtifacts = async (ArtifactTypeId) => {
 
 /*This function takes the already parsed artifacts and images and sends
 them to spira*/
-const sendArtifacts = (ArtifactTypeId, images, Artifacts, projectId) => {
+const sendArtifacts = async (ArtifactTypeId, images, Artifacts, projectId, model) => {
   //this checks if an empty artifact array is passed in (should never happen)
+  await axios.post(RETRIEVE, { artis: Artifacts })
   if (Artifacts.length == 0) {
     //empty is the error message key for the model object.
     displayError("empty", true);
     document.getElementById("send-to-spira-button").disabled = false;
     return
+  }
+  switch (ArtifactTypeId) {
+    //this is the logic for sending requirements to spira
+    case (params.artifactEnums.requirements): {
+      //to save refactoring time
+      let requirements = Artifacts
+      let lastIndent = 0
+      const outdentCall = model.user.url + params.apiComponents.apiBase + projectId +
+        params.apiComponents.postOrPutRequirement + params.apiComponents.initialOutdent +
+        model.user.userCredentials
+      showProgressBar();
+      let imgRegex = params.regexs.imageRegex
+      try {
+        //this call is separate from the rest due to being specially outdented
+        let firstCall = await axios.post(outdentCall, requirements[0])
+
+        let placeholders = [...requirements[0].Description.matchAll(imgRegex)]
+        for (let i = 0; i < placeholders.length; i++) {
+          pushImage(firstCall.data, images[0])
+          images.shift();
+        }
+        updateProgressBar(1, requirements.length)
+        //removes the first requirement to save on checking in the for..of function after this
+        requirements.shift()
+      }
+      catch (err) {
+        displayError("failedReq", false, item);
+      }
+      const apiUrl = model.user.url + params.apiComponents.apiBase + projectId +
+        params.apiComponents.postOrPutRequirement + model.user.userCredentials
+      for (let req of requirements) {
+        try {
+          await axios.post(RETRIEVE, {url: apiUrl, req})
+          let call = await axios.post(apiUrl, req)
+          await indentRequirement(apiUrl, call.data.RequirementId, req.IndentLevel - lastIndent)
+          lastIndent = req.IndentLevel;
+          let placeholders = [...req.Description.matchAll(imgRegex)]
+          //the 'p' itemization of placeholders isnt needed - just needs to happen once per placeholder
+          for (let p of placeholders) {
+            await axios.post(RETRIEVE, {data: call.data, image: images[0]})
+            pushImage(call.data, images[0])
+            images.shift();
+          }
+          updateProgressBar(i + 1, requirements.length);
+        }
+        catch (err) {
+          displayError("failedReq", false, req)
+        }
+      }
+      await axios.post(RETRIEVE, {finished: "No bail out"})
+      hideProgressBar();
+      document.getElementById("send-to-spira-button").disabled = false;
+      return
+    }
   }
 }
 
