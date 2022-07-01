@@ -20,8 +20,6 @@ import {
   enableButton
 } from './taskpane.js';
 
-//Lines for filterDescription: 126 191 259 278 404 
-
 /*
   Functions that should be moved over: 
   retrieveStyles,
@@ -126,18 +124,9 @@ const parseArtifacts = async (ArtifactTypeId, model) => {
               descEnd = undefined
               let descHtml = descRange.getHtml();
               await context.sync();
-              //m_value is the actual string of the html
-              /******
-               * This block from "matches" all the way to filterForLists can be put into 1 function.
-               */
-              //this gets the index of the 2 body tags in the HTML string
-              let matches = [...descHtml.m_value.matchAll(bodyTagRegex)]
-              /*this slices the body to be the beginning of the first
-               body tag to the beginning of the closing body tag*/
-              let htmlBody = descHtml.m_value.slice(matches[0].index, matches[1].index)
-              //this removes the first body tag, and then trims whitespace
-              htmlBody = htmlBody.replace(matches[0][0], "").trim()
-              requirement.Description = await filterForLists(htmlBody.replaceAll("\r", ""));
+              //this filters out unwanted html clutter and formats lists
+              let filteredDescription = await filterDescription(descHtml.m_value)
+              requirement.Description = filteredDescription
               requirements.push(requirement)
               /*gets the requirement of the to be created requirement based
                on its index in the styles array.*/
@@ -195,13 +184,8 @@ const parseArtifacts = async (ArtifactTypeId, model) => {
               }
               let descHtml = descRange.getHtml();
               await context.sync();
-              let matches = [...descHtml.m_value.matchAll(bodyTagRegex)]
-              /*this slices the body to be the beginning of the first
-               body tag to the beginning of the closing body tag*/
-              let htmlBody = descHtml.m_value.slice(matches[0].index, matches[1].index)
-              //this removes the first body tag, and then trims whitespace
-              htmlBody = htmlBody.replace(matches[0][0], "").trim()
-              requirement.Description = await filterForLists(htmlBody.replaceAll("\r", ""));
+              let filteredDescription = await filterDescription(descHtml.m_value)
+              requirement.Description = filteredDescription
             }
             requirements.push(requirement)
           }
@@ -264,38 +248,12 @@ const parseArtifacts = async (ArtifactTypeId, model) => {
               descStart = undefined; descEnd = undefined;
               if (!testCase.Name) {
                 //this whole block will be replaced with filterDescription when that is done
-                let filteredDescription = filterForLists(descHtml.m_value.replaceAll("\r", ""));
-                let tableRegex = params.regexs.tableRegex
-                /*descriptionBody parses out the body, Tables
-                 matches all tables to be removed as well*/
-                let bodyTags = [...descHtml.m_value.matchAll(bodyTagRegex)]
-                /*this slices the html to be the beginning of the first
-                 body tag to the beginning of the closing body tag*/
-                let htmlBody = descHtml.m_value.slice(bodyTags[0].index, bodyTags[1].index)
-                //this removes the first body tag, and then trims whitespace
-                htmlBody = htmlBody.replace(bodyTags[0][0], "").trim()
-                let descriptionTables = [...htmlBody.matchAll(tableRegex)]
-                for (let j = 0; j < descriptionTables.length; j++) {
-                  filteredDescription = filteredDescription.replace(descriptionTables[j][0], "")
-                }
+                let filteredDescription = filterDescription(descHtml.m_value.replaceAll("\r", ""), true);
                 testCase.folderDescription = filteredDescription
               }
               else {
                 //removes tables picked up in the description and adds proper HTML lists
-                let filteredDescription = filterForLists(descHtml.m_value.replaceAll("\r", ""));
-                let tableRegex = params.regexs.tableRegex
-                /*descriptionBody parses out the body, Tables
-                 matches all tables to be removed as well*/
-                let bodyTags = [...descHtml.m_value.matchAll(bodyTagRegex)]
-                /*this slices the html to be the beginning of the first
-                 body tag to the beginning of the closing body tag*/
-                let htmlBody = descHtml.m_value.slice(bodyTags[0].index, bodyTags[1].index)
-                //this removes the first body tag, and then trims whitespace
-                htmlBody = htmlBody.replace(bodyTags[0][0], "").trim()
-                let descriptionTables = [...htmlBody.matchAll(tableRegex)]
-                for (let j = 0; j < descriptionTables.length; j++) {
-                  filteredDescription = filteredDescription.replace(descriptionTables[j][0], "")
-                }
+                let filteredDescription = filterDescription(descHtml.m_value.replaceAll("\r", ""), true)
                 testCase.testCaseDescription = filteredDescription
               }
               if (item.style == styles[0] || item.styleBuiltIn == styles[0]) {
@@ -408,13 +366,7 @@ const parseArtifacts = async (ArtifactTypeId, model) => {
               is only the starting line.*/
               let descHtml = descRange.getHtml();
               await context.sync();
-              let filteredDescription = filterForLists(descHtml.m_value.replaceAll("\r", ""))
-              //This removes tables picked up in the description
-              let tableRegex = /<table(.|\n|\r)*?\/table>/g
-              let descriptionTables = [...filteredDescription.matchAll(tableRegex)]
-              for (let j = 0; j < descriptionTables.length; j++) {
-                filteredDescription = filteredDescription.replace(descriptionTables[j][0], "")
-              }
+              let filteredDescription = filterDescription(descHtml.m_value.replaceAll("\r", ""), true)
               testCase.testCaseDescription = filteredDescription
             }
             //dont push a nameless testCase.
@@ -537,8 +489,8 @@ const sendArtifacts = async (ArtifactTypeId, images, Artifacts, projectId, model
 
 /* Filters a string and changes any word-outputted lists to properly formatted html lists. INDENTING IS NOT YET IMPLEMENTED*/
 const filterForLists = (description) => {
-  let startRegEx = params.regexs.paragraphRegex;
-  let elemList = [...description.matchAll(startRegEx)];
+  let startRegex = params.regexs.paragraphRegex;
+  let elemList = [...description.matchAll(startRegex)];
   description = convertToIndentedList(description, elemList);
   return description
 }
@@ -646,7 +598,7 @@ const createTestCaseFolder = async (folderName, description, projectId, model) =
     return null;
   }
 }
-
+//sends a test case to spira
 const sendTestCase = async (testCaseName, testCaseDescription, testFolderId, projectId, model) => {
   try {
     let apiCall = model.user.url + params.apiComponents.apiBase + projectId + params.apiComponents.postOrPutTestCase +
@@ -664,6 +616,7 @@ const sendTestCase = async (testCaseName, testCaseDescription, testFolderId, pro
   }
 }
 
+//sends a test step to spira
 const pushTestStep = async (testCaseId, testStep, model, projectId) => {
   /*pushTestCase should call this passing in the created testCaseId and iterate through passing
   in that test cases test steps.*/
@@ -680,10 +633,34 @@ const pushTestStep = async (testCaseId, testStep, model, projectId) => {
     console.log(err)
   }
 }
-
-const filterDescription = (description) =>{
+/*filters tables (for test cases/test steps) and body tags out of the description, and
+converts lists into a readable format*/
+//params:
+//description: HTML string that signifies the description block
+//isTestCase: 
+const filterDescription = (description, isTestCase) => {
   //this function will filter out tables + excess html tags and info from all html based fields
+  //this gets the index of the 2 body tags in the HTML string
+  let matches = [...description.matchAll(params.regexs.bodyTagRegex)]
+  /*this slices the body to be the beginning of the first
+   body tag to the beginning of the closing body tag*/
+  let htmlBody = description.slice(matches[0].index, matches[1].index)
+  //this removes the first body tag, and then trims whitespace
+  htmlBody = htmlBody.replace(matches[0][0], "").trim()
+  htmlBody = filterForLists(htmlBody.replaceAll("\r", ""))
+  //if the description is for a test case, remove tables (They will be parsed as steps 
+  //separately)
+  if (isTestCase) {
+    let tableMatches = [...htmlBody.matchAll(params.regexs.tableRegex)]
+    for (let match of tableMatches) {
+      /*tableMatches[i][0] is the full match - the second array is the matched groups but
+      in this case I do not need the groups, only the full match*/
+      htmlBody.replace(match[0], "")
+    }
+  }
+  return htmlBody
 }
+
 export {
   parseArtifacts
 }

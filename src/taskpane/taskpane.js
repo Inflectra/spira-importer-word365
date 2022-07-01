@@ -73,7 +73,7 @@ Testing Functions
 *****************/
 //basic testing function for validating code snippet behaviour.
 async function test() {
-  await parseArtifacts(params.artifactEnums.testCases, model)
+  await parseArtifacts(params.artifactEnums.requirements, model)
 }
 
 /**************
