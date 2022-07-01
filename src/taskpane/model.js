@@ -32,8 +32,8 @@ var params = {
     getRequirement: "/requirements/",
     postOrPutTestCase: "/test-cases",
     getTestCase: "/test-cases/",
-    postOrPutTestStep: "/test-steps/",
-    getTestStep: "/test-steps",
+    postOrPutTestStep: "/test-steps",
+    getTestStep: "/test-steps/",
     postOrGetTestFolders: "/test-folders",
     postImage: "/documents/file",
     //these fields will be populated when the full URL is made for this
@@ -55,6 +55,10 @@ var params = {
     orderedRegEx: />.{1,7}<span/g,
     marginRegEx: /style='margin-left:(\d)\.(\d)in/,
     imageRegex: /<img(.|\n)*("|\s)>/g
+  },
+  //this is the html id's of buttons which will be used when enabling or disabling buttons
+  buttons: {
+    sendToSpira: "send-to-spira-button"
   }
 }
 

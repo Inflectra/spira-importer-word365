@@ -16,14 +16,14 @@ import {
   showProgressBar,
   updateProgressBar,
   indentRequirement,
-  hideProgressBar
+  hideProgressBar,
+  enableButton
 } from './taskpane.js';
 
 //Lines for filterDescription: 126 191 259 278 404 
 
 /*
   Functions that should be moved over: 
-  disableButton,
   retrieveStyles,
   validateHierarchy,
   validateTestSteps
@@ -194,7 +194,6 @@ const parseArtifacts = async (ArtifactTypeId, model) => {
                 descRange = descStart
               }
               let descHtml = descRange.getHtml();
-              await axios.post(RETRIEVE, { in: "here" })
               await context.sync();
               let matches = [...descHtml.m_value.matchAll(bodyTagRegex)]
               /*this slices the body to be the beginning of the first
@@ -209,7 +208,7 @@ const parseArtifacts = async (ArtifactTypeId, model) => {
         }
         if (!validateHierarchy(requirements)) {
           requirements = false
-          document.getElementById("send-to-spira-button").disable = false
+          enableButton(params.buttons.sendToSpira)
           //throw hierarchy error and exit function
           displayError("heirarchy", true)
           return
@@ -240,9 +239,9 @@ const parseArtifacts = async (ArtifactTypeId, model) => {
         }
         /*May not need this, but it is the images in the FIRST TABLE. If i need it I 
         will make it procedural for each given table when images are placed in spira.*/
-        let tableImages = selectionTables.items[0].getRange().inlinePictures;
-        context.load(tableImages)
-        await context.sync();
+        // let tableImages = selectionTables.items[0].getRange().inlinePictures;
+        // context.load(tableImages)
+        // await context.sync();
         if (!validateTestSteps(tables, styles[2])) {
           //validateTestSteps throws the error
           return false
@@ -439,13 +438,14 @@ const parseArtifacts = async (ArtifactTypeId, model) => {
 them to spira*/
 const sendArtifacts = async (ArtifactTypeId, images, Artifacts, projectId, model) => {
   //this checks if an empty artifact array is passed in (should never happen)
-  await axios.post(RETRIEVE, { artis: Artifacts })
   if (Artifacts.length == 0) {
     //empty is the error message key for the model object.
     displayError("empty", true);
-    document.getElementById("send-to-spira-button").disabled = false;
+    enableButton(params.buttons.sendToSpira)
     return
   }
+  let imgRegex = params.regexs.imageRegex
+  showProgressBar();
   switch (ArtifactTypeId) {
     //this is the logic for sending requirements to spira
     case (params.artifactEnums.requirements): {
@@ -455,8 +455,7 @@ const sendArtifacts = async (ArtifactTypeId, images, Artifacts, projectId, model
       const outdentCall = model.user.url + params.apiComponents.apiBase + projectId +
         params.apiComponents.postOrPutRequirement + params.apiComponents.initialOutdent +
         model.user.userCredentials
-      showProgressBar();
-      let imgRegex = params.regexs.imageRegex
+
       try {
         //this call is separate from the rest due to being specially outdented
         let firstCall = await axios.post(outdentCall, requirements[0])
@@ -477,14 +476,12 @@ const sendArtifacts = async (ArtifactTypeId, images, Artifacts, projectId, model
         params.apiComponents.postOrPutRequirement + model.user.userCredentials
       for (let req of requirements) {
         try {
-          await axios.post(RETRIEVE, {url: apiUrl, req})
           let call = await axios.post(apiUrl, req)
           await indentRequirement(apiUrl, call.data.RequirementId, req.IndentLevel - lastIndent)
           lastIndent = req.IndentLevel;
           let placeholders = [...req.Description.matchAll(imgRegex)]
           //the 'p' itemization of placeholders isnt needed - just needs to happen once per placeholder
           for (let p of placeholders) {
-            await axios.post(RETRIEVE, {data: call.data, image: images[0]})
             pushImage(call.data, images[0])
             images.shift();
           }
@@ -494,10 +491,45 @@ const sendArtifacts = async (ArtifactTypeId, images, Artifacts, projectId, model
           displayError("failedReq", false, req)
         }
       }
-      await axios.post(RETRIEVE, {finished: "No bail out"})
       hideProgressBar();
       document.getElementById("send-to-spira-button").disabled = false;
       return
+    }
+    case (params.artifactEnums.testCases): {
+      let testCaseFolders = await retrieveTestCaseFolders(projectId, model);
+      let testCases = Artifacts
+      for (let [i, testCase] of testCases.entries()) {
+        let folder = testCaseFolders.find(folder => folder.Name == testCase.folderName)
+        //if the folder doesnt exist, create a new folder on spira
+        if (!folder) {
+          let newFolder = {}
+          newFolder.TestCaseFolderId = await createTestCaseFolder(testCase.folderName,
+            testCase.folderDescription, projectId, model);
+          newFolder.Name = testCase.folderName;
+          folder = newFolder
+          testCaseFolders.push(newFolder);
+        }
+        //this returns the full test case object response
+        let testCaseArtifact = await sendTestCase(testCase.Name, testCase.testCaseDescription,
+          folder.TestCaseFolderId, projectId, model)
+        //imgRegex defined at the top of the sendArtifacts function
+        let placeholders = [...testCase.testCaseDescription.matchAll(imgRegex)]
+        //p isnt needed but I do need to iterate through the placeholders(this is shorter syntax)
+        for (let p of placeholders) {
+          await pushImage(testCaseArtifact, images[0])
+          images.shift();
+        }
+        for (let testStep of testCase.testSteps) {
+          let step = await pushTestStep(testCaseArtifact.TestCaseId, testStep, model, projectId);
+          if (images[0]) {
+            await pushImage(step, images[0], testCaseArtifact.TestCaseId);
+            images.shift();
+          }
+        }
+        updateProgressBar(i + 1, testCases.length);
+      }
+      hideProgressBar();
+      enableButton(params.buttons.sendToSpira)
     }
   }
 }
@@ -585,6 +617,73 @@ const listDelimiter = (elem, start, endPrefix, ordered) => {
   return elem;
 }
 
+//this function retrieves an array of all testCaseFolders in the selected project
+const retrieveTestCaseFolders = async (projectId, model) => {
+  let apiCall = model.user.url + params.apiComponents.apiBase + projectId +
+    params.apiComponents.postOrGetTestFolders + model.user.userCredentials;
+  try {
+    let callResponse = await superagent.get(apiCall).set('accept', "application/json").set('Content-Type', "application/json")
+    return callResponse.body
+  }
+  catch (err) {
+    //throw error or do nothing (would be network error maybe?)
+  }
+}
+
+//This function creates a new test case folder in spira and returns its TestCaseFolderId
+const createTestCaseFolder = async (folderName, description, projectId, model) => {
+  let apiCall = model.user.url + params.apiComponents.apiBase + projectId +
+    params.apiComponents.postOrGetTestFolders + model.user.userCredentials
+  try {
+    let folderCall = await axios.post(apiCall, {
+      Name: folderName,
+      Description: description
+    })
+    return folderCall.data.TestCaseFolderId;
+  }
+  catch (err) {
+    console.log(err);
+    return null;
+  }
+}
+
+const sendTestCase = async (testCaseName, testCaseDescription, testFolderId, projectId, model) => {
+  try {
+    let apiCall = model.user.url + params.apiComponents.apiBase + projectId + params.apiComponents.postOrPutTestCase +
+      model.user.userCredentials
+    var testCaseResponse = await axios.post(apiCall, {
+      Name: testCaseName,
+      Description: testCaseDescription,
+      TestCaseFolderId: testFolderId
+    })
+    return testCaseResponse.data;
+  }
+  catch (err) {
+    console.log(err);
+    return null;
+  }
+}
+
+const pushTestStep = async (testCaseId, testStep, model, projectId) => {
+  /*pushTestCase should call this passing in the created testCaseId and iterate through passing
+  in that test cases test steps.*/
+  let apiCall = model.user.url + params.apiComponents.apiBase + projectId +
+    params.apiComponents.getTestCase + testCaseId + params.apiComponents.postOrPutTestStep +
+    model.user.userCredentials;
+  try {
+    //testStep = {Description: "", SampleData: "", ExpectedResult: ""}
+    //we dont need the response from this - so no assigning to variable.
+    let stepCall = await axios.post(apiCall, testStep)
+    return stepCall.data
+  }
+  catch (err) {
+    console.log(err)
+  }
+}
+
+const filterDescription = (description) =>{
+  //this function will filter out tables + excess html tags and info from all html based fields
+}
 export {
   parseArtifacts
 }

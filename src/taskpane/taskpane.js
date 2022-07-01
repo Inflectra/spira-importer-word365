@@ -72,9 +72,10 @@ const devmode = () => {
 Testing Functions 
 *****************/
 //basic testing function for validating code snippet behaviour.
-export async function test() {
-  let bruh = await parseArtifacts(params.artifactEnums.requirements, model);
+async function test() {
+  await parseArtifacts(params.artifactEnums.testCases, model)
 }
+
 /**************
 Spira API calls
 **************/
@@ -1417,7 +1418,7 @@ const convertToIndentedList = async (description, elemList) => {
         indentLevel--;
       }
     }
-    axios.post(RETRIEVE, {elem: elem, alteredElem: alteredElem})
+    axios.post(RETRIEVE, { elem: elem, alteredElem: alteredElem })
     description = description.replace(elem, alteredElem);
   }
   return description;
@@ -1469,5 +1470,6 @@ export {
   showProgressBar,
   updateProgressBar,
   indentRequirement,
-  hideProgressBar
+  hideProgressBar,
+  enableButton
 }
