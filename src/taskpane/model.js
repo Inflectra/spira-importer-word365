@@ -50,7 +50,7 @@ var params = {
     bodyTagRegex: /<(\/)??body(.|\n|\r|\s)*?>/gu,
     paragraphRegex: /(<p )(.|\n|\s|\r)*?(<\/p>)/gu,
     emptyParagraphRegex: /<p(.)*?>\&nbsp\;<\/p>/g,
-    orderedRegEx: />.{1,2}<span/g,
+    orderedRegEx: />.{1,7}<span/g,
     marginRegEx: /style='margin-left:(\d)\.(\d)in/
   }
 }

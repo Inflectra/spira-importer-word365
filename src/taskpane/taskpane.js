@@ -801,7 +801,7 @@ const parseRequirements = async () => {
           let descHtml = descRange.getHtml();
           await context.sync();
           //m_value is the actual string of the html
-          requirement.Description = filterForLists(descHtml.m_value.replaceAll("\r", ""));
+          requirement.Description = await filterForLists(descHtml.m_value.replaceAll("\r", ""));
           try {
             requirements.push(requirement)
             let indent = styles.indexOf(item.styleBuiltIn)
@@ -863,7 +863,7 @@ const parseRequirements = async () => {
           }
           let descHtml = descRange.getHtml();
           await context.sync();
-          requirement.Description = filterForLists(descHtml.m_value.replaceAll("\r", ""));
+          requirement.Description = await filterForLists(descHtml.m_value.replaceAll("\r", ""));
         }
         requirements.push(requirement)
       }
@@ -1020,7 +1020,7 @@ const newParseTestCases = async () => {
           }
           else {
             //removes tables picked up in the description and adds proper HTML lists
-            let filteredDescription = filterForLists(descHtml.m_value.replaceAll("\r", "")); // filter for LISTS!!!
+            let filteredDescription = await filterForLists(descHtml.m_value.replaceAll("\r", "")); // filter for LISTS!!!
             let tableRegex = /<table(.|\n|\r)*?\/table>/g
             let descriptionTables = [...filteredDescription.matchAll(tableRegex)]
             for (let j = 0; j < descriptionTables.length; j++) {
@@ -1110,7 +1110,7 @@ const newParseTestCases = async () => {
           is only the starting line.*/
           let descHtml = descRange.getHtml();
           await context.sync();
-          let filteredDescription = filterForLists(descHtml.m_value.replaceAll("\r", ""))
+          let filteredDescription = await filterForLists(descHtml.m_value.replaceAll("\r", ""))
           //This removes tables picked up in the description
           let tableRegex = /<table(.|\n|\r)*?\/table>/g
           let descriptionTables = [...filteredDescription.matchAll(tableRegex)]
@@ -1376,35 +1376,11 @@ const rowCheck = (firstRow, lineRow) => {
   //for loop, compare inner items at i
 }
 
-/* Takes a single <p> to </p> element and turns it into a list element if it has the necessary class*/
-const convertToListElem = (pElem) => {
-  let listElem = pElem + "";
-  let ordered = !(listElem.includes(">·<span") || listElem.includes(">o<span") || listElem.includes(">§<span"));
-  let orderedRegEx = params.regexs.orderedRegEx;
-  if (listElem.includes("class=MsoListParagraphCxSpFirst")) { //Case for if the element is the first element in a list
-    //Must add extra html element codes at the beginning and end of the list to wrap the list elements together.
-    listElem = listDelimiter(listElem, true, false, ordered); // starts a list
-  }
-  else if (listElem.includes("class=MsoListParagraphCxSpLast")) { //Case for if the element is the last element in a list.
-    listElem = listDelimiter(listElem, false, false, ordered); // ends a list
-  }
-  else if (listElem.includes("class=MsoListParagraph ")) { //Case for if the element is the only element in the list
-    listElem = listDelimiter(listElem, true, false, ordered); // starts a list
-    listElem = listDelimiter(listElem, false, false, ordered); // ends a list
-  }
-  if (listElem.includes("class=MsoListParagraph")) { // This will happen for every element that is part of a list
-    listElem = listElem.replace("<p ", "<li ").replace("</p>", "</li>").replaceAll(orderedRegEx, "><span");
-    listElem = listElem.replaceAll("&nbsp;", "");
-  }
-  //Case for if the element is not part of a list is handled by just returning it back.
-  return { elem: listElem, ordered: ordered };
-}
-
 /* Filters a string and changes any word-outputted lists to properly formatted html lists. INDENTING IS NOT YET IMPLEMENTED*/
-const filterForLists = (description) => {
+const filterForLists = async (description) => {
   let startRegEx = params.regexs.paragraphRegex;
   let elemList = [...description.matchAll(startRegEx)];
-  description = convertToIndentedList(description, elemList);
+  description = await convertToIndentedList(description, elemList);
   return description
 }
 
@@ -1412,7 +1388,7 @@ const filterForLists = (description) => {
    Then it keeps track of the current indent level as it loops through the array, processing the elements
    through convertToListElem and adding an extra <ul> or <ol> as necessary to properly turn them into html 
    lists. */
-const convertToIndentedList = (description, elemList) => {
+const convertToIndentedList = async (description, elemList) => {
   let indentLevel = 0;
   let lastOrdered = false;
   for (let i = 0; i < elemList.length; i++) {
@@ -1441,9 +1417,34 @@ const convertToIndentedList = (description, elemList) => {
         indentLevel--;
       }
     }
+    axios.post(RETRIEVE, {elem: elem, alteredElem: alteredElem})
     description = description.replace(elem, alteredElem);
   }
   return description;
+}
+
+/* Takes a single <p> to </p> element and turns it into a list element if it has the necessary class*/
+const convertToListElem = (pElem) => {
+  let listElem = pElem + "";
+  let ordered = !(listElem.includes(">·<span") || listElem.includes(">o<span") || listElem.includes(">§<span"));
+  let orderedRegEx = params.regexs.orderedRegEx;
+  if (listElem.includes("class=MsoListParagraphCxSpFirst")) { //Case for if the element is the first element in a list
+    //Must add extra html element codes at the beginning and end of the list to wrap the list elements together.
+    listElem = listDelimiter(listElem, true, false, ordered); // starts a list
+  }
+  else if (listElem.includes("class=MsoListParagraphCxSpLast")) { //Case for if the element is the last element in a list.
+    listElem = listDelimiter(listElem, false, false, ordered); // ends a list
+  }
+  else if (listElem.includes("class=MsoListParagraph ")) { //Case for if the element is the only element in the list
+    listElem = listDelimiter(listElem, true, false, ordered); // starts a list
+    listElem = listDelimiter(listElem, false, false, ordered); // ends a list
+  }
+  if (listElem.includes("class=MsoListParagraph")) { // This will happen for every element that is part of a list
+    listElem = listElem.replace("<p ", "<li ").replace("</p>", "</li>").replaceAll(orderedRegEx, "><span");
+    listElem = listElem.replaceAll("&nbsp;", "");
+  }
+  //Case for if the element is not part of a list is handled by just returning it back.
+  return { elem: listElem, ordered: ordered };
 }
 
 /* Adds a <ul> or <ol> element based on the parameters and if the element is an unordered or ordered list. */
@@ -1462,6 +1463,5 @@ export {
   disableButton,
   retrieveStyles,
   validateHierarchy,
-  filterForLists,
   validateTestSteps
 }
