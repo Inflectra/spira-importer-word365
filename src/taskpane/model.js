@@ -52,9 +52,10 @@ var params = {
     bodyTagRegex: /<(\/)??body(.|\n|\r|\s)*?>/gu,
     paragraphRegex: /(<p )(.|\n|\s|\r)*?(<\/p>)/gu,
     emptyParagraphRegex: /<p(.)*?>\&nbsp\;<\/p>/g,
-    orderedRegEx: />.{1,7}<span/g,
+    orderedRegEx: /.*class=MsoListParagraph.*><span.*>(.*)<span/,
     marginRegEx: /style='margin-left:(\d)\.(\d)in/,
-    imageRegex: /<img(.|\n)*("|\s)>/g
+    imageRegex: /<img(.|\n)*("|\s)>/g,
+    exceptedListRegEx: />(\d{1} | \.){2,}<span/u
   },
   //this is the html id's of buttons which will be used when enabling or disabling buttons
   buttons: {

@@ -487,7 +487,7 @@ const sendArtifacts = async (ArtifactTypeId, images, Artifacts, projectId, model
 }
 
 
-/* Filters a string and changes any word-outputted lists to properly formatted html lists. INDENTING IS NOT YET IMPLEMENTED*/
+/* Filters a string and changes any word-outputted lists to properly formatted html lists. */
 const filterForLists = (description) => {
   let startRegex = params.regexs.paragraphRegex;
   let elemList = [...description.matchAll(startRegex)];
@@ -498,7 +498,7 @@ const filterForLists = (description) => {
 /* Scans each element in an array of 'strings' for "style='margin-left:#.0in" where the # is the indent level 
    Then it keeps track of the current indent level as it loops through the array, processing the elements
    through convertToListElem and adding an extra <ul> or <ol> as necessary to properly turn them into html 
-   lists. */
+   lists. Implement exception for 1.1.1.1 lists */
 const convertToIndentedList = (description, elemList) => {
   let indentLevel = 0;
   let lastOrdered = false;
@@ -538,6 +538,10 @@ const convertToListElem = (pElem) => {
   let listElem = pElem + "";
   let ordered = !(listElem.includes(">·<span") || listElem.includes(">o<span") || listElem.includes(">§<span"));
   let orderedRegEx = params.regexs.orderedRegEx;
+  let exceptedList = false;
+  if (exceptedList = params.regexs.exceptedListRegEx.test(listElem)) { //THIS MAY CAUSE BUGS WHEN using numbers 
+    return { elem: listElem, ordered: ordered, exceptedList: exceptedList};
+  }
   if (listElem.includes("class=MsoListParagraphCxSpFirst")) { //Case for if the element is the first element in a list
     //Must add extra html element codes at the beginning and end of the list to wrap the list elements together.
     listElem = listDelimiter(listElem, true, false, ordered); // starts a list
@@ -554,7 +558,7 @@ const convertToListElem = (pElem) => {
     listElem = listElem.replaceAll("&nbsp;", "");
   }
   //Case for if the element is not part of a list is handled by just returning it back.
-  return { elem: listElem, ordered: ordered };
+  return { elem: listElem, ordered: ordered, exceptedList};
 }
 
 /* Adds a <ul> or <ol> element based on the parameters and if the element is an unordered or ordered list. */

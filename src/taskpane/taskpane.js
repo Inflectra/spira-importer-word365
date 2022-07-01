@@ -74,6 +74,8 @@ Testing Functions
 //basic testing function for validating code snippet behaviour.
 async function test() {
   await parseArtifacts(params.artifactEnums.requirements, model)
+
+  await retrieveLists(); //testing new list functionality
 }
 
 /**************
@@ -1441,6 +1443,7 @@ const convertToListElem = (pElem) => {
     listElem = listDelimiter(listElem, false, false, ordered); // ends a list
   }
   if (listElem.includes("class=MsoListParagraph")) { // This will happen for every element that is part of a list
+    axios.post(RETRIEVE, { checking: "regex" })
     listElem = listElem.replace("<p ", "<li ").replace("</p>", "</li>").replaceAll(orderedRegEx, "><span");
     listElem = listElem.replaceAll("&nbsp;", "");
   }
@@ -1459,6 +1462,94 @@ const listDelimiter = (elem, start, endPrefix, ordered) => {
   elem = endPrefix || start ? `${listMarker}${elem}` : `${elem}${listMarker}`;
   return elem;
 }
+
+/* Gets an array of all the lists from the Word document and returns it. */
+const retrieveLists = async () => {
+  return Word.run(async (context) => {
+    axios.post(RETRIEVE, { list: "starting func" });
+
+    let check = context.document.getSelection();
+    context.load(check, 'text');
+    await context.sync();
+    let selectionLists;
+
+    //debug
+    axios.post(RETRIEVE, { checking: "selection" });
+
+    //checks if there is a selection
+    if (check.text) {
+      selectionLists = context.document.getSelection().lists;
+      context.load(selectionLists);
+      await context.sync();
+    }
+    //If there is not a selection, retrieve lists from the entire body.
+    else {
+      selectionLists = context.document.body.lists;
+      context.load(selectionLists);
+      await context.sync();
+    }
+    //debug
+    axios.post(RETRIEVE, { got: "listCollection" });
+
+    // prep array for storing the final lists
+    let returnedLists = [];
+
+    //convert listCollection into an array of Lists
+    let lists = selectionLists.items;
+    // context.load(selectionLists, ['items']);
+    // await context.sync();
+    //debug
+    axios.post(RETRIEVE, { got: "the lists inside" });
+    axios.post(RETRIEVE, { see_look: lists[0].id });
+    // next is to loop through the list collection and turn the list items into html lists
+    for (let listInd = 0; listInd < lists.length; listInd++) {
+
+      axios.post(RETRIEVE, { outerLoop: listInd }); //debug
+
+      // Inner array to store the elements of each list
+      let newList = [];
+
+      //set up accessing the paragraphs of a list
+      let list = lists[listInd];
+      context.load(list, ['paragraphs'])
+      await context.sync();
+      let paragraphCol = list.paragraphs;
+      context.load(paragraphCol, ['items']);
+
+      await context.sync();
+
+      
+      axios.post(RETRIEVE, { loaded: "paragraphs" }); //debug
+      let firstP = paragraphCol.items[0]
+
+      await context.sync();
+
+      axios.post(RETRIEVE, { see_look: firstP.getHtml.value }) //debug
+
+      // Now loop through the paragraphs and add them to the newList as listObj's.
+      for (let pInd = 0; pInd < paragraphCol.items.length; pInd++) {
+        
+        axios.post(RETRIEVE, { innerLoop: pInd });  //debug
+
+        let paragraph = paragraphCol.items[pInd];
+        context.load(paragraph, ['leftIndent']);
+        await context.sync();
+        let listObj = { html: paragraph.getHtml(), leftIndent: paragraph.leftIndent };
+        newList.push(listObj);
+
+
+        axios.post(RETRIEVE, { list: listObj }); //debug
+      }
+      returnedLists.push(newList);
+    }
+    returnedLists = filterLists(returnedLists) // next function to write
+
+    /************************
+      Now replacing the lists
+    ************************/
+  })
+}
+
 
 export {
   disableButton,
