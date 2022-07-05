@@ -130,7 +130,7 @@ const parseArtifacts = async (ArtifactTypeId, model) => {
               let descHtml = descRange.getHtml();
               await context.sync();
               //this filters out unwanted html clutter and formats lists
-              let filteredDescription = await filterDescription(descHtml.m_value)
+              let filteredDescription = filterDescription(descHtml.m_value)
               requirement.Description = filteredDescription
               requirements.push(requirement)
               /*gets the requirement of the to be created requirement based
@@ -189,7 +189,7 @@ const parseArtifacts = async (ArtifactTypeId, model) => {
               }
               let descHtml = descRange.getHtml();
               await context.sync();
-              let filteredDescription = await filterDescription(descHtml.m_value)
+              let filteredDescription = filterDescription(descHtml.m_value)
               requirement.Description = filteredDescription
             }
             requirements.push(requirement)
@@ -649,7 +649,7 @@ converts lists into a readable format*/
 //params:
 //description: HTML string that signifies the description block
 //isTestCase: 
-const filterDescription = (description, isTestCase) => {
+const filterDescription = (description, isTestCase, lists) => {
   //this function will filter out tables + excess html tags and info from all html based fields
   //this gets the index of the 2 body tags in the HTML string
   let bodyTagmatches = [...description.matchAll(params.regexs.bodyTagRegex)]
@@ -678,3 +678,19 @@ const filterDescription = (description, isTestCase) => {
   return htmlBody
 }
 
+const filterForListsNew = (description, lists) => {
+  let matches = [];
+  for (let i = 0; i < lists.length; i++) {
+    let list = lists[i];
+    let newListElement = "";
+    for (let j = 0; j < list.length; j++) {
+      let listItem = list[j];
+      match = listItem.html.m_value.match(params.regexs.listReplacementRegEx);
+      let newItemElement = "";
+      
+    }
+  }
+}
+export {
+  parseArtifacts
+}

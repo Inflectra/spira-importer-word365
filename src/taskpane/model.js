@@ -58,8 +58,9 @@ var params = {
     orderedRegEx: /.*class=MsoListParagraph.*><span.*>(.*)<span/,
     marginRegEx: /style='margin-left:(\d)\.(\d)in/,
     imageRegex: /<img(.|\n)*("|\s)>/g,
-    exceptedListRegEx: />(\d{1} | \.){2,}<span/gu,
-    spanRegex: /<span(.|\r|\n|\s)*?<\/span>/g
+    spanRegex: /<span(.|\r|\n|\s)*?<\/span>/g,
+    exceptedListRegEx: />(\d{1} | \.){2,}<span/u,
+    listReplacementRegEx: /<p class=MsoListParagraph (.|\n|\s|\r)*?<\/p>/
   },
   //this is the html id's of buttons which will be used when enabling or disabling buttons
   buttons: {

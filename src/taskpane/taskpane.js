@@ -1496,7 +1496,7 @@ const retrieveLists = async () => {
         context.load(paragraph)
         await context.sync();
         let listItem = paragraph.listItemOrNullObject
-        context.load(listItem, ['level'])
+        context.load(listItem, ['level', 'listString'])
         await context.sync();
         let html = paragraph.getHtml();
         await context.sync();
