@@ -551,8 +551,8 @@ const openStyleMappings = async (pageTag) => {
   document.getElementById("send-to-spira").style.display = "none"
   //checks the current selected artifact type then loads the appropriate menu
   if (pageTag == "req-") {
-    document.getElementById("select-requirements").style['background-color'] = "#022360"
-    document.getElementById("select-test-cases").style['background-color'] = "#0078d7"
+    document.getElementById("select-requirements").style['background-color'] = model.colors.primaryButton;
+    document.getElementById("select-test-cases").style['background-color'] = model.colors.inactiveButton;
     document.getElementById("req-style-mappings").classList.remove("hidden")
     document.getElementById("test-style-mappings").style.display = 'none'
     document.getElementById("req-style-mappings").style.display = 'flex'
@@ -560,8 +560,8 @@ const openStyleMappings = async (pageTag) => {
   }
   //opens the test cases style mappings if test mappings is the selected artifact type
   else {
-    document.getElementById("select-test-cases").style['background-color'] = "#022360"
-    document.getElementById("select-requirements").style['background-color'] = "#0078d7"
+    document.getElementById("select-test-cases").style['background-color'] = model.colors.primaryButton;
+    document.getElementById("select-requirements").style['background-color'] = model.colors.inactiveButton;
     document.getElementById("req-style-mappings").style.display = 'none'
     document.getElementById("test-style-mappings").style.display = 'flex'
   }

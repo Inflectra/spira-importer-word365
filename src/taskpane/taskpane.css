@@ -92,6 +92,10 @@ ul {
     padding: 0;
 }
 
+.fade {
+    transition: 0.3s;
+}
+
 /*PAGE PARTS*/
 
 .header {
@@ -171,7 +175,8 @@ ul {
 }
 
 .style-button {
-    margin-left: 0.5em;
+    margin-right: 0.5em;
+    margin-bottom: 0.5em;
 }
 
 #main-page-buttons {
@@ -277,15 +282,16 @@ ul {
 }
 
 #send-to-spira {
-    margin-left: 5%;
+    margin-left: 2.5%;
     margin-top: 5%;
     margin-bottom: 3%;
 }
 
 .artifact-button {
-    background-color: #0078d7;
+    background-color: #f4f4f4; /* inactive: #f4f4f4, active: #0078d7 */
     border: none;
-    color: white;
+    color: black;
+    margin-right: 2.5%;
     padding: 8px 12px;
     text-align: center;
     text-decoration: none;
@@ -294,9 +300,14 @@ ul {
     cursor:pointer;
 }
 
-.artifact-button:hover .artifact-button:focus{
-    color:#0A0269;
+.artifact-button:hover {
+    background-color:#eaeaea;
 }
+
+.artifact-button:focus {
+    background-color: #0078d7;
+}
+
 /*MS DEFAULT CLASSES*/
 .ms-welcome__header {
     padding: 20px;

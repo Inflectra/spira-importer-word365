@@ -691,6 +691,3 @@ const filterForListsNew = (description, lists) => {
     }
   }
 }
-export {
-  parseArtifacts
-}

@@ -121,6 +121,7 @@ function Data() {
   this.colors = {
     primaryButton: '#0078d7',
     selectedButton: '#0A0269',
+    inactiveButton: '#f4f4f4',
     progressBarProgress: '#60ec60',
     progressBarBackground: '#dadada',
     errorMessages: "#ff0000"

@@ -8,7 +8,7 @@
     <meta charset="UTF-8" />
     <meta http-equiv="X-UA-Compatible" content="IE=Edge" />
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>Contoso Task Pane Add-in</title>
+    <title>SpiraPlan Importer</title>
 
     <!-- Office JavaScript API -->
     <script type="text/javascript" src="https://appsforoffice.microsoft.com/lib/1.1/hosted/office.js"></script>
@@ -63,15 +63,15 @@
         </ul>
 
         <div class="mt-md" id="login-buttons">
-            <button class="action ms-Button ms-Button--primary" id="btn-login"
+            <button class="action ms-Button ms-Button--primary fade" id="btn-login"
                 title="Login using details filled out above" type="button">
                 Log In
             </button>
-            <button class="ms-Button ms-Button--default" id="btn-help-login" title="View help screens" type="button">
+            <button class="ms-Button ms-Button--default fade" id="btn-help-login" title="View help screens" type="button">
                 Help
             </button>
             <!--Remove this before deployment-->
-            <button class="ms-Button ms-Button--default" id="dev-mode" title="View help screens" type="button">
+            <button class="ms-Button ms-Button--default fade" id="dev-mode" title="View help screens" type="button">
                 DevMode
             </button>
         </div>
@@ -92,8 +92,8 @@
             <!--Turn this into radio buttons of some sort which fit the theming instead of dd-->
             <p>2. Select the artifact type you want to import:</p>
             <div id="artifact-select" class="artifact-buttons">
-                <button type="button" class="artifact-button" id="select-requirements">Requirements</button>
-                <button type="button" class="artifact-button" id="select-test-cases">Test Cases</button>
+                <button type="button" class="artifact-button fade" id="select-requirements">Requirements</button>
+                <button type="button" class="artifact-button fade" id="select-test-cases">Test Cases</button>
             </div>
             <p class="error-message" id="styles-err"></p>
 
@@ -102,7 +102,7 @@
         It looks perfect after you confirm the styles (and they are valid) and the send to
         spira button appears, but before that it behaves oddly. Unsure how to fix.-->
         <div id="req-style-mappings" class="styles-block hidden">
-            <p class="style-prompt">3. Select the styles used:</p>
+            <p class="style-prompt">3. Select the styles to use for Requirements:</p>
             <label for="req-style-select1" class="style-labels">Indent Level 1:</label>
             <select title="req-style-select1" id="req-style-select1" class="style-selector"></select>
             <label for="req-style-select2" class="style-labels">Indent Level 2:</label>
@@ -116,38 +116,39 @@
             <div class="style-buttons">
                 <div role="button" id="confirm-req-style-mappings"
                     class="action ms-Button ms-Button--primary style-button">
-                    <span class="ms-Button-label">Confirm</span>
+                    <span class="ms-Button-label fade">Validate Styles</span>
                 </div>
             </div>
         </div>
         <div id="test-style-mappings" class="styles-block hidden">
-            <p class="style-prompt">3. Select the styles used:</p>
+            <p class="style-prompt">3. Select the styles to use for Test Cases:</p>
             <label for="test-style-select1" class="style-labels">Folder Name:</label>
             <select title="test-style-select1" id="test-style-select1" class="style-selector"></select>
             <label for="test-style-select2" class="style-labels">Test Name:</label>
             <select title="test-style-select2" id="test-style-select2" class="style-selector"></select>
-            <h4 style="margin: 0">Test Steps:</h4>
-            <label for="test-style-select3" class="style-labels">Description:</label>
+            <h4 style="margin-top: 1em; margin-bottom: 0;">Test Steps:</h4>
+            <div>
+                <label for="header-check">Using header rows:</label><input type="checkbox" id="header-check"
+                    title="header-check" />
+            </div>
+            <label for="test-style-select3" class="style-labels" style="margin-top: 0">Description:</label>
             <select title="test-style-select3" id="test-style-select3" class="style-selector"></select>
             <label for="test-style-select4" class="style-labels">Expected Result:</label>
             <select title="test-style-select4" id="test-style-select4" class="style-selector"></select>
             <label for="test-style-select5" class="style-labels">Sample Data:</label>
             <select title="test-style-select5" id="test-style-select5" class="style-selector"></select>
-            <div>
-                <label for="header-check"><b>Header rows?</b></label><input type="checkbox" id="header-check"
-                    title="header-check" />
-            </div>
+
             <div class="style-buttons">
                 <div role="button" id="confirm-test-style-mappings"
                     class="action ms-Button ms-Button--primary style-button">
-                    <span class="ms-Button-label">Confirm</span>
+                    <span class="ms-Button-label">Validate Styles</span>
                 </div>
             </div>
         </div>
         <div id="send-to-spira">
             <p id="send-err" class="error-message"></p>
             <p>4. Check your selection, then send to spira:</p>
-            <button class="action ms-Button ms-Button--primary" id="send-to-spira-button" title="Send-to-spira"
+            <button class="action ms-Button ms-Button--primary fade" id="send-to-spira-button" title="Send-to-spira"
                 type="button">
                 Send to Spira
             </button>
@@ -155,11 +156,11 @@
         <div id="progress-bar" class="hidden">
             <div id="progress-bar-progress"></div>
         </div>
-        <div id="bottom-buttons" style="margin-top: 0.5em; margin-left: 5%;">
-            <div role="button" id="log-out" class="action ms-Button ms-Button--default">
+        <div id="bottom-buttons" style="margin-top: 0.5em; margin-right: 5%;">
+            <div role="button" id="log-out" class="action ms-Button ms-Button--default fade" style="margin-left: 2.5%;">
                 <span class="ms-Button-label">Log-Out</span>
             </div>
-            <div role="button" id="help" class="action ms-Button ms-Button--default">
+            <div role="button" id="help" class="action ms-Button ms-Button--default fade">
                 <span class="ms-Button-label">Help</span>
             </div>
         </div>
