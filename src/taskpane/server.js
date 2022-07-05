@@ -5,6 +5,10 @@ const superagent = require('superagent');
 axios.defaults.headers.put['Content-Type'] = "application/json"
 axios.defaults.headers.put['accept'] = "application/json"
 
+export {
+  parseArtifacts
+}
+
 import { Data, tempDataStore, params, templates } from './model.js'
 import {
   disableButton,
@@ -104,9 +108,11 @@ const parseArtifacts = async (ArtifactTypeId, model) => {
         var requirements = [];
         let body = splitSelection;
         let requirement = new templates.Requirement()
+        await axios.post(RETRIEVE, {in: 'parsing'})
         for (let [i, item] of body.items.entries()) {
           //style stores custom styles while styleBuiltIn only stores default styles
           if (styles.includes(item.styleBuiltIn) || styles.includes(item.style)) {
+            await axios.post(RETRIEVE, {text: item.text, requirements: requirements})
             /*this wraps up the description of the previous requirement, pushes to
             requirements array, and creates a new requirement object*/
             if (descStart) {
@@ -191,12 +197,14 @@ const parseArtifacts = async (ArtifactTypeId, model) => {
           }
         }
         if (!validateHierarchy(requirements)) {
+          await axios.post(RETRIEVE, {failed:"hierarchy"})
           requirements = false
           enableButton(params.buttons.sendToSpira)
           //throw hierarchy error and exit function
           displayError("heirarchy", true)
           return
         }
+        await axios.post(RETRIEVE, {in: "The end"})
         //if the heirarchy is invalid, clear requirements and throw error
         sendArtifacts(params.artifactEnums.requirements, imageObjects, requirements, projectId, model)
         return requirements
@@ -642,7 +650,7 @@ converts lists into a readable format*/
 //params:
 //description: HTML string that signifies the description block
 //isTestCase: 
-const filterDescription = (description, isTestCase) => {
+const filterDescription = (description, isTestCase) => {s
   //this function will filter out tables + excess html tags and info from all html based fields
   //this gets the index of the 2 body tags in the HTML string
   let matches = [...description.matchAll(params.regexs.bodyTagRegex)]
@@ -662,9 +670,7 @@ const filterDescription = (description, isTestCase) => {
       htmlBody.replace(match[0], "")
     }
   }
+  axios.post(RETRIEVE, {html: htmlBody})
   return htmlBody
 }
 
-export {
-  parseArtifacts
-}

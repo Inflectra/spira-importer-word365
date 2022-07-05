@@ -966,12 +966,11 @@ Pure data manipulation
 const pushArtifacts = async () => {
   let active = document.getElementById("req-style-mappings").style.display
   //if the requirements style mappings are visible that is the selected artifact.
+  let artifactType = params.artifactEnums.testCases;
   if (active == "flex") {
-    await pushRequirements();
+    artifactType = params.artifactEnums.requirements
   }
-  else {
-    await pushTestCases();
-  }
+  parseArtifacts(artifactType, model)
 }
 
 const newParseTestCases = async () => {
@@ -1467,7 +1466,6 @@ const retrieveLists = async () => {
     let selection = context.document.getSelection();
     context.load(selection, 'text');
     await context.sync();
-    let selectionLists;
     //if there is not a selection, selects the whole body
     if (!selection.text) {
       selection = context.document.body.getRange();
@@ -1492,7 +1490,7 @@ const retrieveLists = async () => {
       let paragraphs = list.paragraphs;
       context.load(paragraphs);
       await context.sync();
-      for (let paragraph of paragraphs.items){
+      for (let paragraph of paragraphs.items) {
         context.load(paragraph)
         await context.sync();
         let listItem = paragraph.listItemOrNullObject
@@ -1500,39 +1498,50 @@ const retrieveLists = async () => {
         await context.sync();
         let html = paragraph.getHtml();
         await context.sync();
-        await axios.post(RETRIEVE, {html: html})
-        break
+        let pRegex = params.regexs.paragraphRegex
+        let match = html.m_value.match(pRegex)
+        html = match[0]
+        let spanMatches = [...html.matchAll(params.regexs.spanRegex)]
+        //there will be an extra match if the text in a list is rich text
+        if (spanMatches[1]) {
+          await axios.post(RETRIEVE, { match: spanMatches[1] })
+          //sometimes the indicator (i. text) has span formatting on it, so this
+          //handles that case
+          if (spanMatches[2]) {
+            newList.push({ text: spanMatches[2][0], indentLevel: listItem.level })
+          }
+          //this will be the list item if span[2] does not exist (verifies it isnt empty either)
+          else if (spanMatches[1][0].includes("&nbsp;")) {
+            //this can happen when the list 'bullet' text is formatted too.
+            //removes both span mathces
+            html = html.replace(spanMatches[0][0], "").replace(spanMatches[1][0], "").replaceAll("</span>", "")
+            let pTagMatches = [...html.matchAll(params.regexs.pTagRegex)]
+            for (let match of pTagMatches) {
+              html = html.replace(match[0], "")
+            }
+            newList.push({ text: html, indentLevel: listItem.level })
+          }
+          else {
+            newList.push({ text: spanMatches[1][0] })
+          }
+        }
+        //if the listItem is not rich text, this will filter down to just the text
+
+        else {
+          //spanMatches[0][0] leaves out second closing span tag in the html structure
+          html = html.replace(spanMatches[0][0], "").replaceAll("</span>", "")
+          let pTagMatches = [...html.matchAll(params.regexs.pTagRegex)]
+          //p tags break <li> tags when placed within them so that is filtered out here
+          for (let match of pTagMatches) {
+            html = html.replace(match[0], "")
+          }
+          newList.push({ text: html, indentLevel: listItem.level })
+        }
       }
-      break
+      returnedLists.push(newList)
+      
     }
-    //   axios.post(RETRIEVE, { loaded: "paragraphs" }); //debug
-    //   let firstP = paragraphCol.items[0]
-
-    //   await context.sync();
-
-    //   axios.post(RETRIEVE, { see_look: firstP.getHtml().m_value }) //debug
-
-    //   // Now loop through the paragraphs and add them to the newList as listObj's.
-    //   for (let pInd = 0; pInd < paragraphCol.items.length; pInd++) {
-
-    //     axios.post(RETRIEVE, { innerLoop: pInd });  //debug
-
-    //     let paragraph = paragraphCol.items[pInd];
-    //     context.load(paragraph, ['leftIndent']);
-    //     await context.sync();
-    //     let listObj = { html: paragraph.getHtml(), leftIndent: paragraph.leftIndent };
-    //     newList.push(listObj);
-
-
-    //     axios.post(RETRIEVE, { list: listObj }); //debug
-    //   }
-    //   returnedLists.push(newList);
-    // }
-    // returnedLists = filterLists(returnedLists) // next function to write
-
-    /************************
-      Now replacing the lists
-    ************************/
+    await axios.post(RETRIEVE, {lists: returnedLists})
   })
 }
 

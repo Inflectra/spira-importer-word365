@@ -51,11 +51,13 @@ var params = {
     //this parses out the body tags for removal
     bodyTagRegex: /<(\/)??body(.|\n|\r|\s)*?>/gu,
     paragraphRegex: /(<p )(.|\n|\s|\r)*?(<\/p>)/gu,
+    pTagRegex: /<\/??p(.|\n|\r|\s)*?>/g,
     emptyParagraphRegex: /<p(.)*?>\&nbsp\;<\/p>/g,
     orderedRegEx: /.*class=MsoListParagraph.*><span.*>(.*)<span/,
     marginRegEx: /style='margin-left:(\d)\.(\d)in/,
     imageRegex: /<img(.|\n)*("|\s)>/g,
-    exceptedListRegEx: />(\d{1} | \.){2,}<span/u
+    exceptedListRegEx: />(\d{1} | \.){2,}<span/gu,
+    spanRegex: /<span(.|\r|\n|\s)*?<\/span>/g
   },
   //this is the html id's of buttons which will be used when enabling or disabling buttons
   buttons: {
