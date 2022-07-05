@@ -49,7 +49,7 @@ of a document, returning digestable objects which can easily be used to send art
 to spira.*/
 const parseArtifacts = async (ArtifactTypeId, model) => {
   return Word.run(async (context) => {
-    disableButton("send-to-spira-button");
+    disableButton(params.buttons.sendToSpira);
     /***************************
      Start range identification
      **************************/
@@ -108,18 +108,17 @@ const parseArtifacts = async (ArtifactTypeId, model) => {
         var requirements = [];
         let body = splitSelection;
         let requirement = new templates.Requirement()
-        await axios.post(RETRIEVE, {in: 'parsing'})
         for (let [i, item] of body.items.entries()) {
           //style stores custom styles while styleBuiltIn only stores default styles
           if (styles.includes(item.styleBuiltIn) || styles.includes(item.style)) {
-            await axios.post(RETRIEVE, {text: item.text, requirements: requirements})
             /*this wraps up the description of the previous requirement, pushes to
             requirements array, and creates a new requirement object*/
             if (descStart) {
               descEnd = body.items[i - 1]
               /*creates a description range given the beginning 
               and end as delimited by lines with mapped styles*/
-              let descRange = descStart.expandToOrNullObject(descEnd)
+              let descRange = descStart.expandTo(descEnd)
+              context.load(descRange)
               await context.sync();
               //descRange is null if the descEnd is not valid to extend the descStart
               if (!descRange) {
@@ -197,14 +196,12 @@ const parseArtifacts = async (ArtifactTypeId, model) => {
           }
         }
         if (!validateHierarchy(requirements)) {
-          await axios.post(RETRIEVE, {failed:"hierarchy"})
           requirements = false
           enableButton(params.buttons.sendToSpira)
           //throw hierarchy error and exit function
           displayError("heirarchy", true)
           return
         }
-        await axios.post(RETRIEVE, {in: "The end"})
         //if the heirarchy is invalid, clear requirements and throw error
         sendArtifacts(params.artifactEnums.requirements, imageObjects, requirements, projectId, model)
         return requirements
@@ -430,19 +427,21 @@ const sendArtifacts = async (ArtifactTypeId, images, Artifacts, projectId, model
         requirements.shift()
       }
       catch (err) {
+        await axios.post(RETRIEVE, { failed1: "req" })
         displayError("failedReq", false, item);
       }
       const apiUrl = model.user.url + params.apiComponents.apiBase + projectId +
         params.apiComponents.postOrPutRequirement + model.user.userCredentials
-      for (let req of requirements) {
+      for (let [i, req] of requirements.entries()) {
         try {
           let call = await axios.post(apiUrl, req)
+          await axios.post(RETRIEVE, call.body)
           await indentRequirement(apiUrl, call.data.RequirementId, req.IndentLevel - lastIndent)
           lastIndent = req.IndentLevel;
           let placeholders = [...req.Description.matchAll(imgRegex)]
           //the 'p' itemization of placeholders isnt needed - just needs to happen once per placeholder
           for (let p of placeholders) {
-            pushImage(call.data, images[0])
+            await pushImage(call.data, images[0])
             images.shift();
           }
           updateProgressBar(i + 1, requirements.length);
@@ -548,7 +547,7 @@ const convertToListElem = (pElem) => {
   let orderedRegEx = params.regexs.orderedRegEx;
   let exceptedList = false;
   if (exceptedList = params.regexs.exceptedListRegEx.test(listElem)) { //THIS MAY CAUSE BUGS WHEN using numbers 
-    return { elem: listElem, ordered: ordered, exceptedList: exceptedList};
+    return { elem: listElem, ordered: ordered, exceptedList: exceptedList };
   }
   if (listElem.includes("class=MsoListParagraphCxSpFirst")) { //Case for if the element is the first element in a list
     //Must add extra html element codes at the beginning and end of the list to wrap the list elements together.
@@ -566,7 +565,7 @@ const convertToListElem = (pElem) => {
     listElem = listElem.replaceAll("&nbsp;", "");
   }
   //Case for if the element is not part of a list is handled by just returning it back.
-  return { elem: listElem, ordered: ordered, exceptedList};
+  return { elem: listElem, ordered: ordered, exceptedList };
 }
 
 /* Adds a <ul> or <ol> element based on the parameters and if the element is an unordered or ordered list. */
@@ -650,16 +649,21 @@ converts lists into a readable format*/
 //params:
 //description: HTML string that signifies the description block
 //isTestCase: 
-const filterDescription = (description, isTestCase) => {s
+const filterDescription = (description, isTestCase) => {
   //this function will filter out tables + excess html tags and info from all html based fields
   //this gets the index of the 2 body tags in the HTML string
-  let matches = [...description.matchAll(params.regexs.bodyTagRegex)]
+  let bodyTagmatches = [...description.matchAll(params.regexs.bodyTagRegex)]
   /*this slices the body to be the beginning of the first
    body tag to the beginning of the closing body tag*/
-  let htmlBody = description.slice(matches[0].index, matches[1].index)
+  let htmlBody = description.slice(bodyTagmatches[0].index, bodyTagmatches[1].index)
   //this removes the first body tag, and then trims whitespace
-  htmlBody = htmlBody.replace(matches[0][0], "").trim()
-  htmlBody = filterForLists(htmlBody.replaceAll("\r", ""))
+  htmlBody = htmlBody.replace(bodyTagmatches[0][0], "").trim()
+  let whitespaceMatch = [...htmlBody.matchAll(params.regexs.whitespaceRegex)]
+  for (let match of whitespaceMatch) {
+    //this takes any double or more spaces, and turns them into single spaces
+    htmlBody = htmlBody.replace(match, " ")
+  }
+  htmlBody = filterForLists(htmlBody.replaceAll("\r", "").replaceAll("\t", ""))
   //if the description is for a test case, remove tables (They will be parsed as steps 
   //separately)
   if (isTestCase) {
@@ -670,7 +674,7 @@ const filterDescription = (description, isTestCase) => {s
       htmlBody.replace(match[0], "")
     }
   }
-  axios.post(RETRIEVE, {html: htmlBody})
+  axios.post(RETRIEVE, { html: htmlBody })
   return htmlBody
 }
 

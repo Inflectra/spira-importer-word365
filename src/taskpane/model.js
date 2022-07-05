@@ -45,6 +45,8 @@ var params = {
     indentCall: "/requirements/{requirement-id}/indent",
   },
   regexs: {
+    //this detects multiple whitespace characters that are not new lines in a row
+    whitespaceRegex: /[^\S\n]{2,}/g,
     tableRegex: /<table(.|\n|\r)*?\/table>/g,
     //this parses out the entire body and its contents
     bodyRegex: /<body(.|\n|\r|\s)*?<\/body>/gu,

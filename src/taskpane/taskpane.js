@@ -216,13 +216,13 @@ const indentRequirement = async (apiCall, id, indent) => {
   //loop for indenting/outdenting requirement
   for (let i = 0; i < indent; i++) {
     try {
-      let call2 = await axios.post(apiCall, {});
+      await axios.post(apiCall, {});
     }
     catch (err) {
       console.log(err)
     }
   }
-  return
+  return true
 }
 
 /* 
@@ -497,7 +497,7 @@ const pushImage = async (Artifact, image, testCaseId) => {
   else {
     //handle error (should never reach here, but if it does it should be handled)
   }
-  return
+  return true
 }
 
 /********************
@@ -663,6 +663,7 @@ const updateProgressBar = (current, total) => {
   let width = current / total * MAX_WIDTH;
   let bar = document.getElementById("progress-bar-progress");
   bar.style.width = width + "%";
+  return true
 }
 
 const showProgressBar = () => {
@@ -970,6 +971,7 @@ const pushArtifacts = async () => {
   if (active == "flex") {
     artifactType = params.artifactEnums.requirements
   }
+  await axios.post(RETRIEVE, { artifactType: artifactType })
   parseArtifacts(artifactType, model)
 }
 
@@ -1539,9 +1541,9 @@ const retrieveLists = async () => {
         }
       }
       returnedLists.push(newList)
-      
+
     }
-    await axios.post(RETRIEVE, {lists: returnedLists})
+    await axios.post(RETRIEVE, { lists: returnedLists })
   })
 }
 
