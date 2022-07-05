@@ -16,7 +16,7 @@ const superagent = require('superagent');
 //makes sure put requests uses the proper content-type header
 axios.defaults.headers.put['Content-Type'] = "application/json"
 axios.defaults.headers.put['accept'] = "application/json"
-import { Data, tempDataStore, params, templates, ERROR_MESSAGES } from './model'
+import { Data, params, templates, ERROR_MESSAGES } from './model'
 import {
   parseArtifacts
 } from './server'
@@ -971,7 +971,6 @@ const pushArtifacts = async () => {
   if (active == "flex") {
     artifactType = params.artifactEnums.requirements
   }
-  await axios.post(RETRIEVE, { artifactType: artifactType })
   parseArtifacts(artifactType, model)
 }
 
@@ -1478,7 +1477,8 @@ const retrieveLists = async () => {
     context.load(lists)
     await context.sync();
     // prep array for storing the final lists
-    let returnedLists = [];
+    let finalLists = [];
+    let finalSingleItemLists = []
     // next is to loop through the list collection and turn the list items into html lists
     for (let list of lists.items) {
       context.load(list)
@@ -1524,11 +1524,10 @@ const retrieveLists = async () => {
             newList.push({ text: html, indentLevel: listItem.level })
           }
           else {
-            newList.push({ text: spanMatches[1][0] })
+            newList.push({ text: spanMatches[1][0], indentLevel: listItem.level })
           }
         }
         //if the listItem is not rich text, this will filter down to just the text
-
         else {
           //spanMatches[0][0] leaves out second closing span tag in the html structure
           html = html.replace(spanMatches[0][0], "").replaceAll("</span>", "")
@@ -1540,10 +1539,17 @@ const retrieveLists = async () => {
           newList.push({ text: html, indentLevel: listItem.level })
         }
       }
-      returnedLists.push(newList)
-
+      //single item lists need to be parsed differently than multi item ones
+      if (paragraphs.items.length <= 1) {
+        finalSingleItemLists.push(newList)
+      }
+      else {
+        finalLists.push(newList)
+      }
     }
-    await axios.post(RETRIEVE, { lists: returnedLists })
+    //returns both so they can be parsed separately
+    //this will be whatever as it will just be megafunction parsing
+    return [finalLists, finalSingleItemLists]
   })
 }
 

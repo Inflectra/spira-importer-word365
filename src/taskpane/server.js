@@ -9,7 +9,7 @@ export {
   parseArtifacts
 }
 
-import { Data, tempDataStore, params, templates } from './model.js'
+import { Data, params, templates } from './model.js'
 import {
   disableButton,
   retrieveStyles,
@@ -49,15 +49,14 @@ of a document, returning digestable objects which can easily be used to send art
 to spira.*/
 const parseArtifacts = async (ArtifactTypeId, model) => {
   return Word.run(async (context) => {
-    disableButton(params.buttons.sendToSpira);
+    disableButton(params.buttonIds.sendToSpira);
     /***************************
      Start range identification
      **************************/
     let projectId = document.getElementById("project-select").value
     let selection = context.document.getSelection();
-    let splitSelection = context.document.getSelection().split(['\r']);
+    let splitSelection;
     context.load(selection, ['text', 'inlinePictures', 'style', 'styleBuiltIn']);
-    context.load(splitSelection, ['text', 'inlinePictures', 'style', 'styleBuiltIn'])
     await context.sync();
     //If there is no selected area, parse the full body of the document instead
     if (!selection.text) {
@@ -66,6 +65,11 @@ const parseArtifacts = async (ArtifactTypeId, model) => {
       context.load(selection, ['text', 'inlinePictures', 'style', 'styleBuiltIn']);
       context.load(splitSelection, ['text', 'inlinePictures', 'style', 'styleBuiltIn'])
       await context.sync();
+    }
+    else {
+      splitSelection = context.document.getSelection().split(['\r']);
+      context.load(splitSelection, ['text', 'inlinePictures', 'style', 'styleBuiltIn'])
+      context.sync();
     }
     /********************** 
      Start image formatting
@@ -92,6 +96,81 @@ const parseArtifacts = async (ArtifactTypeId, model) => {
       imageLines.shift();
     }
     //end of image formatting
+    /*************************
+     Start list parsing
+     *************************/
+    let lists = selection.lists
+    context.load(lists)
+    await context.sync();
+    let formattedLists = []
+    let formattedSingleItemLists = []
+    for (let list of lists.items) {
+      context.load(list)
+      context.sync();
+      // Inner array to store the elements of each list
+      let newList = [];
+      //set up accessing the paragraphs of a list
+      context.load(list, ['paragraphs'])
+      await context.sync();
+      let paragraphs = list.paragraphs;
+      context.load(paragraphs);
+      await context.sync();
+      for (let paragraph of paragraphs.items) {
+        context.load(paragraph)
+        await context.sync();
+        let listItem = paragraph.listItemOrNullObject
+        context.load(listItem, ['level', 'listString'])
+        await context.sync();
+        let html = paragraph.getHtml();
+        await context.sync();
+        let pRegex = params.regexs.paragraphRegex
+        let match = html.m_value.match(pRegex)
+        html = match[0]
+        let spanMatches = [...html.matchAll(params.regexs.spanRegex)]
+        //there will be an extra match if the text in a list is rich text
+        if (spanMatches[1]) {
+          //sometimes the indicator (i. text) has span formatting on it, so this
+          //handles that case
+          if (spanMatches[2]) {
+            newList.push(new templates.ListItem(spanMatches[2][0], listItem.level))
+          }
+          //this will be the list item if span[2] does not exist (verifies it isnt empty either)
+          else if (spanMatches[1][0].includes("&nbsp;")) {
+            //this can happen when the list 'bullet' text is formatted too.
+            //removes both span mathces
+            html = html.replace(spanMatches[0][0], "").replace(spanMatches[1][0], "").replaceAll("</span>", "")
+            let pTagMatches = [...html.matchAll(params.regexs.pTagRegex)]
+            for (let match of pTagMatches) {
+              html = html.replace(match[0], "")
+            }
+            newList.push(new templates.ListItem(html, listItem.level))
+          }
+          else {
+            newList.push(new templates.ListItem(spanMatches[1][0], listItem.level))
+          }
+        }
+        //if the listItem is not rich text, this will filter down to just the text
+        else {
+          //spanMatches[0][0] leaves out second closing span tag in the html structure
+          html = html.replace(spanMatches[0][0], "").replaceAll("</span>", "")
+          let pTagMatches = [...html.matchAll(params.regexs.pTagRegex)]
+          //p tags break <li> tags when placed within them so that is filtered out here
+          for (let match of pTagMatches) {
+            html = html.replace(match[0], "")
+          }
+
+          newList.push(new templates.ListItem(html, listItem.level))
+        }
+      }
+      //single item lists need to be parsed differently than multi item ones
+      if (paragraphs.items.length <= 1) {
+        formattedSingleItemLists.push(newList)
+      }
+      else {
+        formattedLists.push(newList)
+      }
+    }
+    //end of list parsing
     /**********************
      Start Artifact Parsing
     ***********************/
@@ -130,7 +209,7 @@ const parseArtifacts = async (ArtifactTypeId, model) => {
               let descHtml = descRange.getHtml();
               await context.sync();
               //this filters out unwanted html clutter and formats lists
-              let filteredDescription = filterDescription(descHtml.m_value)
+              let filteredDescription = filterDescription(descHtml.m_value, false, formattedLists, formattedSingleItemLists)
               requirement.Description = filteredDescription
               requirements.push(requirement)
               /*gets the requirement of the to be created requirement based
@@ -189,7 +268,7 @@ const parseArtifacts = async (ArtifactTypeId, model) => {
               }
               let descHtml = descRange.getHtml();
               await context.sync();
-              let filteredDescription = filterDescription(descHtml.m_value)
+              let filteredDescription = filterDescription(descHtml.m_value, false, formattedLists, formattedSingleItemLists)
               requirement.Description = filteredDescription
             }
             requirements.push(requirement)
@@ -197,7 +276,7 @@ const parseArtifacts = async (ArtifactTypeId, model) => {
         }
         if (!validateHierarchy(requirements)) {
           requirements = false
-          enableButton(params.buttons.sendToSpira)
+          enableButton(params.buttonIds.sendToSpira)
           //throw hierarchy error and exit function
           displayError("heirarchy", true)
           return
@@ -253,12 +332,12 @@ const parseArtifacts = async (ArtifactTypeId, model) => {
               descStart = undefined; descEnd = undefined;
               if (!testCase.Name) {
                 //this whole block will be replaced with filterDescription when that is done
-                let filteredDescription = filterDescription(descHtml.m_value.replaceAll("\r", ""), true);
+                let filteredDescription = filterDescription(descHtml.m_value.replaceAll("\r", ""), true, formattedLists, formattedSingleItemLists);
                 testCase.folderDescription = filteredDescription
               }
               else {
                 //removes tables picked up in the description and adds proper HTML lists
-                let filteredDescription = filterDescription(descHtml.m_value.replaceAll("\r", ""), true)
+                let filteredDescription = filterDescription(descHtml.m_value.replaceAll("\r", ""), true, formattedLists, formattedSingleItemLists)
                 testCase.testCaseDescription = filteredDescription
               }
               if (item.style == styles[0] || item.styleBuiltIn == styles[0]) {
@@ -371,7 +450,7 @@ const parseArtifacts = async (ArtifactTypeId, model) => {
               is only the starting line.*/
               let descHtml = descRange.getHtml();
               await context.sync();
-              let filteredDescription = filterDescription(descHtml.m_value.replaceAll("\r", ""), true)
+              let filteredDescription = filterDescription(descHtml.m_value.replaceAll("\r", ""), true, formattedLists, formattedSingleItemLists)
               testCase.testCaseDescription = filteredDescription
             }
             //dont push a nameless testCase.
@@ -398,7 +477,7 @@ const sendArtifacts = async (ArtifactTypeId, images, Artifacts, projectId, model
   if (Artifacts.length == 0) {
     //empty is the error message key for the model object.
     displayError("empty", true);
-    enableButton(params.buttons.sendToSpira)
+    enableButton(params.buttonIds.sendToSpira)
     return
   }
   let imgRegex = params.regexs.imageRegex
@@ -427,7 +506,6 @@ const sendArtifacts = async (ArtifactTypeId, images, Artifacts, projectId, model
         requirements.shift()
       }
       catch (err) {
-        await axios.post(RETRIEVE, { failed1: "req" })
         displayError("failedReq", false, item);
       }
       const apiUrl = model.user.url + params.apiComponents.apiBase + projectId +
@@ -435,7 +513,6 @@ const sendArtifacts = async (ArtifactTypeId, images, Artifacts, projectId, model
       for (let [i, req] of requirements.entries()) {
         try {
           let call = await axios.post(apiUrl, req)
-          await axios.post(RETRIEVE, call.body)
           await indentRequirement(apiUrl, call.data.RequirementId, req.IndentLevel - lastIndent)
           lastIndent = req.IndentLevel;
           let placeholders = [...req.Description.matchAll(imgRegex)]
@@ -488,7 +565,7 @@ const sendArtifacts = async (ArtifactTypeId, images, Artifacts, projectId, model
         updateProgressBar(i + 1, testCases.length);
       }
       hideProgressBar();
-      enableButton(params.buttons.sendToSpira)
+      enableButton(params.buttonIds.sendToSpira)
     }
   }
 }
@@ -648,22 +725,26 @@ const pushTestStep = async (testCaseId, testStep, model, projectId) => {
 converts lists into a readable format*/
 //params:
 //description: HTML string that signifies the description block
-//isTestCase: 
-const filterDescription = (description, isTestCase, lists) => {
+//isTestCase: {boolean} says whether it is a test case (for removing tables)
+//lists: [][] Object where Object = {text:list item text, indentLevel: integer}
+//singleItemLists: same but for lists that are only 1 item (they are handled differently)
+const filterDescription = (description, isTestCase, lists, singleItemLists) => {
   //this function will filter out tables + excess html tags and info from all html based fields
   //this gets the index of the 2 body tags in the HTML string
-  let bodyTagmatches = [...description.matchAll(params.regexs.bodyTagRegex)]
+  let bodyTagMatches = [...description.matchAll(params.regexs.bodyTagRegex)]
   /*this slices the body to be the beginning of the first
    body tag to the beginning of the closing body tag*/
-  let htmlBody = description.slice(bodyTagmatches[0].index, bodyTagmatches[1].index)
+  let htmlBody = description.slice(bodyTagMatches[0].index, bodyTagMatches[1].index)
   //this removes the first body tag, and then trims whitespace
-  htmlBody = htmlBody.replace(bodyTagmatches[0][0], "").trim()
+  htmlBody = htmlBody.replace(bodyTagMatches[0][0], "").trim()
+  htmlBody = formatDescriptionLists(htmlBody.replaceAll("\r", "").replaceAll("\t", ""), lists, singleItemLists)
+  //this trims excess spaces sometimes brought in by lists
   let whitespaceMatch = [...htmlBody.matchAll(params.regexs.whitespaceRegex)]
+
   for (let match of whitespaceMatch) {
     //this takes any double or more spaces, and turns them into single spaces
     htmlBody = htmlBody.replace(match, " ")
   }
-  htmlBody = filterForLists(htmlBody.replaceAll("\r", "").replaceAll("\t", ""))
   //if the description is for a test case, remove tables (They will be parsed as steps 
   //separately)
   if (isTestCase) {
@@ -674,20 +755,69 @@ const filterDescription = (description, isTestCase, lists) => {
       htmlBody.replace(match[0], "")
     }
   }
-  axios.post(RETRIEVE, { html: htmlBody })
   return htmlBody
 }
 
-const filterForListsNew = (description, lists) => {
-  let matches = [];
-  for (let i = 0; i < lists.length; i++) {
-    let list = lists[i];
-    let newListElement = "";
-    for (let j = 0; j < list.length; j++) {
-      let listItem = list[j];
-      match = listItem.html.m_value.match(params.regexs.listReplacementRegEx);
-      let newItemElement = "";
-      
+/*This function formats description lists to follow HTML structuring instead of 
+what the Word API spits out by default*/
+//description: string of outputted and mostly formatted HTML
+//lists: formatted lists with objects of {text: string, indentLevel: int}
+//singleItemLists: the same as lists but for single items (needs to be parsed differently)
+const formatDescriptionLists = (description, lists, singleItemLists) => {
+  //this will replace multi-item lists with properly formatted ones
+  let listStarts = [...description.matchAll(params.regexs.firstListItemRegex)]
+  let listEnds = [...description.matchAll(params.regexs.lastListItemRegex)]
+  //if there isnt a list, return the description unaltered
+  if (!listStarts[0][0]) {
+    return description
+  }
+  for (let [i, start] of listStarts.entries()) {
+    //the opening of the first tag that represents a list
+    let startIndex = start.index;
+    /*this is the index needed to cut off the entire <p></p> grouping for the last item
+    in a list */
+    let endIndex = listEnds[i].index + listEnds[i][0].length;
+    //this is the "list" in HTML returned by the Word javascript API
+    let replacementArea = description.slice(startIndex, endIndex)
+    //if this index exists, it is (most likely) an ordered list
+    let orderTest = replacementArea.match(params.regexs.orderedListRegex)?.index
+    if (orderTest) {
+      let previousIndent = 0
+      //lists[i] = [{text: String, indentLevel: int}]
+      //first item should always be indent level 0
+      lists[0][0].indentLevel = 0
+      let listHtml = "<ol>"
+
+      for (let listItem of lists[0]) {
+        if (listItem.indentLevel > previousIndent) {
+          //this will only indent at max 1 time as spira doesnt support anything beyond that.
+          listHtml = listHtml.concat("<ol>")
+        }
+        else if (listItem.indentLevel < previousIndent) {
+          //this handles any number of levels of outdenting
+          let difference = previousIndent - listItem.indentLevel
+          for (let i = 0; i < difference; i++) {
+            //closes difference number of <ol> nestings 
+            listHtml = listHtml.concat("</ol>")
+          }
+        }
+        listHtml = listHtml.concat(`<li>${listItem.text}</li>`)
+      }
+      /*after indent levels have been set, this finds how many "open" <ol> tags are left
+      and closes them at the end.*/
+      let openings = [...listHtml.matchAll(params.regexs.olTagRegex)].length
+      let closings = [...listHtml.matchAll(params.regexs.olClosingTagRegex)].length
+      for (let i = 0; i < (openings - closings); i++) {
+        listHtml = listHtml.concat("</ol>")
+      }
+      /*replaces the description area identified earlier with the newly formatted HTML,
+      Then shifts lists to remove the now placed, formatted list from the queue*/
+      description = description.replace(replacementArea, listHtml)
+      lists.shift();
+      return description
+    }
+    else {
     }
   }
+  //This will replace single-item lists with properly formatted ones
 }

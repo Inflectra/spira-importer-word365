@@ -55,15 +55,22 @@ var params = {
     paragraphRegex: /(<p )(.|\n|\s|\r)*?(<\/p>)/gu,
     pTagRegex: /<\/??p(.|\n|\r|\s)*?>/g,
     emptyParagraphRegex: /<p(.)*?>\&nbsp\;<\/p>/g,
-    orderedRegEx: /.*class=MsoListParagraph.*><span.*>(.*)<span/,
-    marginRegEx: /style='margin-left:(\d)\.(\d)in/,
+    orderedRegex: /.*class=MsoListParagraph.*><span.*>(.*)<span/,
+    marginRegex: /style='margin-left:(\d)\.(\d)in/,
     imageRegex: /<img(.|\n)*("|\s)>/g,
     spanRegex: /<span(.|\r|\n|\s)*?<\/span>/g,
-    exceptedListRegEx: />(\d{1} | \.){2,}<span/u,
-    listReplacementRegEx: /<p class=MsoListParagraph (.|\n|\s|\r)*?<\/p>/
+    exceptedListRegex: />(\d{1} | \.){2,}<span/u,
+    firstListItemRegex: /<p class\=MsoListParagraphCxSpFirst(.|\n|\r)*?\/p>/g,
+    lastListItemRegex: /<p class\=MsoListParagraphCxSpLast(.|\n|\r)*?\/p>/g,
+    singleListReplacementRegex: /<p class=MsoListParagraph (.|\n|\s|\r)*?<\/p>/g,
+    orderedListRegex: />([A-Za-z0-9]){1,3}\.<span/,
+    //this matches the ordered list 'icon' (ie. 1. or a.)
+    orderedListIconRegex: /[A-Za-z0-9]{1,3}\./,
+    olTagRegex: /<ol>/g,
+    olClosingTagRegex: /<\/ol>/g
   },
   //this is the html id's of buttons which will be used when enabling or disabling buttons
-  buttons: {
+  buttonIds: {
     sendToSpira: "send-to-spira-button"
   }
 }
@@ -95,6 +102,11 @@ var templates = {
     this.base64 = base64;
     this.name = name;
     this.lineNum = lineNum;
+  },
+
+  ListItem: function (text, indentLevel) {
+    this.text = text;
+    this.indentLevel = indentLevel;
   }
 }
 
@@ -128,10 +140,6 @@ function Data() {
   };
 }
 
-function tempDataStore(projectId) {
-  this.currentProjectId = projectId;
-}
-
 var ERROR_MESSAGES = {
   stdTimeOut: 8000, // 8000 is 8 seconds when used in setTimeout()
   allIds: { login: "login-err", send: "send-err", styles: "styles-err" },
@@ -144,4 +152,4 @@ var ERROR_MESSAGES = {
   emptyStyles: { htmlId: "styles-err", message: "You currently have unselected styles. Please provide a style for all provided inputs." }
 }
 
-export { Data, tempDataStore, params, templates, ERROR_MESSAGES }
+export { Data, params, templates, ERROR_MESSAGES }
