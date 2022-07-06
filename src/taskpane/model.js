@@ -60,14 +60,16 @@ var params = {
     imageRegex: /<img(.|\n)*("|\s)>/g,
     spanRegex: /<span(.|\r|\n|\s)*?<\/span>/g,
     exceptedListRegex: />(\d{1} | \.){2,}<span/u,
-    firstListItemRegex: /<p class\=MsoListParagraphCxSpFirst(.|\n|\r)*?\/p>/g,
-    lastListItemRegex: /<p class\=MsoListParagraphCxSpLast(.|\n|\r)*?\/p>/g,
-    singleListReplacementRegex: /<p class=MsoListParagraph (.|\n|\s|\r)*?<\/p>/g,
+    firstListItemRegex: /<p class=MsoListParagraphCxSpFirst(.|\n|\r)*?\/p>/g,
+    lastListItemRegex: /<p class=MsoListParagraphCxSpLast(.|\n|\r)*?\/p>/g,
+    singleListItemRegex: /<p class=MsoListParagraph (.|\n|\s|\r)*?<\/p>/g,
     orderedListRegex: />([A-Za-z0-9]){1,3}\.<span/,
-    //this matches the ordered list 'icon' (ie. 1. or a.)
-    orderedListIconRegex: /[A-Za-z0-9]{1,3}\./,
+    //this matches the ordered list 'icon' (ie. 1.,  a., 1) ) at the start of a line
+    orderedListSymbolRegex: /^[A-Za-z0-9]{1,3}(\.|\))/,
     olTagRegex: /<ol>/g,
-    olClosingTagRegex: /<\/ol>/g
+    olClosingTagRegex: /<\/ol>/g,
+    ulTagRegex: /<ul>/g,
+    ulClosingTagRegex: /<\/ul>/g
   },
   //this is the html id's of buttons which will be used when enabling or disabling buttons
   buttonIds: {

@@ -1462,6 +1462,7 @@ const listDelimiter = (elem, start, endPrefix, ordered) => {
 }
 
 /* Gets an array of all the lists from the Word document and returns it. */
+//this is a mockup function - this is integrated into the mega function now.
 const retrieveLists = async () => {
   return Word.run(async (context) => {
     let selection = context.document.getSelection();

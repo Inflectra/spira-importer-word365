@@ -724,9 +724,9 @@ const pushTestStep = async (testCaseId, testStep, model, projectId) => {
 /*filters tables (for test cases/test steps) and body tags out of the description, and
 converts lists into a readable format*/
 //params:
-//description: HTML string that signifies the description block
+//description: HTML string that signifies the description blockg
 //isTestCase: {boolean} says whether it is a test case (for removing tables)
-//lists: [][] Object where Object = {text:list item text, indentLevel: integer}
+//lists: [][] ListItem (see model)
 //singleItemLists: same but for lists that are only 1 item (they are handled differently)
 const filterDescription = (description, isTestCase, lists, singleItemLists) => {
   //this function will filter out tables + excess html tags and info from all html based fields
@@ -764,60 +764,110 @@ what the Word API spits out by default*/
 //lists: formatted lists with objects of {text: string, indentLevel: int}
 //singleItemLists: the same as lists but for single items (needs to be parsed differently)
 const formatDescriptionLists = (description, lists, singleItemLists) => {
-  //this will replace multi-item lists with properly formatted ones
-  let listStarts = [...description.matchAll(params.regexs.firstListItemRegex)]
+  //listStarts is the starting element of every list
+  let listStarts = [...description.matchAll(params.regexs.firstListItemRegex),
+  ...description.matchAll(params.regexs.singleListItemRegex)]
   let listEnds = [...description.matchAll(params.regexs.lastListItemRegex)]
-  //if there isnt a list, return the description unaltered
+  //if there aren't any lists matched, return the description unaltered
   if (!listStarts[0][0]) {
     return description
   }
   for (let [i, start] of listStarts.entries()) {
-    //the opening of the first tag that represents a list
-    let startIndex = start.index;
-    /*this is the index needed to cut off the entire <p></p> grouping for the last item
-    in a list */
-    let endIndex = listEnds[i].index + listEnds[i][0].length;
-    //this is the "list" in HTML returned by the Word javascript API
-    let replacementArea = description.slice(startIndex, endIndex)
-    //if this index exists, it is (most likely) an ordered list
+    let replacementArea;
+    /*this will handle all the multi item lists, single item ones will be handled slightly
+      differently */
+    if (i < lists.length) {
+      //the opening of the first tag that represents a list
+      let startIndex = description.indexOf(start[0]);
+      /*this is the index needed to cut off the entire <p></p> grouping for the last item
+      in a list */
+      let endIndex = description.indexOf(listEnds[i][0]) + listEnds[i][0].length;
+      //this is the "list" in HTML returned by the Word javascript API
+      replacementArea = description.slice(startIndex, endIndex)
+      //if this index exists, it is (most likely) an ordered list
+      var targetList = lists[i]
+    }
+    //this handles single item lists
+    else {
+      /*i is based on the index within listStarts which is all of the opening elements
+      for multi item lists followed by all the single item list elements*/
+      var targetList = singleItemLists[i - lists.length]
+      //since this is only a single line list, the regex match IS the entire list
+      replacementArea = start[0]
+    }
+    //this determines if a list is ordered or not (passed to listConstructor)
     let orderTest = replacementArea.match(params.regexs.orderedListRegex)?.index
     if (orderTest) {
-      let previousIndent = 0
-      //lists[i] = [{text: String, indentLevel: int}]
-      //first item should always be indent level 0
-      lists[0][0].indentLevel = 0
-      let listHtml = "<ol>"
-
-      for (let listItem of lists[0]) {
-        if (listItem.indentLevel > previousIndent) {
-          //this will only indent at max 1 time as spira doesnt support anything beyond that.
-          listHtml = listHtml.concat("<ol>")
-        }
-        else if (listItem.indentLevel < previousIndent) {
-          //this handles any number of levels of outdenting
-          let difference = previousIndent - listItem.indentLevel
-          for (let i = 0; i < difference; i++) {
-            //closes difference number of <ol> nestings 
-            listHtml = listHtml.concat("</ol>")
-          }
-        }
-        listHtml = listHtml.concat(`<li>${listItem.text}</li>`)
-      }
-      /*after indent levels have been set, this finds how many "open" <ol> tags are left
-      and closes them at the end.*/
-      let openings = [...listHtml.matchAll(params.regexs.olTagRegex)].length
-      let closings = [...listHtml.matchAll(params.regexs.olClosingTagRegex)].length
-      for (let i = 0; i < (openings - closings); i++) {
-        listHtml = listHtml.concat("</ol>")
-      }
-      /*replaces the description area identified earlier with the newly formatted HTML,
-      Then shifts lists to remove the now placed, formatted list from the queue*/
-      description = description.replace(replacementArea, listHtml)
-      lists.shift();
-      return description
+      var listHtml = listConstructor(true, targetList)
     }
     else {
+      var listHtml = listConstructor(false, targetList)
     }
+    description = description.replace(replacementArea, listHtml)
   }
-  //This will replace single-item lists with properly formatted ones
+  return description
+}
+
+//constructs lists in proper HTML format and returns them
+//List: [] ListItem (see model)
+//isOrdered: {boolean} represents whether it is an ordered list or not
+const listConstructor = (isOrdered, list) => {
+  axios.post(RETRIEVE, {list: list})
+  let isSingle = (list.length == 1)
+  let openingTag = '<ol>'
+  let closingTag = '</ol>'
+  let openingRegex = params.regexs.olTagRegex
+  let closingRegex = params.regexs.olClosingTagRegex
+  if (!isOrdered) {
+    openingTag = '<ul>'
+    closingTag = '</ul>'
+    openingRegex = params.regexs.ulTagRegex
+    closingRegex = params.regexs.ulClosingTagRegex
+  }
+  let listHtml = openingTag
+  if (!isSingle) {
+    var previousIndent = 0
+    //we assume the first item is unindented as spira doesnt support it any other way anyways
+    list[0].indentLevel = 0
+    for (let listItem of list) {
+      if (listItem.indentLevel > previousIndent) {
+        //this will only indent at max 1 time as spira doesnt support anything beyond that.
+        listHtml = listHtml.concat(openingTag)
+      }
+      else if (listItem.indentLevel < previousIndent) {
+        //this handles any number of levels of outdenting
+        let difference = previousIndent - listItem.indentLevel
+        for (let i = 0; i < difference; i++) {
+          //closes difference number of <ol> nestings 
+          listHtml = listHtml.concat(closingTag)
+        }
+      }
+      //this checks if the listItem.text still contains a list symbol (ie 1., a., A.) and removes it
+      let symbolTest = listItem.text.match(params.regexs.orderedListSymbolRegex)
+      //when no match, symbolTest = null which crashes when accessing [0]
+      if (symbolTest) {
+        listItem.text = listItem.text.replace(symbolTest[0], "")
+      }
+      //adds the li element to the "DOM"
+      listHtml = listHtml.concat(`<li>${listItem.text}</li>`)
+      previousIndent = listItem.indentLevel
+    }
+    /*after indent levels have been set, this finds how many "open" <ol> tags are left
+      and closes them at the end.*/
+    let openings = [...listHtml.matchAll(openingRegex)].length
+    let closings = [...listHtml.matchAll(closingRegex)].length
+    for (let i = 0; i < (openings - closings); i++) {
+      listHtml = listHtml.concat(closingTag)
+    }
+    return listHtml
+  }
+  //this is the handling of single item lists, multi item lists return above
+  let symbolTest = list[0].text.match(params.regexs.orderedListSymbolRegex)
+  //symbolTest is null if no match
+  if (symbolTest) {
+    list[0].text = list[0].text.replace(symbolTest[0], "")
+  }
+  axios.post(RETRIEVE, {symbol: symbolTest})
+  listHtml = openingTag + `<li>${list[0].text}</li>` + closingTag
+  return listHtml
 }
