@@ -75,6 +75,18 @@ var params = {
   //this is the html id's of buttons which will be used when enabling or disabling buttons
   buttonIds: {
     sendToSpira: "send-to-spira-button"
+  },
+  // This is used to move around within the add-in UI
+  pageStates: {
+    authentication: 0,
+    projects: 1,
+    artifact: 2,
+    req_style: 3,
+    test_style: 4,
+    req_send: 5,
+    test_send: 6,
+    help: 7,
+    dev: 42
   }
 }
 

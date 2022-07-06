@@ -13,7 +13,7 @@
 }
 
 .hidden {
-    display: none;
+    display: none ! important;
 }
 
 .open {
@@ -347,6 +347,10 @@ ul {
 }
 
 .artifact-button:focus {
+    background-color: #0078d7;
+}
+
+.artifact-button .active {
     background-color: #0078d7;
 }
 

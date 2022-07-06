@@ -50,9 +50,10 @@ const setDefaultDisplay = () => {
 const setEventListeners = () => {
   document.getElementById('test').onclick = () => test();
   document.getElementById('btn-login').onclick = () => loginAttempt();
-  document.getElementById('dev-mode').onclick = () => devmode();
+  document.getElementById('dev-mode').onclick = () => goToState(params.pageStates.dev);
   document.getElementById('send-to-spira-button').onclick = () => pushArtifacts();
-  document.getElementById('log-out').onclick = () => logout();
+  document.getElementById('log-out').onclick = () => goToState(params.pageStates.authentication);
+  document.getElementById('project-select').onchange = () => goToState(params.pageStates.artifact);
   document.getElementById("select-requirements").onclick = () => openStyleMappings("req-");
   document.getElementById("select-test-cases").onclick = () => openStyleMappings("test-");
   document.getElementById("confirm-req-style-mappings").onclick = () => confirmStyleMappings('req-');
@@ -60,6 +61,7 @@ const setEventListeners = () => {
 
 }
 
+// DEPRECATED due to the new goToState function
 const devmode = () => {
   //moves us to the main interface without manually entering credentials
   document.getElementById('panel-auth').classList.add('hidden');
@@ -111,6 +113,7 @@ const loginAttempt = async () => {
       model.user.api_key = rssToken;
       model.user.userCredentials = `?username=${username}&api-key=${rssToken}`;
       //populate the products dropdown & model object with the response body.
+      addDefaultProject();
       populateProjects(response.body)
       //On successful login, hide error message if its visible
       clearErrors();
@@ -551,8 +554,8 @@ const openStyleMappings = async (pageTag) => {
   document.getElementById("send-to-spira").style.display = "none"
   //checks the current selected artifact type then loads the appropriate menu
   if (pageTag == "req-") {
-    document.getElementById("select-requirements").style['background-color'] = model.colors.primaryButton;
-    document.getElementById("select-test-cases").style['background-color'] = model.colors.inactiveButton;
+    document.getElementById("select-requirements").classList.add("active");
+    document.getElementById("select-test-cases").classList.remove("active");
     document.getElementById("req-style-mappings").classList.remove("hidden")
     document.getElementById("test-style-mappings").style.display = 'none'
     document.getElementById("req-style-mappings").style.display = 'flex'
@@ -560,8 +563,9 @@ const openStyleMappings = async (pageTag) => {
   }
   //opens the test cases style mappings if test mappings is the selected artifact type
   else {
-    document.getElementById("select-test-cases").style['background-color'] = model.colors.primaryButton;
-    document.getElementById("select-requirements").style['background-color'] = model.colors.inactiveButton;
+    document.getElementById("select-test-cases").classList.add("active");
+    document.getElementById("select-requirements").classList.remove("active");
+    document.getElementById("test-style-mappings").classList.remove("hidden")
     document.getElementById("req-style-mappings").style.display = 'none'
     document.getElementById("test-style-mappings").style.display = 'flex'
   }
@@ -703,6 +707,77 @@ const clearErrors = () => {
   for (let i = 0; i < errs.length; i++) {
     document.getElementById(errs[i]).textContent = "";
   }
+}
+
+const goToState = (state) => {
+  let states = params.pageStates;
+  switch (state) {
+    case (states.authentication):
+
+      // clear stored user data
+      model.clearUser();
+      // hide main selection screen
+      document.getElementById('main-screen').classList.add('hidden');
+      document.getElementById('main-screen').style.display = "none";
+      //removes currently entered RSS token to prevent a user from leaving their login credentials
+      //populated after logging out and leaving their computer.
+      document.getElementById("input-password").value = ""
+      document.getElementById('panel-auth').classList.remove('hidden');
+      clearDropdownElement('project-select');
+
+      // Hides style mappings
+      document.getElementById("req-style-mappings").style.display = 'none'
+      document.getElementById("test-style-mappings").style.display = 'none'
+
+      // Resets artifact button colors
+      document.getElementById("select-requirements").style['background-color'] = model.colors.inactiveButton;
+      document.getElementById("select-test-cases").style['background-color'] = model.colors.inactiveButton;
+
+      // Hides artifact text and buttons
+      document.getElementById('artifact-select-text').classList.add('hidden');
+      document.getElementById('select-requirements').classList.add('hidden');
+      document.getElementById('select-test-cases').classList.add('hidden');
+
+      // Hides send to spira menu and enables button
+      document.getElementById("send-to-spira").style.display = "none"
+      hideProgressBar();
+      document.getElementById("send-to-spira-button").disabled = false;
+
+      // Clear any error messages that exist
+      // clearErrors();
+      break;
+    case (states.projects):
+      addDefaultProject();
+
+      // rest of what happens to the UI when you log in
+      break;
+    case (states.artifact):
+      // Unhide artifact text and buttons
+      document.getElementById('artifact-select-text').classList.remove('hidden');
+      document.getElementById('select-requirements').classList.remove('hidden');
+      document.getElementById('select-test-cases').classList.remove('hidden');
+
+      break;
+    case (states.dev):
+      //moves us to the main interface without manually entering credentials
+      document.getElementById('panel-auth').classList.add('hidden');
+      document.getElementById('main-screen').classList.remove('hidden');
+      document.getElementById("main-screen").style.display = "flex";
+      addDefaultProject();
+      let devOption = document.createElement("option");
+      devOption.text = "Test";
+      devOption.value = null;
+      document.getElementById("project-select").add(devOption);
+      break;
+
+  }
+}
+
+const addDefaultProject = () => {
+  let nullProject = document.createElement("option");
+  nullProject.text = "       ";
+  nullProject.value = null;
+  document.getElementById("project-select").add(nullProject);
 }
 
 /********************
