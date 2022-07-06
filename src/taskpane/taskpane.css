@@ -287,6 +287,48 @@ ul {
     margin-bottom: 3%;
 }
 
+.tooltip {
+    position: relative;
+    background: #eaeaea;
+    border-radius: 100%;
+    padding: 0px 5px;
+    cursor: help;
+}
+
+.tooltip::before, .tooltip::after {
+    position: absolute;
+    left: 50%;
+    opacity: 0;
+}
+.tooltip::before {
+    content: "";
+    border-width: 8px 6.25px 0 6.25px;
+    border-style: solid;
+    border-color: #aaaaaa transparent transparent transparent;
+    margin-left: -7px;
+    top: -8px;
+}
+.tooltip::after {
+    font-size: 10pt;
+    border-style: solid;
+    border-width: 1px;
+    border-color: black;
+    border-radius: 12px;
+    background-color: #f8f8f8;
+    padding: 10px;
+    width: 150px;
+    margin-left: -75px;
+    top: -98px;
+}
+
+.tooltip:hover::before, .tooltip:hover::after {
+    opacity: 1;
+}
+
+.tooltip:hover::after { /* Must be separated so it only appears on hovering the small part */
+    content: attr(tooltip);
+}
+
 .artifact-button {
     background-color: #f4f4f4; /* inactive: #f4f4f4, active: #0078d7 */
     border: none;
