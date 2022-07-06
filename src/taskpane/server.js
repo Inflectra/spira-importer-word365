@@ -121,6 +121,14 @@ const parseArtifacts = async (ArtifactTypeId, model) => {
         let listItem = paragraph.listItemOrNullObject
         context.load(listItem, ['level', 'listString'])
         await context.sync();
+        /*this covers odd formats with long listStrings (hover listString for details).
+        The "false" newList will get pushed, and serve as a "skip this one" flag for 
+        the later function which places formatted lists into the description.*/
+        if (paragraph.listItemOrNullObject.listString.length > 5 || (newList == false && typeof newList == 'boolean')) {
+          await axios.post(RETRIEVE, {pa: paragraph.listItemOrNullObject.listString.length, newList: newList})
+          newList = false
+          continue
+        }
         let html = paragraph.getHtml();
         await context.sync();
         let pRegex = params.regexs.paragraphRegex
@@ -163,12 +171,13 @@ const parseArtifacts = async (ArtifactTypeId, model) => {
         }
       }
       //single item lists need to be parsed differently than multi item ones
-      if (paragraphs.items.length <= 1) {
+      if (paragraphs.items.length == 1) {
         formattedSingleItemLists.push(newList)
       }
       else {
         formattedLists.push(newList)
       }
+      newList = []
     }
     //end of list parsing
     /**********************
@@ -764,9 +773,12 @@ what the Word API spits out by default*/
 //lists: formatted lists with objects of {text: string, indentLevel: int}
 //singleItemLists: the same as lists but for single items (needs to be parsed differently)
 const formatDescriptionLists = (description, lists, singleItemLists) => {
-  axios.post(RETRIEVE, {desc: description})
   //if there aren't any lists in this description, return the description unaltered
   if (!description.includes("MsoListParagraph")) {
+    /*There is sometimes inconsistent spacing between list symbols and the text of a list item,
+    so this removes excess whitespace there. Can still be inconsistent after this, but only
+    by 1 space instead of by 1-10*/
+
     return description
   }
 
@@ -774,8 +786,18 @@ const formatDescriptionLists = (description, lists, singleItemLists) => {
   let listStarts = [...description.matchAll(params.regexs.firstListItemRegex),
   ...description.matchAll(params.regexs.singleListItemRegex)]
   let listEnds = [...description.matchAll(params.regexs.lastListItemRegex)]
-  
+
   for (let [i, start] of listStarts.entries()) {
+    /*these have to be exact - lists[i] being undefined means something different than it 
+    existing and being defined as false. False serves as the flag to skip parsing this section*/
+    axios.post(RETRIEVE, {lists: lists[i], single: singleItemLists[i- lists.length]})
+    if ((lists[i] === false && lists[i] != undefined) || (singleItemLists[i - lists.length] === false && singleItemLists[i - lists.length] != undefined)) {
+      let nbspMatches = [...description.matchAll(params.regexs.nonBreakingWhitespaceRegex)]
+      for (let match of nbspMatches) {
+        description = description.replace(match[0], " ")
+      }
+      continue
+    }
     let replacementArea;
     /*this will handle all the multi item lists, single item ones will be handled slightly
       differently */
@@ -800,12 +822,8 @@ const formatDescriptionLists = (description, lists, singleItemLists) => {
     }
     //this determines if a list is ordered or not (passed to listConstructor)
     let orderTest = replacementArea.match(params.regexs.orderedListRegex)?.index
-    if (orderTest) {
-      var listHtml = listConstructor(true, targetList)
-    }
-    else {
-      var listHtml = listConstructor(false, targetList)
-    }
+    //(orderTest) here is a conditional as it determines whether a list is considered a ol or ul
+    let listHtml = listConstructor((orderTest), targetList)
     description = description.replace(replacementArea, listHtml)
   }
   return description
@@ -815,7 +833,6 @@ const formatDescriptionLists = (description, lists, singleItemLists) => {
 //List: [] ListItem (see model)
 //isOrdered: {boolean} represents whether it is an ordered list or not
 const listConstructor = (isOrdered, list) => {
-
   let isSingle = (list.length == 1)
   let openingTag = '<ol>'
   let closingTag = '</ol>'
