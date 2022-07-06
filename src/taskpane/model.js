@@ -63,7 +63,7 @@ var params = {
     firstListItemRegex: /<p class=MsoListParagraphCxSpFirst(.|\n|\r)*?\/p>/g,
     lastListItemRegex: /<p class=MsoListParagraphCxSpLast(.|\n|\r)*?\/p>/g,
     singleListItemRegex: /<p class=MsoListParagraph (.|\n|\s|\r)*?<\/p>/g,
-    orderedListRegex: />([A-Za-z0-9]){1,3}\.<span/,
+    orderedListRegex: />(\()?([A-Za-z0-9]){1,3}\.<span/,
     //this matches the ordered list 'icon' (ie. 1.,  a., 1) ) at the start of a line
     orderedListSymbolRegex: /^[A-Za-z0-9]{1,3}(\.|\))/,
     olTagRegex: /<ol>/g,

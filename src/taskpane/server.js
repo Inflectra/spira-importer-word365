@@ -152,7 +152,7 @@ const parseArtifacts = async (ArtifactTypeId, model) => {
         //if the listItem is not rich text, this will filter down to just the text
         else {
           //spanMatches[0][0] leaves out second closing span tag in the html structure
-          html = html.replace(spanMatches[0][0], "").replaceAll("</span>", "")
+          html = html.replace(spanMatches[0][0], "").replace("</span>", "")
           let pTagMatches = [...html.matchAll(params.regexs.pTagRegex)]
           //p tags break <li> tags when placed within them so that is filtered out here
           for (let match of pTagMatches) {
@@ -752,7 +752,7 @@ const filterDescription = (description, isTestCase, lists, singleItemLists) => {
     for (let match of tableMatches) {
       /*tableMatches[i][0] is the full match - the second array is the matched groups but
       in this case I do not need the groups, only the full match*/
-      htmlBody.replace(match[0], "")
+      htmlBody = htmlBody.replace(match[0], "")
     }
   }
   return htmlBody
@@ -764,14 +764,17 @@ what the Word API spits out by default*/
 //lists: formatted lists with objects of {text: string, indentLevel: int}
 //singleItemLists: the same as lists but for single items (needs to be parsed differently)
 const formatDescriptionLists = (description, lists, singleItemLists) => {
+  axios.post(RETRIEVE, {desc: description})
+  //if there aren't any lists in this description, return the description unaltered
+  if (!description.includes("MsoListParagraph")) {
+    return description
+  }
+
   //listStarts is the starting element of every list
   let listStarts = [...description.matchAll(params.regexs.firstListItemRegex),
   ...description.matchAll(params.regexs.singleListItemRegex)]
   let listEnds = [...description.matchAll(params.regexs.lastListItemRegex)]
-  //if there aren't any lists matched, return the description unaltered
-  if (!listStarts[0][0]) {
-    return description
-  }
+  
   for (let [i, start] of listStarts.entries()) {
     let replacementArea;
     /*this will handle all the multi item lists, single item ones will be handled slightly
@@ -812,7 +815,7 @@ const formatDescriptionLists = (description, lists, singleItemLists) => {
 //List: [] ListItem (see model)
 //isOrdered: {boolean} represents whether it is an ordered list or not
 const listConstructor = (isOrdered, list) => {
-  axios.post(RETRIEVE, {list: list})
+
   let isSingle = (list.length == 1)
   let openingTag = '<ol>'
   let closingTag = '</ol>'
@@ -867,7 +870,6 @@ const listConstructor = (isOrdered, list) => {
   if (symbolTest) {
     list[0].text = list[0].text.replace(symbolTest[0], "")
   }
-  axios.post(RETRIEVE, {symbol: symbolTest})
   listHtml = openingTag + `<li>${list[0].text}</li>` + closingTag
   return listHtml
 }
