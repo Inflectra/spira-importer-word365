@@ -72,7 +72,7 @@ Testing Functions
 *****************/
 //basic testing function for validating code snippet behaviour.
 async function test() {
-  await retrieveLists(); //testing new list functionality
+  let styles = retrieveStyles("test-")
 }
 
 /**************
@@ -265,6 +265,7 @@ const pushTestCases = async () => {
     // now make the testSteps
     for (let j = 0; j < testCase.testSteps.length; j++) {
       let step = await pushTestStep(testCaseArtifact.TestCaseId, testCase.testSteps[j]);
+      //there needs to be full image handling logic 
       if (images[0]) {
         await pushImage(step, images[0], testCaseArtifact.TestCaseId);
         images.shift();
@@ -346,7 +347,7 @@ const pushTestCaseFolder = async (folderName, description) => {
 post response from creation, you need to GET the artifact from the spira API each time you 
 PUT due to the Concurrency date being checked by API.*/
 //this function can be optimized to make 1 put request per artifact, rather than 1 per image
-const pushImage = async (Artifact, image, testCaseId) => {
+const pushImage = async (Artifact, image, testCaseId, styles) => {
   let pid
   if (Artifact.ProjectId != 0) {
     pid = Artifact.ProjectId
@@ -406,7 +407,7 @@ const pushImage = async (Artifact, image, testCaseId) => {
       console.log(err)
     }
     // now replace the placeholder in the description with img tags
-    let placeholderRegex = /<img(.|\n|\r)*("|\s)\>/g
+    let placeholderRegex = params.regexs.imageRegex
     //gets an array of all the placeholders for images. 
     let placeholders = [...fullArtifactObj.Description.matchAll(placeholderRegex)]
     /*placeholders[0][0] is the first matched instance - because you need to GET for each change
@@ -438,14 +439,55 @@ const pushImage = async (Artifact, image, testCaseId) => {
       //do nothing
       console.log(err)
     }
+    await axios.post(RETRIEVE, { WE: "in here?" })
     // now replace the placeholder in the description with img tags
-    let placeholderRegex = /<img(.|\n|\r)*?("|\s)>/g
-    //gets an array of all the placeholders for images. 
-    let placeholders = [...fullArtifactObj.Description.matchAll(placeholderRegex)]
-    /*placeholders[0][0] is the first matched instance - because you need to GET for each change
-    this should work each time - each placeholder should have 1 equivalent image in the same
-    order they appear throughout the document.*/
-    fullArtifactObj.Description = fullArtifactObj.Description.replace(placeholders[0][0], `<img alt=${image?.name} src=${imgLink}><br />`)
+    let placeholderRegex = params.regexs.imageRegex
+
+    //This is needed to determine the order of how images will appear throughout
+    //the document relative to the TestStep field they represent.
+    let styleOrganizer = [{ column: parseInt(styles[2].substring(styles[2].length - 1)), for: "descPlaceholders" },
+    { column: parseInt(styles[3].substring(styles[2].length - 1)), for: "expectedPlaceholders" },
+    { column: parseInt(styles[4].substring(styles[2].length - 1)), for: "samplePlaceholders" }]
+
+    //this sorts the styles by increasing order of column number (lowest column first)
+    styleOrganizer.sort((a, b) => (a.column > b.column) ? 1 : -1)
+    let descPlaceholders = [...fullArtifactObj.Description.matchAll(placeholderRegex)]
+    let samplePlaceholders = [...fullArtifactObj.SampleData.matchAll(placeholderRegex)]
+    let expectedPlaceholders = [...fullArtifactObj.ExpectedResult.matchAll(placeholderRegex)]
+
+    /*this allows us to directly reference any placeholder array with the
+     styleOrganizer "for" property*/
+    let placeholderReference = {
+      descPlaceholders: descPlaceholders,
+      samplePlaceholders: samplePlaceholders, expectedPlaceholders: expectedPlaceholders
+    }
+
+    /*placeholders[0][0] is the first matched instance - because you need to GET for 
+    each changethis should work each time - each placeholder should have 1 equivalent
+    image in the same order they appear throughout the document.*/
+    for (let placeholder of styleOrganizer) {
+      //placeholder = object from styleOrganizer
+      if (placeholderReference[placeholder.for].length != 0) {
+        /*this changes the relevant behavior based on whichever property is both the
+        most to the left in the testSteps tables and also has an image placeholder */
+        switch (placeholder.for) {
+          case ("descPlaceholders"): {
+            fullArtifactObj.Description = fullArtifactObj.Description.replace(descPlaceholders[0][0], `<img src=${imgLink} alt=${image.name} />`)
+            break
+          }
+          case ("samplePlaceholders"): {
+            fullArtifactObj.SampleData = fullArtifactObj.SampleData.replace(samplePlaceholders[0][0], `<img src=${imgLink} alt=${image.name} />`)
+            break
+          }
+          case ("expectedPlaceholders"): {
+            fullArtifactObj.ExpectedResult = fullArtifactObj.ExpectedResult.replace(samplePlaceholders[0][0], `<img src=${imgLink} alt=${image.name} />`)
+            break
+          }
+        }
+        break
+      }
+      continue
+    }
     //PUT artifact with new description (including img tags now)
     let putArtifact = model.user.url + "/services/v6_0/RestService.svc/projects/" + pid +
       `/test-cases/${fullArtifactObj.TestCaseId}/test-steps?username=${model.user.username}&api-key=${model.user.api_key}`;
@@ -1595,17 +1637,17 @@ const retrieveLists = async () => {
           filtration = filtration.replace(match[0], "")
         }
         filtration = filtration.replace(listItem.listString, "")
-        newList.push(new templates.ListItem(filtration, listItem.level))        
+        newList.push(new templates.ListItem(filtration, listItem.level))
       }
-      if(paragraphs.items.length == 1){
+      if (paragraphs.items.length == 1) {
         finalSingleItemLists.push(newList)
       }
-      else{
+      else {
         finalLists.push(newList)
       }
       newList = []
     }
-    await axios.post(RETRIEVE, {single: finalSingleItemLists, lists: finalLists})
+    await axios.post(RETRIEVE, { single: finalSingleItemLists, lists: finalLists })
   })
 }
 

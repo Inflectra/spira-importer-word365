@@ -271,7 +271,7 @@ const parseArtifacts = async (ArtifactTypeId, model) => {
           return
         }
         //if the heirarchy is invalid, clear requirements and throw error
-        sendArtifacts(params.artifactEnums.requirements, imageObjects, requirements, projectId, model)
+        sendArtifacts(params.artifactEnums.requirements, imageObjects, requirements, projectId, model, styles)
         return requirements
       }
       case (params.artifactEnums.testCases): {
@@ -448,7 +448,7 @@ const parseArtifacts = async (ArtifactTypeId, model) => {
             }
           }
         }
-        sendArtifacts(params.artifactEnums.testCases, imageObjects, testCases, projectId, model)
+        sendArtifacts(params.artifactEnums.testCases, imageObjects, testCases, projectId, model, styles)
         return testCases
       }
     }
@@ -458,10 +458,14 @@ const parseArtifacts = async (ArtifactTypeId, model) => {
 //images = [{base64: b64encoded string, name: "", lineNum: ""}]
 //ArtifactTypeId based on params.artifactEnums.{artifact-type}
 //Artifacts is the array of parsed artifacts ready for sending
+//projectId: Int; ID of selected project at time of "send to spira" button press
+//model: Data() object; used for user object containing user credentials
+/*styles: []string; The user selected styles, needed for determining order of test step
+properties inside a table.*/
 
 /*This function takes the already parsed artifacts and images and sends
 them to spira*/
-const sendArtifacts = async (ArtifactTypeId, images, Artifacts, projectId, model) => {
+const sendArtifacts = async (ArtifactTypeId, images, Artifacts, projectId, model, styles) => {
   //this checks if an empty artifact array is passed in (should never happen)
   if (Artifacts.length == 0) {
     //empty is the error message key for the model object.
@@ -546,10 +550,19 @@ const sendArtifacts = async (ArtifactTypeId, images, Artifacts, projectId, model
         }
         for (let testStep of testCase.testSteps) {
           let step = await sendTestStep(testCaseArtifact.TestCaseId, testStep, model, projectId);
-          if (images[0]) {
-            await pushImage(step, images[0], testCaseArtifact.TestCaseId);
-            images.shift();
+          //these are the <img> 'placeholders' for all 3 testStep fields
+          let placeholders = [...testStep.Description.matchAll(imgRegex),
+          ...testStep.SampleData.matchAll(imgRegex),
+          ...testStep.ExpectedResult.matchAll(imgRegex)]
+          await axios.post(RETRIEVE, {places: testStep, imgs: images})
+          for (let p of placeholders) {
+            if (images[0]) {
+              //this needs to be full image handling for all 3 fields.
+              await pushImage(step, images[0], testCaseArtifact.TestCaseId, styles);
+              images.shift();
+            }
           }
+
         }
         updateProgressBar(i + 1, testCases.length);
       }
@@ -679,10 +692,8 @@ const formatDescriptionLists = (description, lists, singleItemLists) => {
 
   //listStarts is the starting element of every list, single list starts is needed to
   //know how many single lists are parsed here.
-  axios.post(RETRIEVE, { break: "eve n sooner?" })
   let singleItemListStarts = [...description.matchAll(params.regexs.singleListItemRegex)]
   let multiItemListStarts = [...description.matchAll(params.regexs.firstListItemRegex)]
-  axios.post(RETRIEVE, { sing: singleItemListStarts, multi: multiItemListStarts, this: "This here in the beginning is the break" })
   let listStarts = [...multiItemListStarts, ...singleItemListStarts]
   let listEnds = [...description.matchAll(params.regexs.lastListItemRegex)]
   for (let [i, start] of listStarts.entries()) {
@@ -726,15 +737,12 @@ const formatDescriptionLists = (description, lists, singleItemLists) => {
   //Deletes the relevant lists and singleItemLists from their arrays.
   /*easier to do this tacked on than to re-write the core of this function to 
   account for this.*/
-  axios.post(RETRIEVE, { this: 'is the break' })
   for (let i = 0; i < multiItemListStarts.length; i++) {
     lists.shift();
   }
-  axios.post(RETRIEVE, { multi: "worked" })
   for (let i = 0; i < singleItemListStarts.length; i++) {
     singleItemLists.shift();
   }
-  axios.post(RETRIEVE, { single: 'worked' })
   return description
 }
 

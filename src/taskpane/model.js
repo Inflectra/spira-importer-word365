@@ -58,7 +58,7 @@ var params = {
     emptyParagraphRegex: /<p(.)*?>\&nbsp\;<\/p>/g,
     orderedRegex: /.*class=MsoListParagraph.*><span.*>(.*)<span/,
     marginRegex: /style='margin-left:(\d)\.(\d)in/,
-    imageRegex: /<img(.|\n)*("|\s)>/g,
+    imageRegex: /<img(.|\n|\r)*("|\s)>/g,
     listSpanRegex: /<span(.|\r|\n|\s)*?(<\/span>){1,2}/,
     exceptedListRegex: />(\d{1} | \.){2,}<span/u,
     firstListItemRegex: /<p class=MsoListParagraphCxSpFirst(.|\n|\r)*?\/p>/g,
