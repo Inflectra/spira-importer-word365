@@ -343,16 +343,28 @@ ul {
     cursor:pointer;
 }
 
-.artifact-button:hover {
+.artifact-button:disabled {
+    background-color: #f4f4f4;
+    color: #a6a6a6;
+}
+
+.artifact-button:disabled.activated{
+    background-color: #abd3f3;
+}
+
+.artifact-button:hover,
+.artifact-button:focus {
     background-color:#eaeaea;
 }
 
-.artifact-button:focus {
-    background-color: #eaeaea;
+.ms-Button--primary, 
+.artifact-button.activated {
+    background-color: #0078d7;
+    color: white;
 }
 
-.activated {
-    background-color: #0078d7 ! important;
+.artifact-button.activated {
+    cursor: default;
 }
 
 /*MS DEFAULT CLASSES*/

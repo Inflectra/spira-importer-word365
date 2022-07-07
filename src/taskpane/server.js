@@ -271,7 +271,7 @@ const parseArtifacts = async (ArtifactTypeId, model) => {
           return
         }
         //if the heirarchy is invalid, clear requirements and throw error
-        sendArtifacts(params.artifactEnums.requirements, imageObjects, requirements, projectId, model, styles)
+        await sendArtifacts(params.artifactEnums.requirements, imageObjects, requirements, projectId, model, styles)
         return requirements
       }
       case (params.artifactEnums.testCases): {
@@ -448,7 +448,7 @@ const parseArtifacts = async (ArtifactTypeId, model) => {
             }
           }
         }
-        sendArtifacts(params.artifactEnums.testCases, imageObjects, testCases, projectId, model, styles)
+        await sendArtifacts(params.artifactEnums.testCases, imageObjects, testCases, projectId, model, styles)
         return testCases
       }
     }

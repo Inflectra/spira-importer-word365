@@ -87,7 +87,7 @@
     <!--Main screen-->
     <div id="main-screen" class="hidden">
         <div id="app-body" class="ms-welcome__main" style="display: none;">
-            <button type="button" id="test">test</button>
+            <!-- <button type="button" id="test">test</button> -->
             <p style="left: 0; margin-left: 0">1. Select the product you wish to import to:</p>
             <select id="project-select" class="selectors"></select>
             <!--Turn this into radio buttons of some sort which fit the theming instead of dd-->
@@ -104,20 +104,20 @@
         <div id="req-style-mappings" class="styles-block hidden">
             <p class="style-prompt">3. Select the styles to use for Requirements:</p>
             <label for="req-style-select1" class="style-labels">Indent Level 1:</label>
-            <select title="req-style-select1" id="req-style-select1" class="style-selector"></select>
+            <select title="req-style-select1" id="req-style-select1" class="style-selector mb-sm"></select>
             <label for="req-style-select2" class="style-labels">Indent Level 2:</label>
-            <select title="req-style-select2" id="req-style-select2" class="style-selector"></select>
+            <select title="req-style-select2" id="req-style-select2" class="style-selector mb-sm"></select>
             <label for="req-style-select3" class="style-labels">Indent Level 3:</label>
-            <select title="req-style-select3" id="req-style-select3" class="style-selector"></select>
+            <select title="req-style-select3" id="req-style-select3" class="style-selector mb-sm"></select>
             <label for="req-style-select4" class="style-labels">Indent Level 4:</label>
-            <select title="req-style-select4" id="req-style-select4" class="style-selector"></select>
+            <select title="req-style-select4" id="req-style-select4" class="style-selector mb-sm"></select>
             <label for="req-style-select5" class="style-labels">Indent Level 5:</label>
-            <select title="req-style-select5" id="req-style-select5" class="style-selector"></select>
-            <div class="style-buttons">
-                <div role="button" id="confirm-req-style-mappings"
+            <select title="req-style-select5" id="req-style-select5" class="style-selector mb-sm"></select>
+            <div class="style-buttons mb-md">
+                <button type="button" id="confirm-req-style-mappings"
                     class="action ms-Button ms-Button--primary style-button fade">
                     <span class="ms-Button-label fade">Validate Styles</span>
-                </div>
+                </button>
             </div>
         </div>
         <div id="test-style-mappings" class="styles-block hidden">
@@ -141,10 +141,10 @@
             <select title="test-style-select5" id="test-style-select5" class="style-selector"></select>
 
             <div class="style-buttons">
-                <div role="button" id="confirm-test-style-mappings"
+                <button type="button" id="confirm-test-style-mappings"
                     class="action ms-Button ms-Button--primary style-button fade">
                     <span class="ms-Button-label">Validate Styles</span>
-                </div>
+                </button>
             </div>
         </div>
         <div id="send-to-spira" class="hidden">
@@ -159,12 +159,13 @@
             <div id="progress-bar-progress"></div>
         </div>
         <div id="bottom-buttons" style="margin-top: 0.5em; margin-right: 5%;">
-            <div role="button" id="log-out" class="action ms-Button ms-Button--default fade" style="margin-left: 2.5%;">
+            <button type="button" id="log-out" class="action ms-Button ms-Button--default fade"
+                style="margin-left: 2.5%;">
                 <span class="ms-Button-label">Log-Out</span>
-            </div>
-            <div role="button" id="help" class="action ms-Button ms-Button--default fade">
+            </button>
+            <button type="button" id="help" class="action ms-Button ms-Button--default fade">
                 <span class="ms-Button-label">Help</span>
-            </div>
+            </button>
         </div>
     </div>
     <!-- footer -->

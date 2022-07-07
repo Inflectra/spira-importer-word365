@@ -45,10 +45,10 @@ const setDefaultDisplay = () => {
 }
 
 const setEventListeners = () => {
-  document.getElementById('test').onclick = () => test();
+  // document.getElementById('test').onclick = () => test();
   document.getElementById('btn-login').onclick = () => loginAttempt();
   document.getElementById('dev-mode').onclick = () => goToState(params.pageStates.dev);
-  document.getElementById('send-to-spira-button').onclick = () => pushArtifacts();
+  document.getElementById('send-to-spira-button').onclick = async () => await pushArtifacts();
   document.getElementById('log-out').onclick = () => goToState(params.pageStates.authentication);
   document.getElementById("select-requirements").onclick = () => openStyleMappings("req-");
   document.getElementById("select-test-cases").onclick = () => openStyleMappings("test-");
@@ -552,6 +552,20 @@ const disableButton = (htmlId) => {
 
 const enableButton = (htmlId) => {
   document.getElementById(htmlId).disabled = false
+}
+
+const disableMainButtons = () => { // Disables all buttons on the main screen
+  let buttons = Object.values(params.buttonIds);
+  for (let button of buttons) {
+    disableButton(button);
+  }
+}
+
+const enableMainButtons = () => { // Enables all buttons on the main screen
+  let buttons = Object.values(params.buttonIds);
+  for (let button of buttons) {
+    enableButton(button);
+  }
 }
 
 const populateProjects = (projects) => {
@@ -1094,7 +1108,9 @@ const pushArtifacts = async () => {
   if (active) {
     artifactType = params.artifactEnums.requirements
   }
-  parseArtifacts(artifactType, model)
+  disableMainButtons();
+  await parseArtifacts(artifactType, model);
+  enableMainButtons();
 }
 
 const newParseTestCases = async () => {

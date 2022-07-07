@@ -74,7 +74,13 @@ var params = {
   },
   //this is the html id's of buttons which will be used when enabling or disabling buttons
   buttonIds: {
-    sendToSpira: "send-to-spira-button"
+    sendToSpira: "send-to-spira-button",
+    selectRequirements: "select-requirements",
+    selectTestCases: "select-test-cases",
+    validateStylesReq: "confirm-req-style-mappings",
+    validateStylesTest: "confirm-test-style-mappings",
+    logout: "log-out",
+    help: "help"
   },
   // This is used to move around within the add-in UI
   pageStates: {
