@@ -42,9 +42,6 @@ Office.onReady((info) => {
 
 const setDefaultDisplay = () => {
   document.getElementById("app-body").style.display = "flex";
-  document.getElementById("req-style-mappings").style.display = 'none';
-  document.getElementById("test-style-mappings").style.display = 'none';
-  document.getElementById("send-to-spira").style.display = 'none'
 }
 
 const setEventListeners = () => {
@@ -53,19 +50,19 @@ const setEventListeners = () => {
   document.getElementById('dev-mode').onclick = () => goToState(params.pageStates.dev);
   document.getElementById('send-to-spira-button').onclick = () => pushArtifacts();
   document.getElementById('log-out').onclick = () => goToState(params.pageStates.authentication);
-  document.getElementById('project-select').onchange = () => goToState(params.pageStates.artifact);
   document.getElementById("select-requirements").onclick = () => openStyleMappings("req-");
   document.getElementById("select-test-cases").onclick = () => openStyleMappings("test-");
   document.getElementById("confirm-req-style-mappings").onclick = () => confirmStyleMappings('req-');
   document.getElementById("confirm-test-style-mappings").onclick = () => confirmStyleMappings('test-');
+  document.getElementById('project-select').onchange = () => goToState(params.pageStates.artifact);
 
 }
 
 // DEPRECATED due to the new goToState function
 const devmode = () => {
   //moves us to the main interface without manually entering credentials
-  document.getElementById('panel-auth').classList.add('hidden');
-  document.getElementById('main-screen').classList.remove('hidden');
+  hideElement('panel-auth');
+  showElement('main-screen');
   document.getElementById("main-screen").style.display = "flex"
 }
 
@@ -104,8 +101,8 @@ const loginAttempt = async () => {
     var response = await superagent.get(validatingURL).set('accept', 'application/json').set("Content-Type", "application/json")
     if (response.body) {
       //if successful response, move user to main screen
-      document.getElementById('panel-auth').classList.add('hidden');
-      document.getElementById('main-screen').classList.remove('hidden');
+      hideElement('panel-auth');
+      showElement('main-screen');
       document.getElementById('main-screen').style.display = 'flex';
       document.getElementById("btn-login").disabled = false
       model.user.url = finalUrl || url;
@@ -113,7 +110,6 @@ const loginAttempt = async () => {
       model.user.api_key = rssToken;
       model.user.userCredentials = `?username=${username}&api-key=${rssToken}`;
       //populate the products dropdown & model object with the response body.
-      addDefaultProject();
       populateProjects(response.body)
       //On successful login, hide error message if its visible
       clearErrors();
@@ -517,6 +513,7 @@ const enableButton = (htmlId) => {
 }
 
 const populateProjects = (projects) => {
+  addDefaultProject();
   model.projects = projects
   let dropdown = document.getElementById('project-select')
   projects.forEach((project) => {
@@ -532,13 +529,13 @@ const populateProjects = (projects) => {
 
 const logout = () => {
   model.clearUser();
-  document.getElementById('main-screen').classList.add('hidden');
+  hideElement('main-screen');
   //display: flex is set after hidden is removed, may want to make this only use style.display
   document.getElementById('main-screen').style.display = "none";
   //removes currently entered RSS token to prevent a user from leaving their login credentials
   //populated after logging out and leaving their computer.
   document.getElementById("input-password").value = ""
-  document.getElementById('panel-auth').classList.remove('hidden');
+  showElement('panel-auth');
   clearDropdownElement('project-select');
 }
 
@@ -551,23 +548,20 @@ const openStyleMappings = async (pageTag) => {
   style mappings for one or the other then change the artifact type they are required to enter
   their style mappings again.*/
   clearErrors();
-  document.getElementById("send-to-spira").style.display = "none"
+  hideElement('send-to-spira');
   //checks the current selected artifact type then loads the appropriate menu
   if (pageTag == "req-") {
-    document.getElementById("select-requirements").classList.add("active");
-    document.getElementById("select-test-cases").classList.remove("active");
-    document.getElementById("req-style-mappings").classList.remove("hidden")
-    document.getElementById("test-style-mappings").style.display = 'none'
-    document.getElementById("req-style-mappings").style.display = 'flex'
-    //populates all 5 style mapping boxes
+    document.getElementById("select-requirements").classList.add("activated");
+    document.getElementById("select-test-cases").classList.remove("activated");
+    showElement('req-style-mappings');
+    hideElement('test-style-mappings');
   }
   //opens the test cases style mappings if test mappings is the selected artifact type
   else {
-    document.getElementById("select-test-cases").classList.add("active");
-    document.getElementById("select-requirements").classList.remove("active");
-    document.getElementById("test-style-mappings").classList.remove("hidden")
-    document.getElementById("req-style-mappings").style.display = 'none'
-    document.getElementById("test-style-mappings").style.display = 'flex'
+    document.getElementById("select-test-cases").classList.add("activated");
+    document.getElementById("select-requirements").classList.remove("activated");
+    hideElement('req-style-mappings');
+    showElement('test-style-mappings');
   }
   //wont populate styles for requirements if it is already populated
   if (document.getElementById("req-style-select1").childElementCount && pageTag == "req-") {
@@ -578,9 +572,7 @@ const openStyleMappings = async (pageTag) => {
     return
   }
   //doesnt populate styles if both test & req style selectors are populated
-  else if (document.getElementById("test-style-select1").childElementCount && document.getElementById("req-style-select1").childElementCount) {
-    return;
-  }
+
   //retrieveStyles gets the document's settings for the style mappings. Also auto sets default values
   let settings = retrieveStyles(pageTag)
   //Goes line by line and retrieves any custom styles the user may have used.
@@ -624,7 +616,7 @@ const confirmStyleMappings = async (pageTag) => {
       else {
         displayError("duplicateStyles", true)
         //hides the final button if it is already displayed when a user inputs invalid styles.
-        document.getElementById("send-to-spira").style.display = "none"
+        hideElement('send-to-spira');
         return
       }
       Office.context.document.settings.set(pageTag + 'style' + i.toString(), setting);
@@ -640,7 +632,7 @@ const confirmStyleMappings = async (pageTag) => {
   //this saves the settings
   Office.context.document.settings.saveAsync()
   //show the send to spira button after this is clicked and all style selectors are populated.
-  document.getElementById("send-to-spira").style.display = "inline-block"
+  showElement('send-to-spira');
 }
 
 //Populates a passed in style-selector with the avaiable word styles
@@ -717,34 +709,38 @@ const goToState = (state) => {
       // clear stored user data
       model.clearUser();
       // hide main selection screen
-      document.getElementById('main-screen').classList.add('hidden');
-      document.getElementById('main-screen').style.display = "none";
-      //removes currently entered RSS token to prevent a user from leaving their login credentials
-      //populated after logging out and leaving their computer.
+      hideElement('main-screen');
+
+      // removes currently entered RSS token to prevent a user from leaving their login credentials
+      // populated after logging out and leaving their computer.
       document.getElementById("input-password").value = ""
-      document.getElementById('panel-auth').classList.remove('hidden');
+
+      // Show authentication page
+      showElement('panel-auth');
       clearDropdownElement('project-select');
 
       // Hides style mappings
-      document.getElementById("req-style-mappings").style.display = 'none'
-      document.getElementById("test-style-mappings").style.display = 'none'
+      hideElement('req-style-mappings');
+      hideElement('test-style-mappings');
+      // document.getElementById("req-style-mappings").style.display = 'none'
+      // document.getElementById("test-style-mappings").style.display = 'none'
 
       // Resets artifact button colors
-      document.getElementById("select-requirements").style['background-color'] = model.colors.inactiveButton;
-      document.getElementById("select-test-cases").style['background-color'] = model.colors.inactiveButton;
+      document.getElementById("select-requirements").classList.remove("activated");
+      document.getElementById("select-test-cases").classList.remove("activated");
 
       // Hides artifact text and buttons
-      document.getElementById('artifact-select-text').classList.add('hidden');
-      document.getElementById('select-requirements').classList.add('hidden');
-      document.getElementById('select-test-cases').classList.add('hidden');
+      hideElement('artifact-select-text');
+      hideElement('select-requirements');
+      hideElement('select-test-cases');
 
       // Hides send to spira menu and enables button
-      document.getElementById("send-to-spira").style.display = "none"
+      hideElement('send-to-spira');
       hideProgressBar();
       document.getElementById("send-to-spira-button").disabled = false;
 
       // Clear any error messages that exist
-      // clearErrors();
+      clearErrors();
       break;
     case (states.projects):
       addDefaultProject();
@@ -752,15 +748,17 @@ const goToState = (state) => {
       // rest of what happens to the UI when you log in
       break;
     case (states.artifact):
-      // Unhide artifact text and buttons
-      document.getElementById('artifact-select-text').classList.remove('hidden');
-      document.getElementById('select-requirements').classList.remove('hidden');
-      document.getElementById('select-test-cases').classList.remove('hidden');
+      // Show artifact text and buttons
+      showElement('artifact-select-text');
+      showElement('select-requirements');
+      showElement('select-test-cases');
 
+      // If the dropdown has a null value then clear it away
+      document.getElementById('project-select').remove('null')
       break;
     case (states.dev):
       //moves us to the main interface without manually entering credentials
-      document.getElementById('panel-auth').classList.add('hidden');
+      hideElement('panel-auth');
       document.getElementById('main-screen').classList.remove('hidden');
       document.getElementById("main-screen").style.display = "flex";
       addDefaultProject();
@@ -778,6 +776,14 @@ const addDefaultProject = () => {
   nullProject.text = "       ";
   nullProject.value = null;
   document.getElementById("project-select").add(nullProject);
+}
+
+const hideElement = (element_id) => {
+  document.getElementById(element_id).classList.add('hidden');
+}
+
+const showElement = (element_id) => {
+  document.getElementById(element_id).classList.remove('hidden');
 }
 
 /********************
@@ -1040,10 +1046,10 @@ Pure data manipulation
 **********************/
 
 const pushArtifacts = async () => {
-  let active = document.getElementById("req-style-mappings").style.display
+  let active = document.getElementById("test-style-mappings").classList.contains('hidden')
   //if the requirements style mappings are visible that is the selected artifact.
   let artifactType = params.artifactEnums.testCases;
-  if (active == "flex") {
+  if (active) {
     artifactType = params.artifactEnums.requirements
   }
   parseArtifacts(artifactType, model)

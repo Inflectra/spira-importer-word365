@@ -282,6 +282,7 @@ ul {
 }
 
 #send-to-spira {
+    display: inline-block;
     margin-left: 2.5%;
     margin-top: 5%;
     margin-bottom: 3%;
@@ -347,11 +348,11 @@ ul {
 }
 
 .artifact-button:focus {
-    background-color: #0078d7;
+    background-color: #eaeaea;
 }
 
-.artifact-button .active {
-    background-color: #0078d7;
+.activated {
+    background-color: #0078d7 ! important;
 }
 
 /*MS DEFAULT CLASSES*/
