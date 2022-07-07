@@ -1571,61 +1571,35 @@ const retrieveLists = async () => {
       for (let paragraph of paragraphs.items) {
         context.load(paragraph)
         await context.sync();
+        await axios.post(RETRIEVE, { para: paragraph })
         let listItem = paragraph.listItemOrNullObject
         context.load(listItem, ['level', 'listString'])
         await context.sync();
         let html = paragraph.getHtml();
         await context.sync();
-        let pRegex = params.regexs.paragraphRegex
-        let match = html.m_value.match(pRegex)
+        let match = html.m_value.match(params.regexs.paragraphRegex)
         html = match[0]
-        let spanMatches = [...html.matchAll(params.regexs.spanRegex)]
-        //there will be an extra match if the text in a list is rich text
-        if (spanMatches[1]) {
-          await axios.post(RETRIEVE, { match: spanMatches[1] })
-          //sometimes the indicator (i. text) has span formatting on it, so this
-          //handles that case
-          if (spanMatches[2]) {
-            newList.push({ text: spanMatches[2][0], indentLevel: listItem.level })
-          }
-          //this will be the list item if span[2] does not exist (verifies it isnt empty either)
-          else if (spanMatches[1][0].includes("&nbsp;")) {
-            //this can happen when the list 'bullet' text is formatted too.
-            //removes both span mathces
-            html = html.replace(spanMatches[0][0], "").replace(spanMatches[1][0], "").replaceAll("</span>", "")
-            let pTagMatches = [...html.matchAll(params.regexs.pTagRegex)]
-            for (let match of pTagMatches) {
-              html = html.replace(match[0], "")
-            }
-            newList.push({ text: html, indentLevel: listItem.level })
-          }
-          else {
-            newList.push({ text: spanMatches[1][0], indentLevel: listItem.level })
-          }
+        let testingRegex = /<span(.|\r|\n|\s)*?(<\/span>){1,2}/
+        let spanMatches = html.match(testingRegex);
+        if (testmatch) {
+          var filtration = html.replace(testmatch[0], "")
         }
-        //if the listItem is not rich text, this will filter down to just the text
-        else {
-          //spanMatches[0][0] leaves out second closing span tag in the html structure
-          html = html.replace(spanMatches[0][0], "").replaceAll("</span>", "")
-          let pTagMatches = [...html.matchAll(params.regexs.pTagRegex)]
-          //p tags break <li> tags when placed within them so that is filtered out here
-          for (let match of pTagMatches) {
-            html = html.replace(match[0], "")
-          }
-          newList.push({ text: html, indentLevel: listItem.level })
+        let ptagmatch = [...filtration.matchAll(params.regexs.pTagRegex)]
+        for (let match of ptagmatch) {
+          filtration = filtration.replace(match[0], "")
         }
+        filtration = filtration.replace(listItem.listString, "")
+        newList.push(new templates.ListItem(filtration, listItem.level))        
       }
-      //single item lists need to be parsed differently than multi item ones
-      if (paragraphs.items.length <= 1) {
+      if(paragraphs.items.length == 1){
         finalSingleItemLists.push(newList)
       }
-      else {
+      else{
         finalLists.push(newList)
       }
+      newList = []
     }
-    //returns both so they can be parsed separately
-    //this will be whatever as it will just be megafunction parsing
-    return [finalLists, finalSingleItemLists]
+    await axios.post(RETRIEVE, {single: finalSingleItemLists, lists: finalLists})
   })
 }
 

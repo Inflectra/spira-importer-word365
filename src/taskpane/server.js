@@ -125,7 +125,6 @@ const parseArtifacts = async (ArtifactTypeId, model) => {
         The "false" newList will get pushed, and serve as a "skip this one" flag for 
         the later function which places formatted lists into the description.*/
         if (paragraph.listItemOrNullObject.listString.length > 5 || (newList == false && typeof newList == 'boolean')) {
-          await axios.post(RETRIEVE, {pa: paragraph.listItemOrNullObject.listString.length, newList: newList})
           newList = false
           continue
         }
@@ -134,41 +133,22 @@ const parseArtifacts = async (ArtifactTypeId, model) => {
         let pRegex = params.regexs.paragraphRegex
         let match = html.m_value.match(pRegex)
         html = match[0]
-        let spanMatches = [...html.matchAll(params.regexs.spanRegex)]
-        //there will be an extra match if the text in a list is rich text
-        if (spanMatches[1]) {
-          //sometimes the indicator (i. text) has span formatting on it, so this
-          //handles that case
-          if (spanMatches[2]) {
-            newList.push(new templates.ListItem(spanMatches[2][0], listItem.level))
-          }
-          //this will be the list item if span[2] does not exist (verifies it isnt empty either)
-          else if (spanMatches[1][0].includes("&nbsp;")) {
-            //this can happen when the list 'bullet' text is formatted too.
-            //removes both span mathces
-            html = html.replace(spanMatches[0][0], "").replace(spanMatches[1][0], "").replaceAll("</span>", "")
-            let pTagMatches = [...html.matchAll(params.regexs.pTagRegex)]
-            for (let match of pTagMatches) {
-              html = html.replace(match[0], "")
-            }
-            newList.push(new templates.ListItem(html, listItem.level))
-          }
-          else {
-            newList.push(new templates.ListItem(spanMatches[1][0], listItem.level))
+        let spanMatch = html.match(params.regexs.listSpanRegex)
+        if (spanMatch) {
+          html = html.replace(spanMatch[0], "")
+        }
+        let pTagMatches = [...html.matchAll(params.regexs.pTagRegex)]
+        if (pTagMatches) {
+          for (let matchList of pTagMatches) {
+            html = html.replace(matchList[0], "")
           }
         }
-        //if the listItem is not rich text, this will filter down to just the text
-        else {
-          //spanMatches[0][0] leaves out second closing span tag in the html structure
-          html = html.replace(spanMatches[0][0], "").replace("</span>", "")
-          let pTagMatches = [...html.matchAll(params.regexs.pTagRegex)]
-          //p tags break <li> tags when placed within them so that is filtered out here
-          for (let match of pTagMatches) {
-            html = html.replace(match[0], "")
-          }
-
-          newList.push(new templates.ListItem(html, listItem.level))
+        if (listItem.listString.match(params.regexs.orderedListRegex)) {
+          /*the second level unordered list listString is literally an o (letter O)
+          So this prevents that from unintentionally removing an o from the users sentence*/
+          html = html.replace(listItem.listString, "")
         }
+        newList.push(new templates.ListItem(html, listItem.level))
       }
       //single item lists need to be parsed differently than multi item ones
       if (paragraphs.items.length == 1) {
@@ -565,7 +545,7 @@ const sendArtifacts = async (ArtifactTypeId, images, Artifacts, projectId, model
           images.shift();
         }
         for (let testStep of testCase.testSteps) {
-          let step = await pushTestStep(testCaseArtifact.TestCaseId, testStep, model, projectId);
+          let step = await sendTestStep(testCaseArtifact.TestCaseId, testStep, model, projectId);
           if (images[0]) {
             await pushImage(step, images[0], testCaseArtifact.TestCaseId);
             images.shift();
@@ -579,92 +559,6 @@ const sendArtifacts = async (ArtifactTypeId, images, Artifacts, projectId, model
   }
 }
 
-
-/* Filters a string and changes any word-outputted lists to properly formatted html lists. */
-const filterForLists = (description) => {
-  let startRegex = params.regexs.paragraphRegex;
-  let elemList = [...description.matchAll(startRegex)];
-  description = convertToIndentedList(description, elemList);
-  return description
-}
-
-/* Scans each element in an array of 'strings' for "style='margin-left:#.0in" where the # is the indent level 
-   Then it keeps track of the current indent level as it loops through the array, processing the elements
-   through convertToListElem and adding an extra <ul> or <ol> as necessary to properly turn them into html 
-   lists. Implement exception for 1.1.1.1 lists */
-const convertToIndentedList = (description, elemList) => {
-  let indentLevel = 0;
-  let lastOrdered = false;
-  for (let i = 0; i < elemList.length; i++) {
-    /* Use elemList[i][0] in order to reach the matched strings. */
-    let elem = elemList[i][0];
-    let match = elem.match(params.regexs.marginRegEx);
-    let result = convertToListElem(elem);
-    let alteredElem = result.elem;
-    let ordered = result.ordered;
-    if (match) {
-      let curIndentLevel = (parseInt(match[1]) * 2 + parseInt(match[2]) * 0.2) - 1
-      while (curIndentLevel > indentLevel) {
-        alteredElem = listDelimiter(alteredElem, true, false, ordered);
-        indentLevel++;
-      }
-      while (curIndentLevel < indentLevel) {
-        alteredElem = listDelimiter(alteredElem, false, true, lastOrdered);
-        indentLevel--;
-      }
-      lastOrdered = ordered;
-    }
-    else {
-      let curIndentLevel = 0;
-      while (curIndentLevel < indentLevel) {
-        alteredElem = listDelimiter(alteredElem, false, true, lastOrdered);
-        indentLevel--;
-      }
-    }
-    description = description.replace(elem, alteredElem);
-  }
-  return description;
-}
-
-/* Takes a single <p> to </p> element and turns it into a list element if it has the necessary class*/
-const convertToListElem = (pElem) => {
-  let listElem = pElem + "";
-  let ordered = !(listElem.includes(">·<span") || listElem.includes(">o<span") || listElem.includes(">§<span"));
-  let orderedRegEx = params.regexs.orderedRegEx;
-  let exceptedList = false;
-  if (exceptedList = params.regexs.exceptedListRegEx.test(listElem)) { //THIS MAY CAUSE BUGS WHEN using numbers 
-    return { elem: listElem, ordered: ordered, exceptedList: exceptedList };
-  }
-  if (listElem.includes("class=MsoListParagraphCxSpFirst")) { //Case for if the element is the first element in a list
-    //Must add extra html element codes at the beginning and end of the list to wrap the list elements together.
-    listElem = listDelimiter(listElem, true, false, ordered); // starts a list
-  }
-  else if (listElem.includes("class=MsoListParagraphCxSpLast")) { //Case for if the element is the last element in a list.
-    listElem = listDelimiter(listElem, false, false, ordered); // ends a list
-  }
-  else if (listElem.includes("class=MsoListParagraph ")) { //Case for if the element is the only element in the list
-    listElem = listDelimiter(listElem, true, false, ordered); // starts a list
-    listElem = listDelimiter(listElem, false, false, ordered); // ends a list
-  }
-  if (listElem.includes("class=MsoListParagraph")) { // This will happen for every element that is part of a list
-    listElem = listElem.replace("<p ", "<li ").replace("</p>", "</li>").replaceAll(orderedRegEx, "><span");
-    listElem = listElem.replaceAll("&nbsp;", "");
-  }
-  //Case for if the element is not part of a list is handled by just returning it back.
-  return { elem: listElem, ordered: ordered, exceptedList };
-}
-
-/* Adds a <ul> or <ol> element based on the parameters and if the element is an unordered or ordered list. */
-/* endPrefix = true means that it should put the </ul> or </ol> BEFORE the element instead of after. */
-const listDelimiter = (elem, start, endPrefix, ordered) => {
-  // Checks for if is affecting an ordered or unordered list.
-  let orderedMarker = ordered ? "ol" : "ul";
-  // Checks if it is starting or ending a list
-  let listMarker = `<${start ? "" : "/"}${orderedMarker}>`
-  // Checks where it should position the list marker
-  elem = endPrefix || start ? `${listMarker}${elem}` : `${elem}${listMarker}`;
-  return elem;
-}
 
 //this function retrieves an array of all testCaseFolders in the selected project
 const retrieveTestCaseFolders = async (projectId, model) => {
@@ -714,8 +608,8 @@ const sendTestCase = async (testCaseName, testCaseDescription, testFolderId, pro
 }
 
 //sends a test step to spira
-const pushTestStep = async (testCaseId, testStep, model, projectId) => {
-  /*pushTestCase should call this passing in the created testCaseId and iterate through passing
+const sendTestStep = async (testCaseId, testStep, model, projectId) => {
+  /*sendTestCase should call this passing in the created testCaseId and iterate through passing
   in that test cases test steps.*/
   let apiCall = model.user.url + params.apiComponents.apiBase + projectId +
     params.apiComponents.getTestCase + testCaseId + params.apiComponents.postOrPutTestStep +
@@ -730,6 +624,7 @@ const pushTestStep = async (testCaseId, testStep, model, projectId) => {
     console.log(err)
   }
 }
+
 /*filters tables (for test cases/test steps) and body tags out of the description, and
 converts lists into a readable format*/
 //params:
@@ -782,15 +677,17 @@ const formatDescriptionLists = (description, lists, singleItemLists) => {
     return description
   }
 
-  //listStarts is the starting element of every list
-  let listStarts = [...description.matchAll(params.regexs.firstListItemRegex),
-  ...description.matchAll(params.regexs.singleListItemRegex)]
+  //listStarts is the starting element of every list, single list starts is needed to
+  //know how many single lists are parsed here.
+  axios.post(RETRIEVE, { break: "eve n sooner?" })
+  let singleItemListStarts = [...description.matchAll(params.regexs.singleListItemRegex)]
+  let multiItemListStarts = [...description.matchAll(params.regexs.firstListItemRegex)]
+  axios.post(RETRIEVE, { sing: singleItemListStarts, multi: multiItemListStarts, this: "This here in the beginning is the break" })
+  let listStarts = [...multiItemListStarts, ...singleItemListStarts]
   let listEnds = [...description.matchAll(params.regexs.lastListItemRegex)]
-
   for (let [i, start] of listStarts.entries()) {
     /*these have to be exact - lists[i] being undefined means something different than it 
     existing and being defined as false. False serves as the flag to skip parsing this section*/
-    axios.post(RETRIEVE, {lists: lists[i], single: singleItemLists[i- lists.length]})
     if ((lists[i] === false && lists[i] != undefined) || (singleItemLists[i - lists.length] === false && singleItemLists[i - lists.length] != undefined)) {
       let nbspMatches = [...description.matchAll(params.regexs.nonBreakingWhitespaceRegex)]
       for (let match of nbspMatches) {
@@ -801,7 +698,7 @@ const formatDescriptionLists = (description, lists, singleItemLists) => {
     let replacementArea;
     /*this will handle all the multi item lists, single item ones will be handled slightly
       differently */
-    if (i < lists.length) {
+    if (i < multiItemListStarts.length) {
       //the opening of the first tag that represents a list
       let startIndex = description.indexOf(start[0]);
       /*this is the index needed to cut off the entire <p></p> grouping for the last item
@@ -826,6 +723,18 @@ const formatDescriptionLists = (description, lists, singleItemLists) => {
     let listHtml = listConstructor((orderTest), targetList)
     description = description.replace(replacementArea, listHtml)
   }
+  //Deletes the relevant lists and singleItemLists from their arrays.
+  /*easier to do this tacked on than to re-write the core of this function to 
+  account for this.*/
+  axios.post(RETRIEVE, { this: 'is the break' })
+  for (let i = 0; i < multiItemListStarts.length; i++) {
+    lists.shift();
+  }
+  axios.post(RETRIEVE, { multi: "worked" })
+  for (let i = 0; i < singleItemListStarts.length; i++) {
+    singleItemLists.shift();
+  }
+  axios.post(RETRIEVE, { single: 'worked' })
   return description
 }
 
@@ -833,7 +742,11 @@ const formatDescriptionLists = (description, lists, singleItemLists) => {
 //List: [] ListItem (see model)
 //isOrdered: {boolean} represents whether it is an ordered list or not
 const listConstructor = (isOrdered, list) => {
+  //provides a boolean value for if a list is an item with a single lists
   let isSingle = (list.length == 1)
+  /*this logic determines what tags/regexs to use depending on whether the regex ive used to 
+  populate the "isOrdered" parameter thinks it looks like an ordered list 
+  (worst case senario, it puts the wrong kind of list)*/
   let openingTag = '<ol>'
   let closingTag = '</ol>'
   let openingRegex = params.regexs.olTagRegex
