@@ -45,7 +45,7 @@ const setDefaultDisplay = () => {
 }
 
 const setEventListeners = () => {
-  // document.getElementById('test').onclick = () => test();
+  document.getElementById('test').onclick = () => test();
   document.getElementById('btn-login').onclick = () => loginAttempt();
   document.getElementById('dev-mode').onclick = () => goToState(params.pageStates.dev);
   document.getElementById('send-to-spira-button').onclick = async () => await pushArtifacts();
@@ -72,7 +72,27 @@ Testing Functions
 *****************/
 //basic testing function for validating code snippet behaviour.
 async function test() {
-  let styles = retrieveStyles("test-")
+  return Word.run(async (context) => {
+    let tables = context.document.body.tables
+    context.load(tables)
+    await context.sync();
+    let table = tables.items[0].getRange().getHtml();
+    await context.sync();
+    //filter by tr first then td
+    let rows = [...table.m_value.matchAll(params.regexs.tableRowRegex)]
+    let parsedTable = []
+    for (let row of rows){
+      await axios.post(RETRIEVE, {row: row})
+      let tableRow = []
+      ///row[0] is the full match - not the index of which row it is.
+      let cells = [...row[0].matchAll(params.regexs.tableDataRegex)]
+      for (let cell of cells){
+        tableRow.push(cell[0])
+      }
+      parsedTable.push(tableRow)
+    }
+    await axios.post(RETRIEVE, {table: parsedTable})
+  })
 }
 
 /**************
@@ -426,6 +446,7 @@ const pushImage = async (Artifact, image, testCaseId, styles) => {
     }
   }
   else if (Artifact.TestStepId) {
+    console.log("All the way to get call + complex logic")
     try {
       //this needs to have a different way of getting TestCaseId
       //makes a get request for the target artifact which will be updated to contain an image
@@ -439,7 +460,6 @@ const pushImage = async (Artifact, image, testCaseId, styles) => {
       //do nothing
       console.log(err)
     }
-    await axios.post(RETRIEVE, { WE: "in here?" })
     // now replace the placeholder in the description with img tags
     let placeholderRegex = params.regexs.imageRegex
 
@@ -454,6 +474,8 @@ const pushImage = async (Artifact, image, testCaseId, styles) => {
     let descPlaceholders = [...fullArtifactObj.Description.matchAll(placeholderRegex)]
     let samplePlaceholders = [...fullArtifactObj.SampleData.matchAll(placeholderRegex)]
     let expectedPlaceholders = [...fullArtifactObj.ExpectedResult.matchAll(placeholderRegex)]
+    console.log(expectedPlaceholders)
+    console.log(fullArtifactObj.ExpectedResult)
 
     /*this allows us to directly reference any placeholder array with the
      styleOrganizer "for" property*/
@@ -480,7 +502,7 @@ const pushImage = async (Artifact, image, testCaseId, styles) => {
             break
           }
           case ("expectedPlaceholders"): {
-            fullArtifactObj.ExpectedResult = fullArtifactObj.ExpectedResult.replace(samplePlaceholders[0][0], `<img src=${imgLink} alt=${image.name} />`)
+            fullArtifactObj.ExpectedResult = fullArtifactObj.ExpectedResult.replace(expectedPlaceholders[0][0], `<img src=${imgLink} alt=${image.name} />`)
             break
           }
         }
@@ -1470,7 +1492,6 @@ const usedStyles = async () => {
 const validateHierarchy = (requirements) => {
   //requirements = [{Name: str, Description: str, IndentLevel: int}, ...]
   //the first requirement must always be indent level 0 (level 1 in UI terms)
-  axios.post(RETRIEVE, { valid: requirements[0].IndentLevel })
   if (requirements[0].IndentLevel != 0) {
     return false
   }
@@ -1557,7 +1578,6 @@ const convertToIndentedList = async (description, elemList) => {
         indentLevel--;
       }
     }
-    axios.post(RETRIEVE, { elem: elem, alteredElem: alteredElem })
     description = description.replace(elem, alteredElem);
   }
   return description;
@@ -1580,7 +1600,6 @@ const convertToListElem = (pElem) => {
     listElem = listDelimiter(listElem, false, false, ordered); // ends a list
   }
   if (listElem.includes("class=MsoListParagraph")) { // This will happen for every element that is part of a list
-    axios.post(RETRIEVE, { checking: "regex" })
     listElem = listElem.replace("<p ", "<li ").replace("</p>", "</li>").replaceAll(orderedRegEx, "><span");
     listElem = listElem.replaceAll("&nbsp;", "");
   }
@@ -1623,7 +1642,6 @@ const retrieveLists = async () => {
     for (let list of lists.items) {
       context.load(list)
       context.sync();
-      axios.post(RETRIEVE, { outerLoop: list }); //debug
       // Inner array to store the elements of each list
       let newList = [];
       //set up accessing the paragraphs of a list
@@ -1635,7 +1653,6 @@ const retrieveLists = async () => {
       for (let paragraph of paragraphs.items) {
         context.load(paragraph)
         await context.sync();
-        await axios.post(RETRIEVE, { para: paragraph })
         let listItem = paragraph.listItemOrNullObject
         context.load(listItem, ['level', 'listString'])
         await context.sync();
@@ -1663,7 +1680,6 @@ const retrieveLists = async () => {
       }
       newList = []
     }
-    await axios.post(RETRIEVE, { single: finalSingleItemLists, lists: finalLists })
   })
 }
 

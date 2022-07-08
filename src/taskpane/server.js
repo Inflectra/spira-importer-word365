@@ -55,7 +55,8 @@ const parseArtifacts = async (ArtifactTypeId, model) => {
      **************************/
     let projectId = document.getElementById("project-select").value
     let selection = context.document.getSelection();
-    let splitSelection;
+    let splitSelection = context.document.getSelection().split(['\r']);
+    context.load(splitSelection, ['text', 'inlinePictures', 'style', 'styleBuiltIn'])
     context.load(selection, ['text', 'inlinePictures', 'style', 'styleBuiltIn']);
     await context.sync();
     //If there is no selected area, parse the full body of the document instead
@@ -65,11 +66,6 @@ const parseArtifacts = async (ArtifactTypeId, model) => {
       context.load(selection, ['text', 'inlinePictures', 'style', 'styleBuiltIn']);
       context.load(splitSelection, ['text', 'inlinePictures', 'style', 'styleBuiltIn'])
       await context.sync();
-    }
-    else {
-      splitSelection = context.document.getSelection().split(['\r']);
-      context.load(splitSelection, ['text', 'inlinePictures', 'style', 'styleBuiltIn'])
-      context.sync();
     }
     /********************** 
      Start image formatting
@@ -163,6 +159,7 @@ const parseArtifacts = async (ArtifactTypeId, model) => {
     /**********************
      Start Artifact Parsing
     ***********************/
+    await axios.post(RETRIEVE, { crashing: "way too early" })
     const bodyRegex = params.regexs.bodyRegex
     const bodyTagRegex = params.regexs.bodyTagRegex
     switch (ArtifactTypeId) {
@@ -275,6 +272,7 @@ const parseArtifacts = async (ArtifactTypeId, model) => {
         return requirements
       }
       case (params.artifactEnums.testCases): {
+        await axios.post(RETRIEVE, { This: "is in here at least" })
         /*when parsing multiple tables tableCounter serves as an index throughout all
         parts of the function*/
         let tableCounter = 0
@@ -289,16 +287,13 @@ const parseArtifacts = async (ArtifactTypeId, model) => {
         context.load(selectionTables)
         await context.sync();
         //tables = 3d array [table][test step][column], only contains text
+        /*This is used for "detecting" a table when parsing test cases, while the actual
+        text sent to spira is based on the API.*/
         var tables = [];
         for (let i = 0; i < selectionTables.items.length; i++) {
           let table = selectionTables.items[i].values;
           tables.push(table)
         }
-        /*May not need this, but it is the images in the FIRST TABLE. If i need it I 
-        will make it procedural for each given table when images are placed in spira.*/
-        // let tableImages = selectionTables.items[0].getRange().inlinePictures;
-        // context.load(tableImages)
-        // await context.sync();
         if (!validateTestSteps(tables, styles[2])) {
           //validateTestSteps throws the error
           return false
@@ -370,38 +365,32 @@ const parseArtifacts = async (ArtifactTypeId, model) => {
               continue
             }
           }
-          else if (tables[0] && item.text == tables[0][0][parseInt(styles[2].slice(-1)) - 1]?.concat("\t") && item.text.slice(-1) == "\t") {
+          //tables = [][][] string where [table][row][column]
+          /*if there is a table, and the text in the line currently being checked 
+          is within the next table, parse table as test steps*/
+          else if (tables[0] && tables[0][0][parseInt(styles[2].slice(-1)) - 1].includes(item.text)) {
             //This procs when there is a table and the first description equals item.text
             //testStepTable = 2d array [row][column]
             /**************************
              *start parseTestSteps Logic*
             ***************************/
-            //this is the length of a row, needed for organizing the tables for parsing
-            let length = selectionTables.items[tableCounter].values[0].length
-            let tableElementRegex = params.regexs.paragraphRegex
-            for (let item of splitSelection.items) {
-              let html = selectionTables.items[tableCounter].getRange().getHtml();
-              await context.sync();
-              let elements = [...html.m_value.matchAll(tableElementRegex)]
-              var formattedStrings = []
-              for (let [i, element] of elements.entries()) {
-                //if the row exists, place the current element into its relevant box
-                if (formattedStrings[Math.floor(i / length)]) {
-                  /*element is a single match from elements - [0] is the full
-                   string of the match (as per RegExp String Iterator syntax)*/
-                  formattedStrings[Math.floor(i / length)][i % length] = (element[0])
-                }
-                //if a row doesnt exist, create it, then add the current element
-                else {
-                  formattedStrings[Math.floor(i / length)] = []
-                  formattedStrings[Math.floor(i / length)][i % length] = (element[0])
-                }
+            await axios.post(RETRIEVE, {detected: "????"})
+            console.log("this does work tho right lmao")
+            let table = selectionTables.items[tableCounter].getRange().getHtml()
+            await context.sync();
+            let rows = [...table.m_value.matchAll(params.regexs.tableRowRegex)]
+            let formattedTable = []
+            for (let row of rows){
+              let tableRow = []
+              let cells = [...row[0].matchAll(params.regexs.tableDataRegex)]
+              for (let cell of cells){
+                tableRow.push(cell[0])
               }
+              formattedTable.push(tableRow)
             }
-            let testStepTable = formattedStrings
-            /************************
-            *end parseTestSteps Logic*
-            ************************/
+            //formattedStrings should be the outputted 2d array
+            let testStepTable = formattedTable
+            await axios.post(RETRIEVE, { form: formattedTable })
             //table counter lets parseTestSteps know which table is currently being parsed
             tableCounter++
             let testStep = new templates.TestStep();
@@ -426,6 +415,9 @@ const parseArtifacts = async (ArtifactTypeId, model) => {
             testCase.testSteps = testSteps
             //removes the table that has been processed from this functions local reference
             tables.shift();
+            /************************
+            *end parseTestSteps Logic*
+            ************************/
           }
           else if (!descStart && (item.text.slice(-1) != "\t")) {
             descStart = item
@@ -445,6 +437,12 @@ const parseArtifacts = async (ArtifactTypeId, model) => {
             //dont push a nameless testCase.
             if (testCase.Name) {
               testCases.push(testCase)
+            }
+          }
+          if (i == splitSelection.length && !testCase.Name) {
+            if (styles.includes(item.style) || styles.includes(item.styleBuiltIn)) {
+              testCase.Name = item.text
+              await axios.post(RETRIEVE, { case: testCase })
             }
           }
         }
@@ -554,7 +552,6 @@ const sendArtifacts = async (ArtifactTypeId, images, Artifacts, projectId, model
           let placeholders = [...testStep.Description.matchAll(imgRegex),
           ...testStep.SampleData.matchAll(imgRegex),
           ...testStep.ExpectedResult.matchAll(imgRegex)]
-          await axios.post(RETRIEVE, {places: testStep, imgs: images})
           for (let p of placeholders) {
             if (images[0]) {
               //this needs to be full image handling for all 3 fields.

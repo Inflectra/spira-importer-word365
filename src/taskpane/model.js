@@ -49,6 +49,8 @@ var params = {
     nonBreakingWhitespaceRegex: /(&nbsp;){2,}/g,
     whitespaceRegex: /([^\S\n]){2,}/g,
     tableRegex: /<table(.|\n|\r)*?\/table>/g,
+    tableRowRegex: /<tr(.|\n|\r)*?\/tr>/g,
+    tableDataRegex: /<td(.|\n|\r)*?\/td>/g,
     //this parses out the entire body and its contents
     bodyRegex: /<body(.|\n|\r|\s)*?<\/body>/gu,
     //this parses out the body tags for removal
