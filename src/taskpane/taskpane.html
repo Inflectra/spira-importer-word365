@@ -86,6 +86,10 @@
 
     <!--Main screen-->
     <div id="main-screen" class="hidden">
+        <div id="pop-up" class="pop-up err hidden">
+            <p id="close-pop-up" class="close">x </p>
+            <p id="pop-up-text" class="err">pop!<br><br></p>
+        </div>
         <div id="app-body" class="ms-welcome__main" style="display: none;">
             <button type="button" id="test">test</button>
             <p style="left: 0; margin-left: 0">1. Select the product you wish to import to:</p>
@@ -93,13 +97,12 @@
             <!--Turn this into radio buttons of some sort which fit the theming instead of dd-->
             <p id="artifact-select-text" class="mt-md hidden">2. Select the artifact type you want to import:</p>
             <div id="artifact-select" class="mt-0">
-                <button type="button" class="action ms-Button ms-Button--default fade hidden"
-                 id="select-requirements">
-                 <span class="ms-Button-label">Requirements</span>
+                <button type="button" class="action artifact-button fade hidden"
+                    id="select-requirements">
+                    Requirements
                 </button>
-                <button type="button" class="action ms-Button ms-Button--default fade hidden"
-                 id="select-test-cases">
-                 <span class="ms-Button-label">Test Cases</span>
+                <button type="button" class="action artifact-button fade hidden" id="select-test-cases">
+                    Test Cases
                 </button>
             </div>
             <p class="error-message hidden" id="styles-err"></p>
@@ -128,6 +131,7 @@
         </div>
         <div id="test-style-mappings" class="styles-block mt-md hidden">
             <p class="style-prompt">3. Select the styles to use for Test Cases:</p>
+            <h4 style="margin-top: 1em; margin-bottom: 0;">Test Cases:</h4>
             <label for="test-style-select1" class="style-labels">Folder Name:</label>
             <select title="test-style-select1" id="test-style-select1" class="style-selector"></select>
             <label for="test-style-select2" class="style-labels">Test Name:</label>
@@ -136,8 +140,8 @@
             <div>
                 <label for="header-check">Using header rows:</label><input type="checkbox" id="header-check"
                     title="header-check" />
-                <span class="tooltip"
-                    tooltip="Check this box if you start each of your Test Step tables with a header row.">?</span>
+                <span class="tooltip" tooltip="Check this box if you start each of your Test Step tables with a header row. 
+                    The header row will be omitted when sending to Spira.">?</span>
             </div>
             <label for="test-style-select3" class="style-labels" style="margin-top: 0">Description:</label>
             <select title="test-style-select3" id="test-style-select3" class="style-selector"></select>

@@ -160,6 +160,29 @@ ul {
     margin: 0;
 }
 
+.pop-up {
+    background-color: #f1f1f1;
+    position: fixed;
+    align-self: center;
+    z-index: 1;
+    padding: .5rem;
+    border-radius: .5rem;
+    border: 1px solid #aaaaaa;
+    margin: 0;
+    width: 95%;
+}
+
+.pop-up .close {
+    margin-top: -0.5rem;
+    margin-right: -0.5rem;
+    float:right;
+
+    background-color: #ff8888;
+}
+.pop-up.err{
+    background-color: #fccccc;
+}
+
 .error-message {
     color: red;
     font-weight: 700;
@@ -321,13 +344,13 @@ ul {
     font-size: 10pt;
     border-style: solid;
     border-width: 1px;
-    border-color: black;
+    border-color: #aaaaaa;
     border-radius: 12px;
     background-color: #f8f8f8;
     padding: 10px;
     width: 150px;
     margin-left: -75px;
-    top: -98px;
+    top: -136px;
 }
 
 .tooltip:hover::before, .tooltip:hover::after {
@@ -339,16 +362,19 @@ ul {
 }
 
 .artifact-button {
-    background-color: #f4f4f4; /* inactive: #f4f4f4, active: #0078d7 */
-    border: none;
-    color: black;
-    margin-right: 2.5%;
-    padding: 8px 12px;
-    text-align: center;
-    text-decoration: none;
-    display: static;
-    font-size: 16px;
+    box-sizing:border-box;
+    font-family:Segoe UI WestEuropean,Segoe UI,-apple-system,BlinkMacSystemFont,Roboto,Helvetica Neue,sans-serif;
+    -webkit-font-smoothing:antialiased;
+    color:#333;
+    font-size:14px;
+    font-weight:600;
+    background-color:#f4f4f4;
+    border:1px solid #f4f4f4;
     cursor:pointer;
+    display:inline-block;
+    height:32px;
+    min-width:80px;
+    padding:4px 20px 6px;
 }
 
 .artifact-button:disabled {
@@ -356,23 +382,25 @@ ul {
     color: #a6a6a6;
 }
 
-.ms-Button:disabled.activated{
+.artifact-button:disabled.activated{
     background-color: #abd3f3;
 }
 
-.artifact-button:hover,
-.artifact-button:focus {
+.artifact-button:hover{
     background-color:#eaeaea;
+    color:black;
 }
 
 .ms-Button--primary, 
-.ms-Button.activated {
+.artifact-button.activated,
+.artifact-button:focus {
     background-color: #0078d7;
-    color: white ! important;
 }
 
-.ms-Button.activated {
+.artifact-button.activated,
+.artifact-button:focus {
     cursor: default;
+    color: white !important;
 }
 
 /*MS DEFAULT CLASSES*/
