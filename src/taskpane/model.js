@@ -172,7 +172,8 @@ var ERROR_MESSAGES = {
   table: { htmlId: "send-err", message: "Your description column for one or more tables only includes empty cells or does not exist. If you do not want to send test steps - do not select tables in your document. If you do, check your selection and try again." },
   failedReq: { htmlId: "send-err", message: "" },
   duplicateStyles: { htmlId: "styles-err", message: "You currently have multiple mappings set to the same style. Please only use each style once." },
-  emptyStyles: { htmlId: "styles-err", message: "You currently have unselected styles. Please provide a style for all provided inputs." }
+  emptyStyles: { htmlId: "styles-err", message: "You currently have unselected styles. Please provide a style for all provided inputs." },
+  failedImageReq: { htmlId: "send-err", message: "Sending artifacts failed on sending an image. Sending artifacts will continue until a fatal error occurs. Some images may not appear in Spira."}
 }
 
 export { Data, params, templates, ERROR_MESSAGES }

@@ -19,7 +19,9 @@ import {
   showProgressBar,
   updateProgressBar,
   hideProgressBar,
-  enableButton
+  enableButton,
+  enableMainButtons,
+  disableMainButtons
 } from './taskpane.js';
 
 /*
@@ -46,7 +48,7 @@ of a document, returning digestable objects which can easily be used to send art
 to spira.*/
 const parseArtifacts = async (ArtifactTypeId, model) => {
   return Word.run(async (context) => {
-    disableButton(params.buttonIds.sendToSpira);
+    disableMainButtons();
     /***************************
      Start range identification
      **************************/
@@ -61,10 +63,13 @@ const parseArtifacts = async (ArtifactTypeId, model) => {
     catch (err) {
       /*there is a crashing error with context.sync() 
       if your cursor is on an empty line (.getSelection() just crashes)
-      so this handles the fallback and forces full body parsing
+      so this handles the fallback and forces full body parsing in this senario.
       May want to add a confirmation for full body parsing and explain
-      what can cause this*/
+      what can cause this rather than sending the full body without
+      user knowledge*/
       selection = {}
+      //we need an error for explaining this
+      // displayError()
     }
     //If there is no selected area, parse the full body of the document instead
     if (!selection.text) {
@@ -266,14 +271,15 @@ const parseArtifacts = async (ArtifactTypeId, model) => {
             requirements.push(requirement)
           }
         }
+        //if the heirarchy is invalid, clear requirements and throw error
         if (!validateHierarchy(requirements)) {
           requirements = false
-          enableButton(params.buttonIds.sendToSpira)
+          enableMainButtons();
           //throw hierarchy error and exit function
           displayError("heirarchy", true)
           return
         }
-        //if the heirarchy is invalid, clear requirements and throw error
+        clearErrors();
         await sendArtifacts(params.artifactEnums.requirements, imageObjects, requirements, projectId, model, styles)
         return requirements
       }
@@ -323,7 +329,7 @@ const parseArtifacts = async (ArtifactTypeId, model) => {
             context.load(inTableCheck)
             //this context.sync() is the part that throws the error quietly, without it it crashes
             await context.sync();
-            if (inTableCheck && nextTable.text.includes(item.text.trim())){
+            if (inTableCheck && nextTable.text.includes(item.text.trim())) {
               amInTable = true
             }
           }
@@ -516,7 +522,7 @@ const sendArtifacts = async (ArtifactTypeId, images, Artifacts, projectId, model
 
         let placeholders = [...requirements[0].Description.matchAll(imgRegex)]
         for (let i = 0; i < placeholders.length; i++) {
-          pushImage(firstCall.data, images[0], projectId, model)
+          await pushImage(firstCall.data, images[0], projectId, model)
           images.shift();
         }
         updateProgressBar(1, requirements.length)
@@ -559,6 +565,11 @@ const sendArtifacts = async (ArtifactTypeId, images, Artifacts, projectId, model
           let newFolder = {}
           newFolder.TestCaseFolderId = await createTestCaseFolder(testCase.folderName,
             testCase.folderDescription, projectId, model);
+          if (!newFolder.TestCaseFolderId) {
+            displayError("failedReq", false, "Creating a new folder failed. Make sure your internet connection is ok," +
+              " the server is running, and you have permissions to create foldersin the selected product. Otherwise use the name of an existing folder for all test cases.")
+            return
+          }
           newFolder.Name = testCase.folderName;
           folder = newFolder
           testCaseFolders.push(newFolder);
@@ -566,23 +577,42 @@ const sendArtifacts = async (ArtifactTypeId, images, Artifacts, projectId, model
         //this returns the full test case object response
         let testCaseArtifact = await sendTestCase(testCase.Name, testCase.testCaseDescription,
           folder.TestCaseFolderId, projectId, model)
+        if (!testCaseArtifact) {
+          displayError("failedReq", false, `Sending test cases failed on ${testCase.Name}. All previous test cases should be in spira. Check your connection and server status, then try again.`)
+          return
+        }
         //imgRegex defined at the top of the sendArtifacts function
         let placeholders = [...testCase.testCaseDescription.matchAll(imgRegex)]
         //p isnt needed but I do need to iterate through the placeholders(this is shorter syntax)
         for (let p of placeholders) {
-          await pushImage(testCaseArtifact, images[0], projectId, model)
+          try {
+            await pushImage(testCaseArtifact, images[0], projectId, model)
+          }
+          catch (err) {
+            console.log(err)
+            displayError("failedImageReq", false)
+          }
           images.shift();
         }
         for (let testStep of testCase.testSteps) {
           let step = await sendTestStep(testCaseArtifact.TestCaseId, testStep, model, projectId);
+          if (!step) {
+            displayError("failedReq", false, `Sending test cases failed on ${testCase.Name}. All previous test cases should be in spira. Check your connection and server status, then try again.`)
+            return
+          }
           //these are the <img> 'placeholders' for all 3 testStep fields
           let placeholders = [...testStep.Description.matchAll(imgRegex),
           ...testStep.SampleData.matchAll(imgRegex),
           ...testStep.ExpectedResult.matchAll(imgRegex)]
           for (let p of placeholders) {
             if (images[0]) {
-              //this needs to be full image handling for all 3 fields.
-              await pushImage(step, images[0], projectId, model, testCaseArtifact.TestCaseId, styles);
+              //this handles images for all 3 test step fields. 
+              try {
+                await pushImage(step, images[0], projectId, model, testCaseArtifact.TestCaseId, styles);
+              }
+              catch (err) {
+                displayError("failedImageReq", false)
+              }
               images.shift();
             }
           }
@@ -591,7 +621,7 @@ const sendArtifacts = async (ArtifactTypeId, images, Artifacts, projectId, model
         updateProgressBar(i + 1, testCases.length);
       }
       hideProgressBar();
-      enableButton(params.buttonIds.sendToSpira)
+      enableMainButtons();
     }
   }
 }
@@ -606,7 +636,7 @@ const retrieveTestCaseFolders = async (projectId, model) => {
     return callResponse.body
   }
   catch (err) {
-    //throw error or do nothing (would be network error maybe?)
+    displayError("failedReq", false, "Retrieving test folders failed. Check your connection and server status then try again.")
   }
 }
 
@@ -890,7 +920,7 @@ const validateTestSteps = (tables, descStyle) => {
     }
     //if there is a table containing no test step descriptions, throws an error and stops execution
     if (!atLeastOneDesc) {
-      displayError("table");
+      displayError("table", true);
       return false
     }
   }
@@ -934,6 +964,7 @@ const pushImage = async (Artifact, image, projectId, model, testCaseId, styles) 
   }
   catch (err) {
     console.log(err)
+    return
   }
   let fullArtifactObj;
   //checks if the artifact is a requirement (if not it is a test case)
@@ -947,8 +978,8 @@ const pushImage = async (Artifact, image, projectId, model, testCaseId, styles) 
       fullArtifactObj = getArtifactCall.body
     }
     catch (err) {
-      //do nothing
       console.log(err)
+      return
     }
     // now replace the placeholder in the description with img tags
     let placeholderRegex = params.regexs.imageRegex
@@ -967,6 +998,7 @@ const pushImage = async (Artifact, image, projectId, model, testCaseId, styles) 
     catch (err) {
       //do nothing
       console.log(err)
+      return
     }
   }
   else if (Artifact.TestStepId) {
@@ -982,6 +1014,7 @@ const pushImage = async (Artifact, image, projectId, model, testCaseId, styles) 
     catch (err) {
       //do nothing
       console.log(err)
+      return
     }
     // now replace the placeholder in the description with img tags
     let placeholderRegex = params.regexs.imageRegex
@@ -1040,6 +1073,7 @@ const pushImage = async (Artifact, image, projectId, model, testCaseId, styles) 
     catch (err) {
       //do nothing
       console.log(err)
+      return
     }
   }
   else if (Artifact.TestCaseId) {
@@ -1055,6 +1089,7 @@ const pushImage = async (Artifact, image, projectId, model, testCaseId, styles) 
     catch (err) {
       //do nothing
       console.log(err)
+      return
     }
     //crashing HERE
     //dsajdhsjkda
@@ -1076,10 +1111,8 @@ const pushImage = async (Artifact, image, projectId, model, testCaseId, styles) 
     catch (err) {
       //do nothing
       console.log(err)
+      return false
     }
-  }
-  else {
-    //handle error (should never reach here, but if it does it should be handled)
   }
   return true
 }
@@ -1096,7 +1129,9 @@ const indentRequirement = async (apiCall, id, indent) => {
       await axios.post(apiCall, {});
     }
     catch (err) {
+      //do nothing - error displayed from catch block this function is called from
       console.log(err)
+      return false
     }
   }
   return true

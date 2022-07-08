@@ -518,5 +518,7 @@ export {
   showProgressBar,
   updateProgressBar,
   hideProgressBar,
-  enableButton
+  enableButton,
+  enableMainButtons,
+  disableMainButtons
 }
