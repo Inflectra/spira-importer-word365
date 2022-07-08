@@ -186,9 +186,29 @@ ul {
     background-color: #ff8888;
 }
 
-.pop-up .ok {
-    
+.pop-up .r {
+    float: right;
+    text-align: left;
 }
+
+.pop-up .l {
+    float: left;
+    text-align: left;
+}
+
+.pop-up .ok.ms-Button {
+    margin-bottom: -0.5rem;
+    min-width: 0;
+}
+
+.pop-up .ok.ms-Button.r {
+    margin-right: -0.5rem;
+}
+
+.pop-up .ok.ms-Button.l {
+    margin-left: -0.5rem;
+}
+
 .pop-up.err{
     background-color: #fccccc;
 }
