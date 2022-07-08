@@ -41,7 +41,7 @@ const setDefaultDisplay = () => {
 
 const setEventListeners = () => {
   document.getElementById('test').onclick = () => test();
-  document.getElementById('btn-login').onclick = () => loginAttempt();
+  document.getElementById('btn-login').onclick = async () => await loginAttempt();
   document.getElementById('dev-mode').onclick = () => goToState(params.pageStates.dev);
   document.getElementById('send-to-spira-button').onclick = async () => await pushArtifacts();
   document.getElementById('log-out').onclick = () => goToState(params.pageStates.authentication);
@@ -59,6 +59,25 @@ Testing Functions
 //basic testing function for validating code snippet behaviour.
 async function test() {
   return Word.run(async (context) => {
+    let body = context.document.getSelection();
+    let tables = context.document.body.tables
+    context.load(body)
+    context.load(tables)
+    await context.sync();
+    console.log('table')
+    console.log(tables.items[0])
+    try {
+      let intersection = body.intersectWith(tables.items[0].getRange())
+      context.load(intersection)
+      await context.sync();
+      console.log('intersection')
+      console.log(intersection)
+    }
+    catch (err) { console.log(err) }
+    let fullBody = context.document.body
+    context.load(fullBody, ['text'])
+    await context.sync();
+    console.log(fullBody.text)
   })
 }
 

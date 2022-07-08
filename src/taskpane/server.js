@@ -55,7 +55,17 @@ const parseArtifacts = async (ArtifactTypeId, model) => {
     let splitSelection = context.document.getSelection().split(['\r']);
     context.load(splitSelection, ['text', 'inlinePictures', 'style', 'styleBuiltIn'])
     context.load(selection, ['text', 'inlinePictures', 'style', 'styleBuiltIn']);
-    await context.sync();
+    try {
+      await context.sync();
+    }
+    catch (err) {
+      /*there is a crashing error with context.sync() 
+      if your cursor is on an empty line (.getSelection() just crashes)
+      so this handles the fallback and forces full body parsing
+      May want to add a confirmation for full body parsing and explain
+      what can cause this*/
+      selection = {}
+    }
     //If there is no selected area, parse the full body of the document instead
     if (!selection.text) {
       selection = context.document.body.getRange();
@@ -296,6 +306,31 @@ const parseArtifacts = async (ArtifactTypeId, model) => {
         /*part of this portion isnt DRY, but due to not being able to pass Word 
         objects between functions cant be made into its own function*/
         for (let [i, item] of splitSelection.items.entries()) {
+          console.log(descStart)
+          console.log(item.text)
+          //this checks if a line is a part of the next table to be parsed.
+          //amInTable serves as a flag to parse a table text.
+          let amInTable = false;
+          console.log(i)
+          try {
+            var nextTable = selectionTables.items[tableCounter].getRange();
+            context.load(nextTable)
+            await context.sync();
+            console.log(nextTable.text)
+            console.log(item.text)
+            //checks if the item is within the next table
+            let inTableCheck = nextTable.intersectWith(item)
+            context.load(inTableCheck)
+            //this context.sync() is the part that throws the error quietly, without it it crashes
+            await context.sync();
+            if (inTableCheck && nextTable.text.includes(item.text.trim())){
+              amInTable = true
+            }
+          }
+          catch (err) {
+            //do nothing, amInTable should remain false
+          }
+          console.log(i + 1000)
           //this just removes excess tags
           let itemtext = item.text.replaceAll("\r", "")
           if (styles.includes(item.style) || styles.includes(item.styleBuiltIn)) {
@@ -361,16 +396,19 @@ const parseArtifacts = async (ArtifactTypeId, model) => {
             }
           }
           //tables = [][][] string where [table][row][column]
-          /*if there is a table, and the text in the line currently being checked 
-          is within the next table, parse table as test steps*/
-          else if (tables[0] && tables[0][0][parseInt(styles[2].slice(-1)) - 1].includes(item.text)) {
+          //amInTable is a flag set at the beginning of each loop.
+          else if (amInTable) {
             //This procs when there is a table and the first description equals item.text
             //testStepTable = 2d array [row][column]
             /**************************
              *start parseTestSteps Logic*
             ***************************/
             let table = selectionTables.items[tableCounter].getRange().getHtml()
-            await context.sync();
+            await context.sync()
+            /*this checks if the item is within the table being parsed as the .includes method doesnt do a good job of 
+            excluding things due to things like single letters existing. A single letter line is very likely
+            to be included in a table, but this guarantees that wont disrupt / damage the parsing of test steps
+            while also allowing multiple tables to be parsed for 1 test case. */
             let rows = [...table.m_value.matchAll(params.regexs.tableRowRegex)]
             let formattedTable = []
             for (let row of rows) {
@@ -384,7 +422,6 @@ const parseArtifacts = async (ArtifactTypeId, model) => {
             //formattedStrings should be the outputted 2d array
             let testStepTable = formattedTable
             //table counter lets parseTestSteps know which table is currently being parsed
-            tableCounter++
             let testStep = new templates.TestStep();
             let testSteps = []
             //this is true when the "Header rows?" box is checked
@@ -394,7 +431,7 @@ const parseArtifacts = async (ArtifactTypeId, model) => {
               testStepTable.shift();
             }
             //take testStepTable and put into test steps
-            for (let [i, row] of testStepTable.entries()) {
+            for (let row of testStepTable) {
               //skips lines with empty descriptions to prevent pushing empty steps (returns null if no match)
               let emptyStepRegex = params.regexs.emptyParagraphRegex
 
@@ -404,14 +441,15 @@ const parseArtifacts = async (ArtifactTypeId, model) => {
               testStep = { Description: row[parseInt(styles[2].slice(-1)) - 1], ExpectedResult: row[parseInt(styles[3].slice(-1)) - 1], SampleData: row[parseInt(styles[4].slice(-1)) - 1] }
               testSteps.push(testStep)
             }
-            testCase.testSteps = testSteps
+            testCase.testSteps = [...testCase.testSteps, ...testSteps]
             //removes the table that has been processed from this functions local reference
+            tableCounter++
             tables.shift();
             /************************
             *end parseTestSteps Logic*
             ************************/
           }
-          else if (!descStart && (item.text.slice(-1) != "\t")) {
+          else if (!descStart) {
             descStart = item
           }
           if (i == (splitSelection.items.length - 1)) {
@@ -426,14 +464,12 @@ const parseArtifacts = async (ArtifactTypeId, model) => {
               let filteredDescription = filterDescription(descHtml.m_value.replaceAll("\r", ""), true, formattedLists, formattedSingleItemLists)
               testCase.testCaseDescription = filteredDescription
             }
-            //dont push a nameless testCase.
             if (testCase.Name) {
               testCases.push(testCase)
             }
-          }
-          if (i == splitSelection.length && !testCase.Name) {
-            if (styles.includes(item.style) || styles.includes(item.styleBuiltIn)) {
-              testCase.Name = item.text
+            else if ((styles.includes(item.style) || styles.includes(item.styleBuiltIn)) && itemtext) {
+              testCase.Name = itemtext
+              testCases.push(testCase)
             }
           }
         }
@@ -648,7 +684,7 @@ const filterDescription = (description, isTestCase, lists, singleItemLists) => {
 
   for (let match of whitespaceMatch) {
     //this takes any double or more spaces, and turns them into single spaces
-    htmlBody = htmlBody.replace(match, " ")
+    htmlBody = htmlBody.replace(match[0], " ")
   }
   //if the description is for a test case, remove tables (They will be parsed as steps 
   //separately)
@@ -1070,3 +1106,4 @@ const loginCall = async (apiUrl) => {
   var response = await superagent.get(apiUrl).set('accept', 'application/json').set("Content-Type", "application/json")
   return response
 }
+
