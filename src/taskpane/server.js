@@ -6,29 +6,26 @@ axios.defaults.headers.put['Content-Type'] = "application/json"
 axios.defaults.headers.put['accept'] = "application/json"
 
 export {
-  parseArtifacts
+  parseArtifacts,
+  loginCall,
+  retrieveStyles
 }
 
 import { Data, params, templates } from './model.js'
 import {
   disableButton,
-  retrieveStyles,
-  validateHierarchy,
-  validateTestSteps,
   displayError,
-  pushImage,
+  clearErrors,
   showProgressBar,
   updateProgressBar,
-  indentRequirement,
   hideProgressBar,
   enableButton
 } from './taskpane.js';
 
 /*
   Functions that should be moved over: 
-  retrieveStyles,
-  validateHierarchy,
-  validateTestSteps
+  pushImage (i think),
+  indentRequirement
 */
 
 /*Functions that have been integrated into parseArtifacts: pushArtifacts,
@@ -159,7 +156,6 @@ const parseArtifacts = async (ArtifactTypeId, model) => {
     /**********************
      Start Artifact Parsing
     ***********************/
-    await axios.post(RETRIEVE, { crashing: "way too early" })
     const bodyRegex = params.regexs.bodyRegex
     const bodyTagRegex = params.regexs.bodyTagRegex
     switch (ArtifactTypeId) {
@@ -272,7 +268,6 @@ const parseArtifacts = async (ArtifactTypeId, model) => {
         return requirements
       }
       case (params.artifactEnums.testCases): {
-        await axios.post(RETRIEVE, { This: "is in here at least" })
         /*when parsing multiple tables tableCounter serves as an index throughout all
         parts of the function*/
         let tableCounter = 0
@@ -295,7 +290,7 @@ const parseArtifacts = async (ArtifactTypeId, model) => {
           tables.push(table)
         }
         if (!validateTestSteps(tables, styles[2])) {
-          //validateTestSteps throws the error
+          //validateTestSteps throws the error, this just fails quietly
           return false
         }
         /*part of this portion isnt DRY, but due to not being able to pass Word 
@@ -374,23 +369,20 @@ const parseArtifacts = async (ArtifactTypeId, model) => {
             /**************************
              *start parseTestSteps Logic*
             ***************************/
-            await axios.post(RETRIEVE, {detected: "????"})
-            console.log("this does work tho right lmao")
             let table = selectionTables.items[tableCounter].getRange().getHtml()
             await context.sync();
             let rows = [...table.m_value.matchAll(params.regexs.tableRowRegex)]
             let formattedTable = []
-            for (let row of rows){
+            for (let row of rows) {
               let tableRow = []
               let cells = [...row[0].matchAll(params.regexs.tableDataRegex)]
-              for (let cell of cells){
+              for (let cell of cells) {
                 tableRow.push(cell[0])
               }
               formattedTable.push(tableRow)
             }
             //formattedStrings should be the outputted 2d array
             let testStepTable = formattedTable
-            await axios.post(RETRIEVE, { form: formattedTable })
             //table counter lets parseTestSteps know which table is currently being parsed
             tableCounter++
             let testStep = new templates.TestStep();
@@ -442,7 +434,6 @@ const parseArtifacts = async (ArtifactTypeId, model) => {
           if (i == splitSelection.length && !testCase.Name) {
             if (styles.includes(item.style) || styles.includes(item.styleBuiltIn)) {
               testCase.Name = item.text
-              await axios.post(RETRIEVE, { case: testCase })
             }
           }
         }
@@ -489,7 +480,7 @@ const sendArtifacts = async (ArtifactTypeId, images, Artifacts, projectId, model
 
         let placeholders = [...requirements[0].Description.matchAll(imgRegex)]
         for (let i = 0; i < placeholders.length; i++) {
-          pushImage(firstCall.data, images[0])
+          pushImage(firstCall.data, images[0], projectId, model)
           images.shift();
         }
         updateProgressBar(1, requirements.length)
@@ -509,7 +500,7 @@ const sendArtifacts = async (ArtifactTypeId, images, Artifacts, projectId, model
           let placeholders = [...req.Description.matchAll(imgRegex)]
           //the 'p' itemization of placeholders isnt needed - just needs to happen once per placeholder
           for (let p of placeholders) {
-            await pushImage(call.data, images[0])
+            await pushImage(call.data, images[0], projectId, model)
             images.shift();
           }
           updateProgressBar(i + 1, requirements.length);
@@ -543,7 +534,7 @@ const sendArtifacts = async (ArtifactTypeId, images, Artifacts, projectId, model
         let placeholders = [...testCase.testCaseDescription.matchAll(imgRegex)]
         //p isnt needed but I do need to iterate through the placeholders(this is shorter syntax)
         for (let p of placeholders) {
-          await pushImage(testCaseArtifact, images[0])
+          await pushImage(testCaseArtifact, images[0], projectId, model)
           images.shift();
         }
         for (let testStep of testCase.testSteps) {
@@ -555,7 +546,7 @@ const sendArtifacts = async (ArtifactTypeId, images, Artifacts, projectId, model
           for (let p of placeholders) {
             if (images[0]) {
               //this needs to be full image handling for all 3 fields.
-              await pushImage(step, images[0], testCaseArtifact.TestCaseId, styles);
+              await pushImage(step, images[0], projectId, model, testCaseArtifact.TestCaseId, styles);
               images.shift();
             }
           }
@@ -807,4 +798,275 @@ const listConstructor = (isOrdered, list) => {
   }
   listHtml = openingTag + `<li>${list[0].text}</li>` + closingTag
   return listHtml
+}
+
+const retrieveStyles = (pageTag) => {
+  let styles = []
+  for (let i = 1; i <= 5; i++) {
+    let style = Office.context.document.settings.get(pageTag + 'style' + i.toString());
+    //if this is for one of the last 3 test style selectors, choose column1-3 as auto populate settings
+    if (!style && pageTag == "test-" && i >= 3) {
+      Office.context.document.settings.set(pageTag + 'style' + i.toString(), 'column' + (i - 2).toString())
+      style = 'column' + (i - 2).toString()
+    }
+    //if there isnt an existing setting, populate with headings
+    else if (!style) {
+      Office.context.document.settings.set(pageTag + 'style' + i.toString(), 'heading' + i.toString())
+      style = 'heading' + i.toString();
+    }
+    styles.push(style)
+  }
+  return styles
+}
+
+const validateHierarchy = (requirements) => {
+  //requirements = [{Name: str, Description: str, IndentLevel: int}, ...]
+  //the first requirement must always be indent level 0 (level 1 in UI terms)
+  if (requirements[0].IndentLevel != 0) {
+    return false
+  }
+  let prevIndent = 0
+  for (let i = 0; i < requirements.length; i++) {
+    //if there is a jump in indent levels greater than 1, fails validation
+    if (requirements[i].IndentLevel > prevIndent + 1) {
+      return false
+    }
+    prevIndent = requirements[i].IndentLevel
+  }
+  //if the loop goes through without returning false, the hierarchy is valid so returns true
+  return true
+}
+
+//passes in all relevant tables and description style for test steps (only required field).
+const validateTestSteps = (tables, descStyle) => {
+  //the column of descriptions according to the style mappings. -1 for indexing against the arrays
+  let column = parseInt(descStyle.slice(-1)) - 1
+  //tables = [[[], [], []], [[], []], ...] array of 2d arrays(3d array). tables[tableNum][row][column]
+  for (let i = 0; i < tables.length; i++) {
+    //holder for at least one description for a test step being in a given table
+    let atLeastOneDesc = false;
+    for (let j = 0; j < tables[i].length; j++) {
+      /*if a description for any row of a table within the style mapped column exists, the table
+      is considered valid*/
+      if (tables[i][j][column]) {
+        atLeastOneDesc = true
+      }
+    }
+    //if there is a table containing no test step descriptions, throws an error and stops execution
+    if (!atLeastOneDesc) {
+      displayError("table");
+      return false
+    }
+  }
+  clearErrors();
+  return true
+}
+
+const pushImage = async (Artifact, image, projectId, model, testCaseId, styles) => {
+  //image = {base64: "", name: "", lineNum: int}
+  /*upload images and build link of image location in spira 
+  ({model.user.url}/{projectID}/Attachment/{AttachmentID}.aspx)*/
+  //Add AttachmentURL to each imageObject after they are uploaded
+  let pid = projectId
+  let imgLink;
+  let imageApiCall = model.user.url + "/services/v6_0/RestService.svc/projects/"
+    + pid + `/documents/file?username=${model.user.username}&api-key=${model.user.api_key}`
+  try {
+    if (Artifact.RequirementId) {
+      let imageCall = await axios.post(imageApiCall, {
+        FilenameOrUrl: image.name, BinaryData: image.base64,
+        AttachedArtifacts: [{ ArtifactId: Artifact.RequirementId, ArtifactTypeId: 1 }]
+      })
+      imgLink = model.user.url + `/${pid}/Attachment/${imageCall.data.AttachmentId}.aspx`
+    }
+    //checks if the artifact is a test step
+    else if (Artifact.TestStepId) {
+      let imageCall = await axios.post(imageApiCall, {
+        FilenameOrUrl: image.name, BinaryData: image.base64,
+        AttachedArtifacts: [{ ArtifactId: Artifact.TestStepId, ArtifactTypeId: 7 }]
+      })
+      imgLink = model.user.url + `/${pid}/Attachment/${imageCall.data.AttachmentId}.aspx`
+    }
+    //test steps have TestCaseId's, so checks for TestStepId first.
+    else if (Artifact.TestCaseId) {
+      let imageCall = await axios.post(imageApiCall, {
+        FilenameOrUrl: image.name, BinaryData: image.base64,
+        AttachedArtifacts: [{ ArtifactId: Artifact.TestCaseId, ArtifactTypeId: 2 }]
+      })
+      imgLink = model.user.url + `/${pid}/Attachment/${imageCall.data.AttachmentId}.aspx`
+    }
+  }
+  catch (err) {
+    console.log(err)
+  }
+  let fullArtifactObj;
+  //checks if the artifact is a requirement (if not it is a test case)
+  if (Artifact.RequirementId) {
+    try {
+      //makes a get request for the target artifact which will be updated to contain an image
+      let getArtifact = model.user.url + "/services/v6_0/RestService.svc/projects/" + pid +
+        `/requirements/${Artifact.RequirementId}?username=${model.user.username}&api-key=${model.user.api_key}`;
+      let getArtifactCall = await superagent.get(getArtifact).set('accept', 'application/json').set('Content-Type', 'application/json');
+      //This is the body of the get response in its entirety.
+      fullArtifactObj = getArtifactCall.body
+    }
+    catch (err) {
+      //do nothing
+      console.log(err)
+    }
+    // now replace the placeholder in the description with img tags
+    let placeholderRegex = params.regexs.imageRegex
+    //gets an array of all the placeholders for images. 
+    let placeholders = [...fullArtifactObj.Description.matchAll(placeholderRegex)]
+    /*placeholders[0][0] is the first matched instance - because you need to GET for each change
+    this should work each time - each placeholder should have 1 equivalent image in the same
+    order they appear throughout the document.*/
+    fullArtifactObj.Description = fullArtifactObj.Description.replace(placeholders[0][0], `<img alt=${image?.name} src=${imgLink}><br />`)
+    //PUT artifact with new description (including img tags now)
+    let putArtifact = model.user.url + "/services/v6_0/RestService.svc/projects/" + pid +
+      `/requirements?username=${model.user.username}&api-key=${model.user.api_key}`;
+    try {
+      await axios.put(putArtifact, fullArtifactObj)
+    }
+    catch (err) {
+      //do nothing
+      console.log(err)
+    }
+  }
+  else if (Artifact.TestStepId) {
+    try {
+      //this needs to have a different way of getting TestCaseId
+      //makes a get request for the target artifact which will be updated to contain an image
+      let getArtifact = model.user.url + "/services/v6_0/RestService.svc/projects/" + pid +
+        `/test-cases/${testCaseId}/test-steps/${Artifact.TestStepId}?username=${model.user.username}&api-key=${model.user.api_key}`;
+      let getArtifactCall = await superagent.get(getArtifact).set('accept', 'application/json').set('Content-Type', 'application/json');
+      //This is the body of the get response in its entirety.
+      fullArtifactObj = getArtifactCall.body
+    }
+    catch (err) {
+      //do nothing
+      console.log(err)
+    }
+    // now replace the placeholder in the description with img tags
+    let placeholderRegex = params.regexs.imageRegex
+
+    //This is needed to determine the order of how images will appear throughout
+    //the document relative to the TestStep field they represent.
+    let styleOrganizer = [{ column: parseInt(styles[2].substring(styles[2].length - 1)), for: "descPlaceholders" },
+    { column: parseInt(styles[3].substring(styles[2].length - 1)), for: "expectedPlaceholders" },
+    { column: parseInt(styles[4].substring(styles[2].length - 1)), for: "samplePlaceholders" }]
+
+    //this sorts the styles by increasing order of column number (lowest column first)
+    styleOrganizer.sort((a, b) => (a.column > b.column) ? 1 : -1)
+    let descPlaceholders = [...fullArtifactObj.Description.matchAll(placeholderRegex)]
+    let samplePlaceholders = [...fullArtifactObj.SampleData.matchAll(placeholderRegex)]
+    let expectedPlaceholders = [...fullArtifactObj.ExpectedResult.matchAll(placeholderRegex)]
+
+    /*this allows us to directly reference any placeholder array with the
+     styleOrganizer "for" property*/
+    let placeholderReference = {
+      descPlaceholders: descPlaceholders,
+      samplePlaceholders: samplePlaceholders, expectedPlaceholders: expectedPlaceholders
+    }
+
+    /*placeholders[0][0] is the first matched instance - because you need to GET for 
+    each changethis should work each time - each placeholder should have 1 equivalent
+    image in the same order they appear throughout the document.*/
+    for (let placeholder of styleOrganizer) {
+      //placeholder = object from styleOrganizer
+      if (placeholderReference[placeholder.for].length != 0) {
+        /*this changes the relevant behavior based on whichever property is both the
+        most to the left in the testSteps tables and also has an image placeholder */
+        switch (placeholder.for) {
+          case ("descPlaceholders"): {
+            fullArtifactObj.Description = fullArtifactObj.Description.replace(descPlaceholders[0][0], `<img src=${imgLink} alt=${image.name} />`)
+            break
+          }
+          case ("samplePlaceholders"): {
+            fullArtifactObj.SampleData = fullArtifactObj.SampleData.replace(samplePlaceholders[0][0], `<img src=${imgLink} alt=${image.name} />`)
+            break
+          }
+          case ("expectedPlaceholders"): {
+            fullArtifactObj.ExpectedResult = fullArtifactObj.ExpectedResult.replace(expectedPlaceholders[0][0], `<img src=${imgLink} alt=${image.name} />`)
+            break
+          }
+        }
+        break
+      }
+      continue
+    }
+    //PUT artifact with new description (including img tags now)
+    let putArtifact = model.user.url + "/services/v6_0/RestService.svc/projects/" + pid +
+      `/test-cases/${fullArtifactObj.TestCaseId}/test-steps?username=${model.user.username}&api-key=${model.user.api_key}`;
+    try {
+      await axios.put(putArtifact, fullArtifactObj)
+    }
+    catch (err) {
+      //do nothing
+      console.log(err)
+    }
+  }
+  else if (Artifact.TestCaseId) {
+    try {
+      //handle test cases
+      //makes a get request for the target artifact which will be updated to contain an image
+      let getArtifact = model.user.url + "/services/v6_0/RestService.svc/projects/" + pid +
+        `/test-cases/${Artifact.TestCaseId}?username=${model.user.username}&api-key=${model.user.api_key}`;
+      let getArtifactCall = await superagent.get(getArtifact).set('accept', 'application/json').set('Content-Type', 'application/json');
+      //This is the body of the get response in its entirety.
+      fullArtifactObj = getArtifactCall.body
+    }
+    catch (err) {
+      //do nothing
+      console.log(err)
+    }
+    //crashing HERE
+    //dsajdhsjkda
+    //dhasdjkl
+    // now replace the placeholder in the description with img tags
+    let placeholderRegex = /<img(.|\n|\r)*("|\s)\>/g
+    //gets an array of all the placeholders for images. 
+    let placeholders = [...fullArtifactObj.Description.matchAll(placeholderRegex)]
+    /*placeholders[0][0] is the first matched instance - because you need to GET for each change
+    this should work each time - each placeholder should have 1 equivalent image in the same
+    order they appear throughout the document.*/
+    fullArtifactObj.Description = fullArtifactObj.Description.replace(placeholders[0][0], `<img alt=${image?.name} src=${imgLink}><br />`)
+    //PUT artifact with new description (including img tags now)
+    let putArtifact = model.user.url + "/services/v6_0/RestService.svc/projects/" + pid +
+      `/test-cases?username=${model.user.username}&api-key=${model.user.api_key}`;
+    try {
+      await axios.put(putArtifact, fullArtifactObj)
+    }
+    catch (err) {
+      //do nothing
+      console.log(err)
+    }
+  }
+  else {
+    //handle error (should never reach here, but if it does it should be handled)
+  }
+  return true
+}
+
+/*indents requirements to the appropriate level, relative to the last requirement in the product
+before this add-on begins to add more. (No way to find out indent level of the last requirement
+  in a product from the Spira API (i think))*/
+const indentRequirement = async (apiCall, id, indent) => {
+  apiCall = apiCall.replace("requirements", `requirements/${id}/${indent > 0 ? "indent" : "outdent"}`)
+  indent = Math.abs(indent);
+  //loop for indenting/outdenting requirement
+  for (let i = 0; i < indent; i++) {
+    try {
+      await axios.post(apiCall, {});
+    }
+    catch (err) {
+      console.log(err)
+    }
+  }
+  return true
+}
+
+const loginCall = async (apiUrl) => {
+  var response = await superagent.get(apiUrl).set('accept', 'application/json').set("Content-Type", "application/json")
+  return response
 }
