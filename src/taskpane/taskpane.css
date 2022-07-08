@@ -166,7 +166,9 @@ ul {
     align-self: center;
     z-index: 1;
     padding: .5rem;
+    color: black;
     border-radius: .5rem;
+    border-top-right-radius: 0;
     border: 1px solid #aaaaaa;
     margin: 0;
     width: 95%;
@@ -175,9 +177,17 @@ ul {
 .pop-up .close {
     margin-top: -0.5rem;
     margin-right: -0.5rem;
+    padding: 0 0 0.25rem;
+    font-size: 1.5rem;
+    color: black;
+    line-height: 0.85rem;
     float:right;
-
+    border: solid #aaaaaa 1.5px;
     background-color: #ff8888;
+}
+
+.pop-up .ok {
+    
 }
 .pop-up.err{
     background-color: #fccccc;
