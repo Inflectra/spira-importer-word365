@@ -65,8 +65,7 @@
 }
 
 .mt-md {
-    margin-top: 0.5rem;
-    margin-bottom: 1.75rem;
+    margin-top: 1.5rem;
 }
 
 .mt-lg {
@@ -75,6 +74,10 @@
 
 .ma-0 {
     margin: 0;
+}
+
+.mr-sm {
+    margin-right: 0.75rem;
 }
 
 html,
@@ -242,6 +245,16 @@ ul {
     background-color:rgb(96, 236, 96);
 }
 
+#bottom-buttons, #artifact-select {
+    width: 95%;
+    align-self: center;
+    align-items: start;
+    text-align: start;
+    justify-content: start;
+    flex-direction: row;
+    position: relative;
+}
+
 .styles-block {
     /*display:flex is assigned when the block is shown, display:none when hidden*/
     width: 95%;
@@ -273,12 +286,7 @@ ul {
 }
 
 #artifact-select {
-    display: flex;
-    flex-direction: row;
-    align-items: center;
-    text-align: center;
     width: 100%;
-    height: auto;
 }
 
 #send-to-spira {
@@ -348,7 +356,7 @@ ul {
     color: #a6a6a6;
 }
 
-.artifact-button:disabled.activated{
+.ms-Button:disabled.activated{
     background-color: #abd3f3;
 }
 
@@ -358,12 +366,12 @@ ul {
 }
 
 .ms-Button--primary, 
-.artifact-button.activated {
+.ms-Button.activated {
     background-color: #0078d7;
-    color: white;
+    color: white ! important;
 }
 
-.artifact-button.activated {
+.ms-Button.activated {
     cursor: default;
 }
 
