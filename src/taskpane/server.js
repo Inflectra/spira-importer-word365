@@ -80,6 +80,16 @@ const parseArtifacts = async (ArtifactTypeId, model) => {
       context.load(splitSelection, ['text', 'inlinePictures', 'style', 'styleBuiltIn'])
       await context.sync();
     }
+    /*this verifies that the body has been detected successfully / that it exists. 
+    This should never be true here unless a user tries to import a literally empty document
+    but I figure the application should at least just tell them thats what it looks like theyre
+    trying to do and handle it without crashing the add-in.*/
+    //these replaceAll's serve to remove formatting characters that are not actual text
+    if (!selection.text.replaceAll("\r", "").replaceAll("&nbsp", "").replaceAll("\t", "").replaceAll("\n", "")){
+      enableMainButtons();
+      displayError(ERROR_MESSAGES.empty, false)
+      return false
+    }
     /********************** 
      Start image formatting
     ***********************/
