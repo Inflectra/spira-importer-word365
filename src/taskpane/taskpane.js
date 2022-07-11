@@ -296,6 +296,7 @@ const updateProgressBar = (current, total) => {
     document.getElementById('pop-up').classList.remove('sending');
     document.getElementById('pop-up').classList.add('sent');
     document.getElementById('pop-up-text').textContent = "Sent Artifacts!";
+    enableButton('pop-up-ok');
   }
   else {
     document.getElementById('pop-up-text').textContent = `Sending ${total} Artifacts!`;
@@ -304,7 +305,8 @@ const updateProgressBar = (current, total) => {
 }
 
 const showProgressBar = () => {
-  document.getElementById('pop-up').classList.remove('hidden');
+  disableButton('pop-up-ok');
+  showElement('pop-up');
   document.getElementById('pop-up').classList.add('sending');
   document.getElementById('pop-up-text').textContent = "Parsing Document..."
   document.getElementById("progress-bar-progress").style.width = "0%";
@@ -315,26 +317,28 @@ const hideProgressBar = () => {
   document.getElementById('pop-up').classList.remove('sending');
   document.getElementById('pop-up').classList.remove('sent');
   document.getElementById("progress-bar-progress").style.width = "0%";
-  document.getElementById("progress-bar").classList.add("hidden");
+  hideElement('progress-bar');
 }
 
 const displayError = (error, timeOut, failedArtifact) => {
   //We may want to update this to pass in the full object for better readability
   //rather than just passing in the key. (ie. instead of key, pass ERROR_MESSAGES['key'])
   let element = document.getElementById(error.htmlId);
+  hideProgressBar();
+  enableButton('pop-up-ok');
+  document.getElementById('pop-up').classList.add('err')
   showElement('pop-up')
   if (timeOut) {
     element.textContent = error.message;
     setTimeout(() => {
-      element.textContent = "";
-      hideElement('pop-up')
+      clearErrors();
     }, ERROR_MESSAGES.stdTimeOut);
   }
   else if (failedArtifact) { // This is a special case error message for more descriptive errors when sending artifacts
     element.textContent =
       `The request to the API has failed on the Artifact: '${failedArtifact.Name}'. All, if any previous Artifacts should be in Spira.`;
     setTimeout(() => {
-      element.textContent = "";
+      clearErrors();
     }, ERROR_MESSAGES.stdTimeOut);
   }
   else {
@@ -343,11 +347,9 @@ const displayError = (error, timeOut, failedArtifact) => {
 }
 
 const clearErrors = () => {
-  hideElement('pop-up')
-  let errs = Object.values(ERROR_MESSAGES.allIds);
-  for (let i = 0; i < errs.length; i++) {
-    document.getElementById(errs[i]).textContent = "";
-  }
+  hideElement('pop-up');
+  document.getElementById('pop-up').classList.remove('err');
+  document.getElementById('pop-up-text').textContent = "";
 }
 
 const goToState = (state) => {
