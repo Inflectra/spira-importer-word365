@@ -29,6 +29,12 @@
         <img alt="Spira Logo" src="/assets/icon-80.png" class="header-logo" />
         <h3 class="header-heading">SpiraPlan Importer<br></h3>
     </header>
+    <!-- error pop-up -->
+    <div id="pop-up" class="pop-up err hidden">
+        <button type="button" id="pop-up-close" class="close">&#xD7;</button>
+        <p id="pop-up-text" class="err">pop!<br></p>
+        <button type="button" id="pop-up-ok" class="ok ms-Button l">Confirm</button>
+    </div>
     <!--auth page-->
     <div id="panel-auth" class="panel">
         <p class="well">
@@ -86,11 +92,7 @@
 
     <!--Main screen-->
     <div id="main-screen" class="hidden">
-        <div id="pop-up" class="pop-up err">
-            <button type="button" id="pop-up-close" class="close">&#xD7;</button>
-            <p id="pop-up-text" class="err">pop!<br></p>
-            <button type="button" id="pop-up-ok" class="ok ms-Button l">Confirm</button>
-        </div>
+        
         <div id="app-body" class="ms-welcome__main" style="display: none;">
             <button type="button" id="test">test</button>
             <p style="left: 0; margin-left: 0">1. Select the product you wish to import to:</p>

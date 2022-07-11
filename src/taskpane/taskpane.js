@@ -50,7 +50,8 @@ const setEventListeners = () => {
   document.getElementById("confirm-req-style-mappings").onclick = () => confirmStyleMappings('req-');
   document.getElementById("confirm-test-style-mappings").onclick = () => confirmStyleMappings('test-');
   document.getElementById('project-select').onchange = () => goToState(params.pageStates.artifact);
-
+  document.getElementById("pop-up-close").onclick = () => hideElement("pop-up");
+  document.getElementById("pop-up-ok").onclick = () => hideElement('pop-up');
 }
 
 /****************
@@ -124,7 +125,7 @@ const loginAttempt = async () => {
   }
   catch (err) {
     //if the response throws an error, show an error message
-    displayError("login");
+    displayError(ERROR_MESSAGES.login);
     document.getElementById("btn-login").disabled = false;
     return
   }
@@ -247,16 +248,16 @@ const confirmStyleMappings = async (pageTag) => {
       }
       //gives an error explaining they have duplicate style mappings and cannot proceed.
       else {
-        displayError("duplicateStyles", true)
+        displayError(ERROR_MESSAGES.duplicateStyles, true)
         //hides the final button if it is already displayed when a user inputs invalid styles.
         hideElement('send-to-spira');
         return
       }
       Office.context.document.settings.set(pageTag + 'style' + i.toString(), setting);
     }
-    //gives an error explaining they have empty style mappings which conflict.
+    //gives an error explaining they have empty style mappings.
     else {
-      displayError("emptyStyles", true)
+      displayError(ERROR_MESSAGES.emptyStyles, true)
       return
     }
   }
@@ -305,29 +306,32 @@ const hideProgressBar = () => {
   document.getElementById("progress-bar").classList.add("hidden");
 }
 
-const displayError = (key, timeOut, failedArtifact) => {
+const displayError = (error, timeOut, failedArtifact) => {
   //We may want to update this to pass in the full object for better readability
   //rather than just passing in the key. (ie. instead of key, pass ERROR_MESSAGES['key'])
-  let element = document.getElementById(ERROR_MESSAGES[key].htmlId);
+  let element = document.getElementById(error.htmlId);
+  showElement('pop-up')
   if (timeOut) {
-    element.textContent = ERROR_MESSAGES[key].message;
+    element.textContent = error.message;
     setTimeout(() => {
       element.textContent = "";
+      hideElement('pop-up')
     }, ERROR_MESSAGES.stdTimeOut);
   }
-  else if (failedArtifact) { // This is a special case error message for better debugging when sending artifacts
+  else if (failedArtifact) { // This is a special case error message for more descriptive errors when sending artifacts
     element.textContent =
-      `The request to the API has failed on requirement: '${failedArtifact.Name}'. All, if any previous requirements should be in Spira.`;
+      `The request to the API has failed on the Artifact: '${failedArtifact.Name}'. All, if any previous Artifacts should be in Spira.`;
     setTimeout(() => {
       element.textContent = "";
     }, ERROR_MESSAGES.stdTimeOut);
   }
   else {
-    element.textContent = ERROR_MESSAGES[key].message;
+    element.textContent = error.message;
   }
 }
 
 const clearErrors = () => {
+  hideElement('pop-up')
   let errs = Object.values(ERROR_MESSAGES.allIds);
   for (let i = 0; i < errs.length; i++) {
     document.getElementById(errs[i]).textContent = "";

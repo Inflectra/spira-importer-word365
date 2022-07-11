@@ -165,15 +165,18 @@ function Data() {
 
 var ERROR_MESSAGES = {
   stdTimeOut: 8000, // 8000 is 8 seconds when used in setTimeout()
-  allIds: { login: "login-err", send: "send-err", styles: "styles-err" },
-  login: { htmlId: "login-err", message: "Your credentials are invalid" },
-  empty: { htmlId: "send-err", message: "You currently have no valid text selected or within the body of the document. if this is incorrect, check your style mappings and set them as the relevant styles." },
-  hierarchy: { htmlId: "send-err", message: "Your style heirarchy is invalid for the selected area. Please make sure requirements only indent 1 additional level from the previous requirement as specified in the indent level style selectors above." },
-  table: { htmlId: "send-err", message: "Your description column for one or more tables only includes empty cells or does not exist. If you do not want to send test steps - do not select tables in your document. If you do, check your selection and try again." },
-  failedReq: { htmlId: "send-err", message: "" },
-  duplicateStyles: { htmlId: "styles-err", message: "You currently have multiple mappings set to the same style. Please only use each style once." },
-  emptyStyles: { htmlId: "styles-err", message: "You currently have unselected styles. Please provide a style for all provided inputs." },
-  failedImageReq: { htmlId: "send-err", message: "Sending artifacts failed on sending an image. Sending artifacts will continue until a fatal error occurs. Some images may not appear in Spira."}
+  allIds: { login: "login-err", main: "pop-up-text" },
+  login: { htmlId: "pop-up-text", message: "Your credentials are invalid" },
+  empty: { htmlId: "pop-up-text", message: "You currently have no valid text selected or within the body of the document. if this is incorrect, check your style mappings and set them as the relevant styles." },
+  hierarchy: { htmlId: "pop-up-text", message: "Your style heirarchy is invalid for the selected area. Please make sure requirements only indent 1 additional level from the previous requirement as specified in the indent level style selectors above." },
+  table: { htmlId: "pop-up-text", message: "Your description column for one or more tables only includes empty cells or does not exist. If you do not want to send test steps - do not select tables in your document. If you do, check your selection and try again." },
+  failedReq: { htmlId: "pop-up-text", message: "" },
+  duplicateStyles: { htmlId: "pop-up-text", message: "You currently have multiple mappings set to the same style. Please only use each style once." },
+  emptyStyles: { htmlId: "pop-up-text", message: "You currently have unselected styles. Please provide a style for all provided inputs." },
+  failedImageReq: { htmlId: "pop-up-text", message: "Sending artifacts failed on sending an image. Sending artifacts will continue until a fatal error occurs. Some images may not appear in Spira."},
+  testCaseFolders: { htmlId: "pop-up-text", message: "Loading or retriving test case folders failed. If retrieving failed, you may still have your test cases imported in a new folder."},
+  //this will be an info message - not an error (but can be in certain edge cases, see first catch block in parseArtifacts)
+  invalidSelection: { htmlId: "pop-up-text", message: "It appears you have no text selected. the importer will proceed by parsing the full document."}
 }
 
 export { Data, params, templates, ERROR_MESSAGES }

@@ -11,7 +11,7 @@ export {
   retrieveStyles
 }
 
-import { Data, params, templates } from './model.js'
+import { Data, ERROR_MESSAGES, params, templates } from './model.js'
 import {
   disableButton,
   displayError,
@@ -61,14 +61,15 @@ const parseArtifacts = async (ArtifactTypeId, model) => {
       await context.sync();
     }
     catch (err) {
-      /*there is a crashing error with context.sync() 
-      if your cursor is on an empty line (.getSelection() just crashes)
+      console.log(selection)
+      /*there is a crashing error with context.sync(), 
+      if your cursor is on an empty line .getSelection() throws error and crashes
       so this handles the fallback and forces full body parsing in this senario.
       May want to add a confirmation for full body parsing and explain
       what can cause this rather than sending the full body without
       user knowledge*/
       selection = {}
-      //we need an error for explaining this
+      //we need an error for explaining this (and giving the user the option to confirm or cancel)?
       // displayError()
     }
     //If there is no selected area, parse the full body of the document instead
@@ -276,7 +277,7 @@ const parseArtifacts = async (ArtifactTypeId, model) => {
           requirements = false
           enableMainButtons();
           //throw hierarchy error and exit function
-          displayError("heirarchy", true)
+          displayError(ERROR_MESSAGES.hierarchy, true)
           return
         }
         clearErrors();
@@ -312,18 +313,13 @@ const parseArtifacts = async (ArtifactTypeId, model) => {
         /*part of this portion isnt DRY, but due to not being able to pass Word 
         objects between functions cant be made into its own function*/
         for (let [i, item] of splitSelection.items.entries()) {
-          console.log(descStart)
-          console.log(item.text)
           //this checks if a line is a part of the next table to be parsed.
           //amInTable serves as a flag to parse a table text.
           let amInTable = false;
-          console.log(i)
           try {
             var nextTable = selectionTables.items[tableCounter].getRange();
             context.load(nextTable)
             await context.sync();
-            console.log(nextTable.text)
-            console.log(item.text)
             //checks if the item is within the next table
             let inTableCheck = nextTable.intersectWith(item)
             context.load(inTableCheck)
@@ -336,7 +332,6 @@ const parseArtifacts = async (ArtifactTypeId, model) => {
           catch (err) {
             //do nothing, amInTable should remain false
           }
-          console.log(i + 1000)
           //this just removes excess tags
           let itemtext = item.text.replaceAll("\r", "")
           if (styles.includes(item.style) || styles.includes(item.styleBuiltIn)) {
@@ -500,7 +495,7 @@ const sendArtifacts = async (ArtifactTypeId, images, Artifacts, projectId, model
   //this checks if an empty artifact array is passed in (should never happen)
   if (Artifacts.length == 0) {
     //empty is the error message key for the model object.
-    displayError("empty", true);
+    displayError(ERROR_MESSAGES.empty, true);
     enableButton(params.buttonIds.sendToSpira)
     return
   }
@@ -530,7 +525,7 @@ const sendArtifacts = async (ArtifactTypeId, images, Artifacts, projectId, model
         requirements.shift()
       }
       catch (err) {
-        displayError("failedReq", false, item);
+        displayError(ERROR_MESSAGES.failedReq, false, item);
       }
       const apiUrl = model.user.url + params.apiComponents.apiBase + projectId +
         params.apiComponents.postOrPutRequirement + model.user.userCredentials
@@ -548,7 +543,7 @@ const sendArtifacts = async (ArtifactTypeId, images, Artifacts, projectId, model
           updateProgressBar(i + 1, requirements.length);
         }
         catch (err) {
-          displayError("failedReq", false, req)
+          displayError(ERROR_MESSAGES.failedReq, false, req)
         }
       }
       hideProgressBar();
@@ -566,8 +561,7 @@ const sendArtifacts = async (ArtifactTypeId, images, Artifacts, projectId, model
           newFolder.TestCaseFolderId = await createTestCaseFolder(testCase.folderName,
             testCase.folderDescription, projectId, model);
           if (!newFolder.TestCaseFolderId) {
-            displayError("failedReq", false, "Creating a new folder failed. Make sure your internet connection is ok," +
-              " the server is running, and you have permissions to create foldersin the selected product. Otherwise use the name of an existing folder for all test cases.")
+            displayError(ERROR_MESSAGES.failedReq, false, testCase)
             return
           }
           newFolder.Name = testCase.folderName;
@@ -578,7 +572,7 @@ const sendArtifacts = async (ArtifactTypeId, images, Artifacts, projectId, model
         let testCaseArtifact = await sendTestCase(testCase.Name, testCase.testCaseDescription,
           folder.TestCaseFolderId, projectId, model)
         if (!testCaseArtifact) {
-          displayError("failedReq", false, `Sending test cases failed on ${testCase.Name}. All previous test cases should be in spira. Check your connection and server status, then try again.`)
+          displayError(ERROR_MESSAGES.failedReq, false, testCase)
           return
         }
         //imgRegex defined at the top of the sendArtifacts function
@@ -590,14 +584,14 @@ const sendArtifacts = async (ArtifactTypeId, images, Artifacts, projectId, model
           }
           catch (err) {
             console.log(err)
-            displayError("failedImageReq", false)
+            displayError(ERROR_MESSAGES.failedReq, false, testCase)
           }
           images.shift();
         }
         for (let testStep of testCase.testSteps) {
           let step = await sendTestStep(testCaseArtifact.TestCaseId, testStep, model, projectId);
           if (!step) {
-            displayError("failedReq", false, `Sending test cases failed on ${testCase.Name}. All previous test cases should be in spira. Check your connection and server status, then try again.`)
+            displayError(ERROR_MESSAGES.failedReq, false, testCase)
             return
           }
           //these are the <img> 'placeholders' for all 3 testStep fields
@@ -611,7 +605,7 @@ const sendArtifacts = async (ArtifactTypeId, images, Artifacts, projectId, model
                 await pushImage(step, images[0], projectId, model, testCaseArtifact.TestCaseId, styles);
               }
               catch (err) {
-                displayError("failedImageReq", false)
+                displayError(ERROR_MESSAGES.failedReq, false, testCase)
               }
               images.shift();
             }
@@ -636,7 +630,7 @@ const retrieveTestCaseFolders = async (projectId, model) => {
     return callResponse.body
   }
   catch (err) {
-    displayError("failedReq", false, "Retrieving test folders failed. Check your connection and server status then try again.")
+    displayError(ERROR_MESSAGES.testCaseFolders, false)
   }
 }
 
@@ -920,7 +914,7 @@ const validateTestSteps = (tables, descStyle) => {
     }
     //if there is a table containing no test step descriptions, throws an error and stops execution
     if (!atLeastOneDesc) {
-      displayError("table", true);
+      displayError(ERROR_MESSAGES.table, true);
       return false
     }
   }
