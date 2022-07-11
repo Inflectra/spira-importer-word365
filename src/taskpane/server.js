@@ -556,7 +556,8 @@ const sendArtifacts = async (ArtifactTypeId, images, Artifacts, projectId, model
           displayError(ERROR_MESSAGES.failedReq, false, req)
         }
       }
-      hideProgressBar();
+      updateProgressBar(requirements.length, requirements.length);
+      // hideProgressBar();
       document.getElementById("send-to-spira-button").disabled = false;
       return
     }
@@ -624,7 +625,8 @@ const sendArtifacts = async (ArtifactTypeId, images, Artifacts, projectId, model
         }
         updateProgressBar(i + 1, testCases.length);
       }
-      hideProgressBar();
+      updateProgressBar(testCases.length, testCases.length);
+      // hideProgressBar();
       enableMainButtons();
     }
   }

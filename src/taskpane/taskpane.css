@@ -212,6 +212,14 @@ ul {
     background-color: #fccccc;
 }
 
+.pop-up.sending {
+    background-color: #fcfccc;
+}
+
+.pop-up.sent {
+    background-color: #ccfccc;
+}
+
 .error-message {
     color: red;
     font-weight: 700;

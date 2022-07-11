@@ -30,9 +30,12 @@
         <h3 class="header-heading">SpiraPlan Importer<br></h3>
     </header>
     <!-- error pop-up -->
-    <div id="pop-up" class="pop-up err hidden">
+    <div id="pop-up" class="pop-up hidden">
         <button type="button" id="pop-up-close" class="close">&#xD7;</button>
         <p id="pop-up-text" class="err">pop!<br></p>
+        <div id="progress-bar" class="hidden mb-md">
+            <div id="progress-bar-progress"></div>
+        </div>
         <button type="button" id="pop-up-ok" class="ok ms-Button l">Confirm</button>
     </div>
     <!--auth page-->
@@ -92,7 +95,7 @@
 
     <!--Main screen-->
     <div id="main-screen" class="hidden">
-        
+
         <div id="app-body" class="ms-welcome__main" style="display: none;">
             <button type="button" id="test">test</button>
             <p style="left: 0; margin-left: 0">1. Select the product you wish to import to:</p>
@@ -100,8 +103,7 @@
             <!--Turn this into radio buttons of some sort which fit the theming instead of dd-->
             <p id="artifact-select-text" class="mt-md hidden">2. Select the artifact type you want to import:</p>
             <div id="artifact-select" class="mt-0">
-                <button type="button" class="action artifact-button fade hidden"
-                    id="select-requirements">
+                <button type="button" class="action artifact-button fade hidden" id="select-requirements">
                     Requirements
                 </button>
                 <button type="button" class="action artifact-button fade hidden" id="select-test-cases">
@@ -167,9 +169,6 @@
                 type="button">
                 Send to Spira
             </button>
-        </div>
-        <div id="progress-bar" class="hidden">
-            <div id="progress-bar-progress"></div>
         </div>
         <div id="bottom-buttons" class="mt-lg">
             <button type="button" id="log-out" class="action ms-Button ms-Button--default fade">

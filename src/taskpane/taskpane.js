@@ -289,19 +289,31 @@ const clearDropdownElement = (element_id) => {
 }
 
 const updateProgressBar = (current, total) => {
-  const MAX_WIDTH = 80; //CURRENTLY HARDCODED TO BE the same as the width of the progress-bar CSS element
-  let width = current / total * MAX_WIDTH;
+  let width = current / total * 100;
   let bar = document.getElementById("progress-bar-progress");
   bar.style.width = width + "%";
+  if (current == total) {
+    document.getElementById('pop-up').classList.remove('sending');
+    document.getElementById('pop-up').classList.add('sent');
+    document.getElementById('pop-up-text').textContent = "Sent Artifacts!";
+  }
+  else {
+    document.getElementById('pop-up-text').textContent = `Sending ${total} Artifacts!`;
+  }
   return true
 }
 
 const showProgressBar = () => {
+  document.getElementById('pop-up').classList.remove('hidden');
+  document.getElementById('pop-up').classList.add('sending');
+  document.getElementById('pop-up-text').textContent = "Parsing Document..."
   document.getElementById("progress-bar-progress").style.width = "0%";
   document.getElementById("progress-bar").classList.remove("hidden");
 }
 
 const hideProgressBar = () => {
+  document.getElementById('pop-up').classList.remove('sending');
+  document.getElementById('pop-up').classList.remove('sent');
   document.getElementById("progress-bar-progress").style.width = "0%";
   document.getElementById("progress-bar").classList.add("hidden");
 }
