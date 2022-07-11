@@ -167,11 +167,10 @@ ul {
     z-index: 1;
     padding: .5rem;
     color: black;
-    border-radius: .5rem;
-    border-top-right-radius: 0;
     border: 1px solid #aaaaaa;
     margin: 0;
-    width: 95%;
+    width: 100%;
+    margin-top: 50px;
 }
 
 .pop-up .close {
