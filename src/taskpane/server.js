@@ -61,7 +61,6 @@ const parseArtifacts = async (ArtifactTypeId, model) => {
       await context.sync();
     }
     catch (err) {
-      console.log(selection)
       /*there is a crashing error with context.sync(), 
       if your cursor is on an empty line .getSelection() throws error and crashes
       so this handles the fallback and forces full body parsing in this senario.
@@ -85,7 +84,7 @@ const parseArtifacts = async (ArtifactTypeId, model) => {
     but I figure the application should at least just tell them thats what it looks like theyre
     trying to do and handle it without crashing the add-in.*/
     //these replaceAll's serve to remove formatting characters that are not actual text
-    if (!selection.text.replaceAll("\r", "").replaceAll("&nbsp", "").replaceAll("\t", "").replaceAll("\n", "")){
+    if (!selection.text.replaceAll("\r", "").replaceAll("&nbsp", "").replaceAll("\t", "").replaceAll("\n", "")) {
       enableMainButtons();
       displayError(ERROR_MESSAGES.empty, false)
       return false
@@ -223,7 +222,7 @@ const parseArtifacts = async (ArtifactTypeId, model) => {
               /*gets the requirement of the to be created requirement based
                on its index in the styles array.*/
               let indent = styles.indexOf(item.styleBuiltIn)
-              if (!indent) {
+              if (indent == -1) {
                 indent = styles.indexOf(item.style)
               }
               //creates new requirement and populates relevant fields 
@@ -236,7 +235,7 @@ const parseArtifacts = async (ArtifactTypeId, model) => {
               /*gets the requirement of the to be created requirement based
                on its index in the styles array.*/
               let indent = styles.indexOf(item.styleBuiltIn)
-              if (!indent) {
+              if (indent == -1) {
                 indent = styles.indexOf(item.style)
               }
               //creates new requirement and populates relevant fields 
