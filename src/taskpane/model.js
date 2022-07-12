@@ -82,7 +82,7 @@ var params = {
     validateStylesReq: "confirm-req-style-mappings",
     validateStylesTest: "confirm-test-style-mappings",
     logout: "log-out",
-    help: "help"
+    help: "btn-help-main"
   },
   // This is used to move around within the add-in UI
   pageStates: {
@@ -93,7 +93,8 @@ var params = {
     test_style: 4,
     req_send: 5,
     test_send: 6,
-    help: 7,
+    helpLogin: 7,
+    helpMain: 8,
     dev: 42
   }
 }
