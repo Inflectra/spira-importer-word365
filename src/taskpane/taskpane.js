@@ -40,18 +40,21 @@ const setDefaultDisplay = () => {
 }
 
 const setEventListeners = () => {
+  let states = params.pageStates;
   document.getElementById('test').onclick = () => test();
   document.getElementById('btn-login').onclick = async () => await loginAttempt();
-  document.getElementById('dev-mode').onclick = () => goToState(params.pageStates.dev);
+  document.getElementById('dev-mode').onclick = () => goToState(states.dev);
   document.getElementById('send-to-spira-button').onclick = async () => await pushArtifacts();
-  document.getElementById('log-out').onclick = () => goToState(params.pageStates.authentication);
+  document.getElementById('log-out').onclick = () => goToState(states.authentication);
   document.getElementById("select-requirements").onclick = () => openStyleMappings("req-");
   document.getElementById("select-test-cases").onclick = () => openStyleMappings("test-");
   document.getElementById("confirm-req-style-mappings").onclick = () => confirmStyleMappings('req-');
   document.getElementById("confirm-test-style-mappings").onclick = () => confirmStyleMappings('test-');
-  document.getElementById('project-select').onchange = () => goToState(params.pageStates.artifact);
+  document.getElementById('project-select').onchange = () => goToState(states.artifact);
   document.getElementById("pop-up-close").onclick = () => hideElement("pop-up");
   document.getElementById("pop-up-ok").onclick = () => hideElement('pop-up');
+  document.getElementById("btn-help-login").onclick = () => goToState(states.helpLogin);
+  document.getElementById("btn-help-main").onclick = () => goToState(states.helpMain);
 }
 
 /****************
@@ -394,9 +397,8 @@ const goToState = (state) => {
       clearErrors();
       break;
     case (states.projects):
-      addDefaultProject();
-
-      // rest of what happens to the UI when you log in
+      hideElement('panel-auth');
+      showElement('main-screen');
       break;
     case (states.artifact):
       // Show artifact text and buttons
@@ -418,7 +420,24 @@ const goToState = (state) => {
       devOption.value = null;
       document.getElementById("project-select").add(devOption);
       break;
-
+    case (states.helpLogin):
+      // moves us to the help screen and makes the back button take us to the login page
+      hideElement('panel-auth');
+      showElement('help-screen');
+      document.getElementById('btn-help-back').onclick = () => {
+        hideElement('help-screen');
+        goToState(states.authentication);
+      };
+      break;
+    case (states.helpMain):
+      // moves us to the help screen and makes the back button take us to the project select page
+      hideElement('main-screen');
+      showElement('help-screen');
+      document.getElementById('btn-help-back').onclick = () => {
+        hideElement('help-screen');
+        goToState(states.projects);
+      }
+      break;
   }
 }
 

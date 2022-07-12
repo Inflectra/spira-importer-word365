@@ -174,8 +174,31 @@
             <button type="button" id="log-out" class="action ms-Button ms-Button--default fade">
                 <span class="ms-Button-label">Log-Out</span>
             </button>
-            <button type="button" id="help" class="action ms-Button ms-Button--default fade">
+            <button type="button" id="btn-help-main" class="action ms-Button ms-Button--default fade">
                 <span class="ms-Button-label">Help</span>
+            </button>
+        </div>
+    </div>
+    <!-- Help Screen -->
+    <div id="help-screen" class="hidden">
+        <button class="ms-Button ms-Button--default flex" id="btn-help-back" type="button">
+            Back
+        </button>
+        <h3>Quick Help Guide</h3>
+        <p class="mt-0">For more information see our
+            <a target="https://spiradoc.inflectra.com/Migration-and-Integration/Importing-from-Microsoft-Word/">
+                documentation. This add-in is for Word 2016+.
+            </a>
+        </p>
+        <div id="help-buttons" class="flex">
+            <button class="btn-help ms-Button ms-Button--default " id="btn-help-section-login" title="Help with the login screen" type="button">
+                Login
+            </button> 
+            <button class="btn-help ms-Button ms-Button--default" id="btn-help-section-modes" title="Which mode of the add-in is right for you" type="button">
+                Modes
+            </button> 
+            <button class="btn-help ms-Button ms-Button--default" id="btn-help-section-versions" title="Help with working with using different versions of the add-in" type="button">
+                Issues
             </button>
         </div>
     </div>

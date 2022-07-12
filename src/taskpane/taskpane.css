@@ -290,6 +290,7 @@ ul {
     text-align: left;
     margin-top: 50px;
     overflow-y: auto;
+    /* padding: 1rem; */
 }
 #progress-bar {
     margin-left: auto;
@@ -354,6 +355,18 @@ ul {
     margin-left: 2.5%;
     margin-top: 5%;
     margin-bottom: 3%;
+}
+
+#help-screen {
+    height: calc(100vh - 100px);
+    width: 100%;
+    justify-content: start;
+    flex-direction: column;
+    text-align: left;
+    margin-top: 50px;
+    padding: 1rem;
+    overflow-y: auto;
+    position: absolute;
 }
 
 .tooltip {
@@ -428,17 +441,19 @@ ul {
     color:black;
 }
 
-.ms-Button--primary, 
+.ms-Button--default.activated,
 .artifact-button.activated,
 .artifact-button:focus {
     background-color: #0078d7;
-}
-
-.artifact-button.activated,
-.artifact-button:focus {
     cursor: default;
     color: white !important;
 }
+
+.ms-Button--primary {
+    color: white;
+    font-weight: 600;
+}
+
 
 /*MS DEFAULT CLASSES*/
 .ms-welcome__header {
