@@ -306,7 +306,7 @@ const parseArtifacts = async (ArtifactTypeId, model, versionSupport) => {
           requirements = false
           enableMainButtons();
           //throw hierarchy error and exit function
-          displayError(ERROR_MESSAGES.hierarchy, true)
+          displayError(ERROR_MESSAGES.hierarchy, false)
           return
         }
         clearErrors();
@@ -524,7 +524,7 @@ const sendArtifacts = async (ArtifactTypeId, images, Artifacts, projectId, model
   //this checks if an empty artifact array is passed in (should never happen)
   if (Artifacts.length == 0) {
     //empty is the error message key for the model object.
-    displayError(ERROR_MESSAGES.empty, true);
+    displayError(ERROR_MESSAGES.empty, false);
     enableButton(params.buttonIds.sendToSpira)
     return
   }
@@ -569,13 +569,13 @@ const sendArtifacts = async (ArtifactTypeId, images, Artifacts, projectId, model
             await pushImage(call.data, images[0], projectId, model)
             images.shift();
           }
-          updateProgressBar(i + 1, requirements.length);
+          updateProgressBar(i + 2, requirements.length + 1);
         }
         catch (err) {
           displayError(ERROR_MESSAGES.failedReq, false, req)
         }
       }
-      updateProgressBar(requirements.length, requirements.length);
+      updateProgressBar(requirements.length + 1, requirements.length + 1);
       // hideProgressBar();
       document.getElementById("send-to-spira-button").disabled = false;
       return
@@ -644,7 +644,7 @@ const sendArtifacts = async (ArtifactTypeId, images, Artifacts, projectId, model
         }
         updateProgressBar(i + 1, testCases.length);
       }
-      updateProgressBar(testCases.length, testCases.length);
+      updateProgressBar(testCases.length + 1, testCases.length + 1);
       // hideProgressBar();
       enableMainButtons();
     }
@@ -945,7 +945,7 @@ const validateTestSteps = (tables, descStyle) => {
     }
     //if there is a table containing no test step descriptions, throws an error and stops execution
     if (!atLeastOneDesc) {
-      displayError(ERROR_MESSAGES.table, true);
+      displayError(ERROR_MESSAGES.table, false);
       return false
     }
   }

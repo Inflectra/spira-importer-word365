@@ -236,7 +236,7 @@ const confirmStyleMappings = async (pageTag) => {
       }
       //gives an error explaining they have duplicate style mappings and cannot proceed.
       else {
-        displayError(ERROR_MESSAGES.duplicateStyles, true)
+        displayError(ERROR_MESSAGES.duplicateStyles)
         //hides the final button if it is already displayed when a user inputs invalid styles.
         hideElement('send-to-spira');
         return
@@ -245,7 +245,7 @@ const confirmStyleMappings = async (pageTag) => {
     }
     //gives an error explaining they have empty style mappings.
     else {
-      displayError(ERROR_MESSAGES.emptyStyles, true)
+      displayError(ERROR_MESSAGES.emptyStyles)
       return
     }
   }
@@ -283,11 +283,15 @@ const updateProgressBar = (current, total) => {
   if (current == total) {
     document.getElementById('pop-up').classList.remove('sending');
     document.getElementById('pop-up').classList.add('sent');
-    document.getElementById('pop-up-text').textContent = "Sent Artifacts!";
+    document.getElementById('pop-up-text').textContent = `Sent ${total} 
+    ${document.getElementById('select-requirements').classList.contains('activated') ?
+      "Requirements!" : "Test Cases!"}`;
     enableButton('pop-up-ok');
   }
   else {
-    document.getElementById('pop-up-text').textContent = `Sending ${total} Artifacts!`;
+    document.getElementById('pop-up-text').textContent = `Sending ${total} 
+    ${document.getElementById('select-requirements').classList.contains('activated') ?
+      "Requirements!" : "Test Cases!"}`;
   }
   return true
 }
@@ -295,6 +299,8 @@ const updateProgressBar = (current, total) => {
 const showProgressBar = () => {
   disableButton('pop-up-ok');
   showElement('pop-up');
+  document.getElementById('pop-up').classList.remove('sent');
+  document.getElementById('pop-up').classList.remove('err');
   document.getElementById('pop-up').classList.add('sending');
   document.getElementById('pop-up-text').textContent = "Parsing Document..."
   document.getElementById("progress-bar-progress").style.width = "0%";

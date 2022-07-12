@@ -167,22 +167,21 @@ ul {
     z-index: 1;
     padding: .5rem;
     color: black;
-    border: 1px solid #aaaaaa;
-    margin: 0;
-    width: 100%;
+    border: 1px solid #eeeeee;
+    width: 90%;
+    margin: 0 1.5rem 0 0.5rem;
     margin-top: 50px;
 }
 
 .pop-up .close {
-    margin-top: -0.5rem;
-    margin-right: -0.5rem;
+    /* margin-top: -0.5rem; */
     padding: 0 0 0.25rem;
     font-size: 1.5rem;
     color: black;
     line-height: 0.85rem;
     float:right;
-    border: solid #aaaaaa 1.5px;
-    background-color: #ff8888;
+    border: none;
+    background: none;
 }
 
 .pop-up .r {
@@ -196,7 +195,6 @@ ul {
 }
 
 .pop-up .ok.ms-Button {
-    margin-bottom: -0.5rem;
     min-width: 0;
 }
 
@@ -205,19 +203,22 @@ ul {
 }
 
 .pop-up .ok.ms-Button.l {
-    margin-left: -0.5rem;
+    margin-left: 0;
 }
 
 .pop-up.err{
-    background-color: #fccccc;
+    background-color: #feeeee;
+    border-color: #fddddd;
 }
 
 .pop-up.sending {
-    background-color: #fcfccc;
+    background-color: #fefeee;
+    border-color: #fdfddd;
 }
 
 .pop-up.sent {
-    background-color: #ccfccc;
+    background-color: #f7fff7;
+    border-color: #cceecc;
 }
 
 .error-message {
@@ -295,15 +296,15 @@ ul {
 #progress-bar {
     margin-left: auto;
     margin-right: auto;
-    outline: 1px solid black;
     width: 80%;
-    background-color: rgb(218, 218, 218);
+    background-color: #eeeeee;
 }
 
 #progress-bar-progress {
     width: 1%;
-    height: 12px;
+    height: 15px;
     background-color:rgb(96, 236, 96);
+    transition: 0.5s;
 }
 
 #bottom-buttons, #artifact-select {
