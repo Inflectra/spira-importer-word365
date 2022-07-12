@@ -59,6 +59,9 @@ const setEventListeners = () => {
   document.getElementById("pop-up-ok").onclick = () => hideElement('pop-up');
   document.getElementById("btn-help-login").onclick = () => goToState(states.helpLogin);
   document.getElementById("btn-help-main").onclick = () => goToState(states.helpMain);
+  document.getElementById(params.buttonIds.helpLogin).onclick = () => openHelpSection(params.buttonIds.helpLogin);
+  document.getElementById(params.buttonIds.helpModes).onclick = () => openHelpSection(params.buttonIds.helpModes);
+  document.getElementById(params.buttonIds.helpVersions).onclick = () => openHelpSection(params.buttonIds.helpVersions);
 }
 
 /****************
@@ -285,13 +288,13 @@ const updateProgressBar = (current, total) => {
     document.getElementById('pop-up').classList.add('sent');
     document.getElementById('pop-up-text').textContent = `Sent ${total} 
     ${document.getElementById('select-requirements').classList.contains('activated') ?
-      "Requirements!" : "Test Cases!"}`;
+        "Requirements!" : "Test Cases!"}`;
     enableButton('pop-up-ok');
   }
   else {
     document.getElementById('pop-up-text').textContent = `Sending ${total} 
     ${document.getElementById('select-requirements').classList.contains('activated') ?
-      "Requirements!" : "Test Cases!"}`;
+        "Requirements!" : "Test Cases!"}`;
   }
   return true
 }
@@ -433,6 +436,20 @@ const goToState = (state) => {
       }
       break;
   }
+}
+
+//section is the Html id of the help section selected
+const openHelpSection = (buttonId) => {
+  for (let buttonId of params.collections.helpButtons){
+    document.getElementById(buttonId).classList.remove('activated')
+  }
+  let section = buttonId.replace("btn-", "")
+  document.getElementById(buttonId).classList.add('activated')
+  //hides the help sections before showing the relevant one
+  for (let section of params.collections.helpSections) {
+    hideElement(section)
+  }
+  showElement(section)
 }
 
 const addDefaultProject = () => {

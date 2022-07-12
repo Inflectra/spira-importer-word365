@@ -586,7 +586,7 @@ const sendArtifacts = async (ArtifactTypeId, images, Artifacts, projectId, model
       for (let [i, testCase] of testCases.entries()) {
         let folder = testCaseFolders.find(folder => folder.Name == testCase.folderName)
         //if the folder doesnt exist, create a new folder on spira
-        if (!folder) {
+        if (!folder && testCase.folderName) {
           let newFolder = {}
           newFolder.TestCaseFolderId = await createTestCaseFolder(testCase.folderName,
             testCase.folderDescription, projectId, model);
@@ -597,6 +597,10 @@ const sendArtifacts = async (ArtifactTypeId, images, Artifacts, projectId, model
           newFolder.Name = testCase.folderName;
           folder = newFolder
           testCaseFolders.push(newFolder);
+        }
+        //if the name is empty for the folder, set it as null (root directory)
+        else if (!testCase.folderName){
+          folder.TestCAseFolderId = null
         }
         //this returns the full test case object response
         let testCaseArtifact = await sendTestCase(testCase.Name, testCase.testCaseDescription,

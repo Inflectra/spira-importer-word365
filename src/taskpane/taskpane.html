@@ -191,15 +191,52 @@
             </a>
         </p>
         <div id="help-buttons" class="flex">
-            <button class="btn-help ms-Button ms-Button--default " id="btn-help-section-login" title="Help with the login screen" type="button">
+            <button class="btn-help ms-Button ms-Button--default " id="btn-help-section-login"
+                title="Help with the login screen" type="button">
                 Login
-            </button> 
-            <button class="btn-help ms-Button ms-Button--default" id="btn-help-section-modes" title="Which mode of the add-in is right for you" type="button">
+            </button>
+            <button class="btn-help ms-Button ms-Button--default" id="btn-help-section-modes"
+                title="Which mode of the add-in is right for you" type="button">
                 Modes
-            </button> 
-            <button class="btn-help ms-Button ms-Button--default" id="btn-help-section-versions" title="Help with working with using different versions of the add-in" type="button">
+            </button>
+            <button class="btn-help ms-Button ms-Button--default" id="btn-help-section-versions"
+                title="Help with working with using different versions of the add-in" type="button">
                 Issues
             </button>
+        </div>
+        <div id="help-section-login" class="help-section hidden">
+            <h4>1. Connect to your Spira app</h4>
+            <p id="help-connection-google">You can use this add-on with SpiraTest®, SpiraTeam®, or SpiraPlan®. It works
+                with any cloud Spira app. Any on premise Spira needs to be accessible over the internet.</p>
+            <p id="help-connection-excel">You can use this add-on with SpiraTest®, SpiraTeam®, or SpiraPlan®. If you are
+                using Excel in the browser, your Spira app needs to be accessible over the internet.</p>
+            <ol class="list">
+                <li>
+                    <p><b>Enter your SpiraTeam URL</b></p>
+                    <small>Use the web address you use to access Spira in your browser. This is usually of the form
+                        'http://(company).spiraservice.net'. Make sure you remove any suffixes from the address (e.g.
+                        Default.aspx or "/")</small>
+                </li>
+                <li>
+                    <p><b>Enter your username</b></p>
+                    <small>
+                        This is the exact same username you use to log in to Spira. (Not Case Sensitive)
+                    </small>
+                </li>
+                <li>
+                    <p><b>Enter your RSS token</b></p>
+                    <small>You can find or generate this from your user profile page inside Spira - <a
+                            href="http://spiradoc.inflectra.com/HowTo-Guides/Users-profile-management/#how-to-get-or-make-your-rss-token-or-api-key">read
+                            how to do so here</a>. Make sure to include
+                        the curly braces - {ExampleRSS}</small>
+                </li>
+            </ol>
+        </div>
+        <div id="help-section-modes" class="help-section hidden">
+            <h1>Work in progress :)</h1>
+        </div>
+        <div id="help-section-versions" class="help-section hidden">
+            <h1>Work in progress :)</h1>
         </div>
     </div>
     <!-- footer -->

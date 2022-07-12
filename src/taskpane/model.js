@@ -82,7 +82,10 @@ var params = {
     validateStylesReq: "confirm-req-style-mappings",
     validateStylesTest: "confirm-test-style-mappings",
     logout: "log-out",
-    help: "btn-help-main"
+    help: "btn-help-main",
+    helpLogin: "btn-help-section-login",
+    helpModes: "btn-help-section-modes",
+    helpVersions: "btn-help-section-versions"
   },
   // This is used to move around within the add-in UI
   pageStates: {
@@ -96,6 +99,19 @@ var params = {
     helpLogin: 7,
     helpMain: 8,
     dev: 42
+  },
+  //these are collections of parameters that are likely to be used as groups
+  collections: {
+    helpButtons: [
+      "btn-help-section-login",
+      "btn-help-section-modes",
+      "btn-help-section-versions"
+    ],
+    helpSections: [
+      "help-section-login",
+      "help-section-modes",
+      "help-section-versions"
+    ]
   }
 }
 
@@ -174,10 +190,10 @@ var ERROR_MESSAGES = {
   failedReq: { htmlId: "pop-up-text", message: "" },
   duplicateStyles: { htmlId: "pop-up-text", message: "You currently have multiple mappings set to the same style. Please only use each style once." },
   emptyStyles: { htmlId: "pop-up-text", message: "You currently have unselected styles. Please provide a style for all provided inputs." },
-  failedImageReq: { htmlId: "pop-up-text", message: "Sending artifacts failed on sending an image. Sending artifacts will continue until a fatal error occurs. Some images may not appear in Spira."},
-  testCaseFolders: { htmlId: "pop-up-text", message: "Loading or retriving test case folders failed. If retrieving failed, you may still have your test cases imported in a new folder."},
+  failedImageReq: { htmlId: "pop-up-text", message: "Sending artifacts failed on sending an image. Sending artifacts will continue until a fatal error occurs. Some images may not appear in Spira." },
+  testCaseFolders: { htmlId: "pop-up-text", message: "Loading or retriving test case folders failed. If retrieving failed, you may still have your test cases imported in a new folder." },
   //this will be an info message - not an error (but can be in certain edge cases, see first catch block in parseArtifacts)
-  invalidSelection: { htmlId: "pop-up-text", message: "It appears you have no text selected. the importer will proceed by parsing the full document."}
+  invalidSelection: { htmlId: "pop-up-text", message: "It appears you have no text selected. the importer will proceed by parsing the full document." }
 }
 
 export { Data, params, templates, ERROR_MESSAGES }
