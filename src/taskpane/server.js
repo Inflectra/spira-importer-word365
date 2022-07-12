@@ -8,7 +8,8 @@ axios.defaults.headers.put['accept'] = "application/json"
 export {
   parseArtifacts,
   loginCall,
-  retrieveStyles
+  retrieveStyles,
+  updateSelectionArray
 }
 
 import { Data, ERROR_MESSAGES, params, templates } from './model.js'
@@ -40,13 +41,14 @@ import {
 var RETRIEVE = "http://localhost:5000/retrieve"
 
 //params:
-//ArtifactTypeId: ID based on params.artifactEnums.{artifact-type}
-//model: user model object based on Data() model. (contains user credentials)
+//ArtifactTypeId: Int - ID based on params.artifactEnums.{artifact-type}
+//model: Object - user model object based on Data() model. (contains user credentials)
+//versionSupport: boolean - expresses if the user supports version 1.3. If not, skips 1.3 functionality
 
 /*This function takes in an ArtifactTypeId and parses the selected text or full body
 of a document, returning digestable objects which can easily be used to send artifacts
 to spira.*/
-const parseArtifacts = async (ArtifactTypeId, model) => {
+const parseArtifacts = async (ArtifactTypeId, model, versionSupport) => {
   return Word.run(async (context) => {
     disableMainButtons();
     /***************************
@@ -54,7 +56,10 @@ const parseArtifacts = async (ArtifactTypeId, model) => {
      **************************/
     let projectId = document.getElementById("project-select").value
     let selection = context.document.getSelection();
-    let splitSelection = context.document.getSelection().split(['\r']);
+    let splitSelection = context.document.getSelection().paragraphs;
+    if (versionSupport) {
+      splitSelection = context.document.getSelection().split(['\r'])
+    }
     context.load(splitSelection, ['text', 'inlinePictures', 'style', 'styleBuiltIn'])
     context.load(selection, ['text', 'inlinePictures', 'style', 'styleBuiltIn']);
     try {
@@ -73,8 +78,16 @@ const parseArtifacts = async (ArtifactTypeId, model) => {
     }
     //If there is no selected area, parse the full body of the document instead
     if (!selection.text) {
-      selection = context.document.body.getRange();
-      splitSelection = context.document.body.getRange().split(['\r']);
+      //.getRange is an API v1.3 function. It is only needed for .expandTo calls. paragraphs can handle the rest.
+      if (versionSupport) {
+        selection = context.document.body.getRange();
+        splitSelection = context.document.body.getRange().split(['\r'])
+      }
+      else {
+        selection = context.document.body
+        splitSelection = context.document.body.paragraphs;
+      }
+
       context.load(selection, ['text', 'inlinePictures', 'style', 'styleBuiltIn']);
       context.load(splitSelection, ['text', 'inlinePictures', 'style', 'styleBuiltIn'])
       await context.sync();
@@ -113,69 +126,73 @@ const parseArtifacts = async (ArtifactTypeId, model) => {
       //removes the first item in imageLines as it has been converted to an imageObject;
       imageLines.shift();
     }
+    console.log(imageObjects)
     //end of image formatting
     /*************************
      Start list parsing
      *************************/
-    let lists = selection.lists
-    context.load(lists)
-    await context.sync();
-    let formattedLists = []
-    let formattedSingleItemLists = []
-    for (let list of lists.items) {
-      context.load(list)
-      context.sync();
-      // Inner array to store the elements of each list
-      let newList = [];
-      //set up accessing the paragraphs of a list
-      context.load(list, ['paragraphs'])
+    //lists are not supported in API version 1.1
+    if (versionSupport) {
+      let lists = selection.lists
+      context.load(lists)
       await context.sync();
-      let paragraphs = list.paragraphs;
-      context.load(paragraphs);
-      await context.sync();
-      for (let paragraph of paragraphs.items) {
-        context.load(paragraph)
+      var formattedLists = []
+      var formattedSingleItemLists = []
+      for (let list of lists.items) {
+        context.load(list)
+        context.sync();
+        // Inner array to store the elements of each list
+        let newList = [];
+        //set up accessing the paragraphs of a list
+        context.load(list, ['paragraphs'])
         await context.sync();
-        let listItem = paragraph.listItemOrNullObject
-        context.load(listItem, ['level', 'listString'])
+        let paragraphs = list.paragraphs;
+        context.load(paragraphs);
         await context.sync();
-        /*this covers odd formats with long listStrings (hover listString for details).
-        The "false" newList will get pushed, and serve as a "skip this one" flag for 
-        the later function which places formatted lists into the description.*/
-        if (paragraph.listItemOrNullObject.listString.length > 5 || (newList == false && typeof newList == 'boolean')) {
-          newList = false
-          continue
-        }
-        let html = paragraph.getHtml();
-        await context.sync();
-        let pRegex = params.regexs.paragraphRegex
-        let match = html.m_value.match(pRegex)
-        html = match[0]
-        let spanMatch = html.match(params.regexs.listSpanRegex)
-        if (spanMatch) {
-          html = html.replace(spanMatch[0], "")
-        }
-        let pTagMatches = [...html.matchAll(params.regexs.pTagRegex)]
-        if (pTagMatches) {
-          for (let matchList of pTagMatches) {
-            html = html.replace(matchList[0], "")
+        for (let paragraph of paragraphs.items) {
+          context.load(paragraph)
+          await context.sync();
+          let listItem = paragraph.listItemOrNullObject
+          context.load(listItem, ['level', 'listString'])
+          await context.sync();
+          /*this covers odd formats with long listStrings (hover listString for details).
+          The "false" newList will get pushed, and serve as a "skip this one" flag for 
+          the later function which places formatted lists into the description.*/
+          if (paragraph.listItemOrNullObject.listString.length > 5 || (newList == false && typeof newList == 'boolean')) {
+            newList = false
+            continue
           }
+          let html = paragraph.getHtml();
+          await context.sync();
+          let pRegex = params.regexs.paragraphRegex
+          let match = html.m_value.match(pRegex)
+          html = match[0]
+          let spanMatch = html.match(params.regexs.listSpanRegex)
+          if (spanMatch) {
+            html = html.replace(spanMatch[0], "")
+          }
+          let pTagMatches = [...html.matchAll(params.regexs.pTagRegex)]
+          if (pTagMatches) {
+            for (let matchList of pTagMatches) {
+              html = html.replace(matchList[0], "")
+            }
+          }
+          if (listItem.listString.match(params.regexs.orderedListRegex)) {
+            /*the second level unordered list listString is literally an o (letter O)
+            So this prevents that from unintentionally removing an o from the users sentence*/
+            html = html.replace(listItem.listString, "")
+          }
+          newList.push(new templates.ListItem(html, listItem.level))
         }
-        if (listItem.listString.match(params.regexs.orderedListRegex)) {
-          /*the second level unordered list listString is literally an o (letter O)
-          So this prevents that from unintentionally removing an o from the users sentence*/
-          html = html.replace(listItem.listString, "")
+        //single item lists need to be parsed differently than multi item ones
+        if (paragraphs.items.length == 1) {
+          formattedSingleItemLists.push(newList)
         }
-        newList.push(new templates.ListItem(html, listItem.level))
+        else {
+          formattedLists.push(newList)
+        }
+        newList = []
       }
-      //single item lists need to be parsed differently than multi item ones
-      if (paragraphs.items.length == 1) {
-        formattedSingleItemLists.push(newList)
-      }
-      else {
-        formattedLists.push(newList)
-      }
-      newList = []
     }
     //end of list parsing
     /**********************
@@ -203,7 +220,10 @@ const parseArtifacts = async (ArtifactTypeId, model) => {
               descEnd = body.items[i - 1]
               /*creates a description range given the beginning 
               and end as delimited by lines with mapped styles*/
-              let descRange = descStart.expandTo(descEnd)
+              let descRange;
+              if (versionSupport) {
+                descRange = descStart.expandTo(descEnd)
+              }
               context.load(descRange)
               await context.sync();
               //descRange is null if the descEnd is not valid to extend the descStart
@@ -1147,3 +1167,25 @@ const loginCall = async (apiUrl) => {
   return response
 }
 
+async function updateSelectionArray() {
+  return Word.run(async (context) => {
+    //check for highlighted text  
+    //splits the selected areas by enter-based indentation. 
+    let selection = context.document.body
+    context.load(selection, 'text');
+    await context.sync();
+    selection = context.document.body.paragraphs
+    //loads the text, style elements, and any images from a given line
+    context.load(selection, ['text', 'styleBuiltIn', 'style'])
+    await context.sync();
+    // Testing parsing lines of text from the selection array and logging it
+    let lines = []
+    selection.items.forEach((item) => {
+      lines.push({
+        text: item.text, style: (item.styleBuiltIn == "Other" ? item.style : item.styleBuiltIn),
+        custom: (item.styleBuiltIn == "Other")
+      })
+    })
+    return lines
+  })
+}

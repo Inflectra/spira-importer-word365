@@ -14,7 +14,8 @@ import { Data, params, templates, ERROR_MESSAGES } from './model'
 import {
   parseArtifacts,
   loginCall,
-  retrieveStyles
+  retrieveStyles,
+  updateSelectionArray
 } from './server'
 
 // Global selection array, used throughout
@@ -23,6 +24,7 @@ values from within due to the required syntax of returning a Word.run((callback)
 function. */
 var model = new Data();
 var SELECTION = [];
+var versionSupport;
 //setting a user object to maintain credentials when using other parts of the add-in
 
 Office.onReady((info) => {
@@ -30,6 +32,8 @@ Office.onReady((info) => {
     setDefaultDisplay();
     setEventListeners();
     document.body.classList.add('ms-office');
+    //This checks if a users Word versions supports WordApi 1.3, then sets this in a global variable
+    versionSupport = Office.context.requirements.isSetSupported("WordApi", "1.3")
     // this element doesn't currently exist
     // document.getElementById("help-connection-google").style.display = "none";
   }
@@ -62,27 +66,8 @@ Testing Functions
 *****************/
 //basic testing function for validating code snippet behaviour.
 async function test() {
-  return Word.run(async (context) => {
-    let body = context.document.getSelection();
-    let tables = context.document.body.tables
-    context.load(body)
-    context.load(tables)
-    await context.sync();
-    console.log('table')
-    console.log(tables.items[0])
-    try {
-      let intersection = body.intersectWith(tables.items[0].getRange())
-      context.load(intersection)
-      await context.sync();
-      console.log('intersection')
-      console.log(intersection)
-    }
-    catch (err) { console.log(err) }
-    let fullBody = context.document.body
-    context.load(fullBody, ['text'])
-    await context.sync();
-    console.log(fullBody.text)
-  })
+  let selection = await updateSelectionArray();
+  console.log(selection)
 }
 
 /**************
@@ -326,11 +311,14 @@ const hideProgressBar = () => {
 const displayError = (error, timeOut, failedArtifact) => {
   //We may want to update this to pass in the full object for better readability
   //rather than just passing in the key. (ie. instead of key, pass ERROR_MESSAGES['key'])
+  console.log('got called'
+  )
   let element = document.getElementById(error.htmlId);
   hideProgressBar();
   enableButton('pop-up-ok');
-  document.getElementById('pop-up').classList.add('err')
+  document.getElementById('pop-up').classList.add('err');
   showElement('pop-up')
+  console.log("getting in")
   if (timeOut) {
     element.textContent = error.message;
     setTimeout(() => {
@@ -456,49 +444,12 @@ const showElement = (element_id) => {
   document.getElementById(element_id).classList.remove('hidden');
 }
 
-/********************
-Word/Office API calls
-********************/
-
-/* Get an Array of {text, style} objects from the user's selected text, delimited by /r
- (/r is the plaintext version of a new line started by enter)*/
-export async function updateSelectionArray() {
-  return Word.run(async (context) => {
-    //check for highlighted text
-    //splits the selected areas by enter-based indentation. 
-    let selection = context.document.getSelection();
-    context.load(selection, 'text');
-    await context.sync();
-    if (selection.text) {
-      selection = context.document.getSelection().split(['/r'])
-      //loads the text, style elements, and any images from a given line
-      context.load(selection, ['text', 'styleBuiltIn', 'style', 'inlinePictures'])
-      await context.sync();
-    }
-
-    // if nothing is selected, select the entire body of the document
-    else {
-      selection = context.document.body.getRange().split(['/r']);
-      context.load(selection, ['text', 'styleBuiltIn', 'style', 'inlinePictures'])
-      await context.sync();
-    }
-    // Testing parsing lines of text from the selection array and logging it
-    let lines = []
-    selection.items.forEach((item) => {
-      lines.push({
-        text: item.text, style: (item.styleBuiltIn == "Other" ? item.style : item.styleBuiltIn),
-        custom: (item.styleBuiltIn == "Other"), images: item.inlinePictures
-      })
-    })
-    SELECTION = lines;
-    return
-  })
-}
-
 /*********************
 Pure data manipulation
 **********************/
 
+//This is the initialization call that determines the artifactType id based on user selection
+//before passing off to parseArtifacts() in server.js.
 const pushArtifacts = async () => {
   let active = document.getElementById("test-style-mappings").classList.contains('hidden')
   //if the requirements style mappings are visible that is the selected artifact.
@@ -507,7 +458,7 @@ const pushArtifacts = async () => {
     artifactType = params.artifactEnums.requirements
   }
   disableMainButtons();
-  await parseArtifacts(artifactType, model);
+  await parseArtifacts(artifactType, model, versionSupport);
   enableMainButtons();
 }
 
@@ -538,6 +489,7 @@ const trimStyles = async (styles, prevStyles) => {
 /* Returns the array of all used styles in the selection */
 const usedStyles = async () => {
   let styles = [];
+  //this is an old method, but makes sense to use here as this occurs before the user 
   await updateSelectionArray();
   for (let i = 0; i < SELECTION.length; i++) {
     //normal is a reserved style for descriptions of requirements
