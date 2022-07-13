@@ -98,7 +98,8 @@
 
         <div id="app-body" class="ms-welcome__main" style="display: none;">
             <button type="button" id="test">test</button>
-            <p id="product-select-text" style="left: 0; margin-left: 0" class="bold">1. Select the product you wish to import to:</p>
+            <p id="product-select-text" style="left: 0; margin-left: 0" class="bold">1. Select the product you wish to
+                import to:</p>
             <select id="product-select" class="selectors"></select>
             <!--Turn this into radio buttons of some sort which fit the theming instead of dd-->
             <p id="artifact-select-text" class="mt-md hidden">2. Select the artifact type you want to import:</p>
@@ -235,7 +236,7 @@
         <div id="help-section-guide" class="help-section hidden">
             <h4>1. Select the project you wish to import to</h4>
             <h4>2. Select the desired artifact type</h4>
-            <p>You can import both Requirements and Test Cases to SpiraTest®, SpiraTeam®, or SpiraPlan® from this tool. 
+            <p>You can import both Requirements and Test Cases to SpiraTest®, SpiraTeam®, or SpiraPlan® from this tool.
                 The expected formatting of your document will vary depending on the selected Artifact.
             </p>
             <h4>3. Select the styles used within your document</h4>
@@ -245,29 +246,77 @@
                     <p><b>Requirements:</b></p>
                     <small>Each style represents a deeper level of indentation within spira, and a
                         parent child relationship between them. Indent Level 1 is fully outdented, while
-                        the rest represent the level of indentation of each subsequent style. You may only 
-                        increase the indentation by 1 level per requirement when compared to the previous 
+                        the rest represent the level of indentation of each subsequent style. You may only
+                        increase the indentation by 1 level per requirement when compared to the previous
                         requirement in your document. You may however outdent as you please. (e.g. having an
-                        indent level 1 requirement as the first requirement means the second one can only be 
-                        indent level 1 or 2 - but from indent level 4, your next requirement can be at any 
+                        indent level 1 requirement as the first requirement means the second one can only be
+                        indent level 1 or 2 - but from indent level 4, your next requirement can be at any
                         indent level.) Text which is not any of the configured styles will be uploaded as the
                         description for the requirement name it is under in your Word document.</small>
                 </li>
                 <li>
                     <p><b>Test Cases:</b></p>
-                    <small>For test cases, there are 2 sections of selectors. The first one is the styles used to 
-                        represent the name of the folder that test cases are in, and the name of the test cases themselves.
-                        The second one determines how tables will be turned into test steps for the appropriate test case.
-                        The column number represents the column from the left that a certain type of infomration is expected
-                        in. For example, if the first column of your table has test step descriptions, you would select 
-                        "column 1" for Descriptions. Any text that is not any of the configured styles or within a table will be
+                    <small>For test cases, there are 2 sections of selectors. The first one is the styles used to
+                        represent the name of the folder that test cases are in, and the name of the test cases
+                        themselves.
+                        The second one determines how tables will be turned into test steps for the appropriate test
+                        case.
+                        The column number represents the column from the left that a certain type of infomration is
+                        expected
+                        in. For example, if the first column of your table has test step descriptions, you would select
+                        "column 1" for Descriptions. Any text that is not any of the configured styles or within a table
+                        will be
                         put as the description of the previously named test case when uploaded.
                     </small>
                 </li>
             </ol>
         </div>
         <div id="help-section-versions" class="help-section hidden">
-            <h1>Work in progress :)</h1>
+            <p>In case you run into any issues while using this addin, review the functionality
+                listed here 
+            </p>
+            <h4>Issues with Sending Requirements</h4>
+            <ul class="list">
+                <li>
+                    <small>
+                        If you are sending multiple requirements in one selection, you must make
+                        sure that the first requirement has a style that is set to Indent level 1
+                        and there are no hierarchy skips within the requirements. That is, each
+                        requirement must be at most 1 indent level higher than the one preceding it.
+                    </small>
+                </li>
+                <li>
+                    <small>
+                        If you don't have any text selected, then the importer will attempt to send
+                        your entire document according to your style mappings selection, and that
+                        may not be your intent.
+                    </small>
+                </li>
+                <li>
+                    <small>
+                        If you select only a single requirement, it will be sent and maximally outdented
+                        as long as its style fits one of the style mapping indent levels. This may be
+                        useful if you miss a requirement and want to send it without worrying about
+                        switching up your style mappings to do so. Just remember to move the requirement
+                        in Spira if it is supposed to be a child of something else.
+                    </small>
+                </li>
+            </ul>
+            <h4>Issues with Sending Test Steps</h4>
+            <ul class="list">
+                <li>
+                    <small>
+                        Tables which do not contain any text in any cell within the allocated 
+                        “description” column will throw a table error
+                    </small>
+                </li>
+                <li>
+                    <small>
+                        Empty cells or non existent cells for the other 2 properties work fine, just 
+                        populates empty string
+                    </small>
+                </li>
+            </ul>
         </div>
     </div>
     <!-- footer -->

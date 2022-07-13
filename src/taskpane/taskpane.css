@@ -80,6 +80,10 @@
     margin-right: 0.75rem;
 }
 
+.ml-sm {
+    margin-left: 0.75rem;
+}
+
 html,
 body {
     font-family: Arial;
@@ -90,7 +94,7 @@ body {
     overflow: hidden;
 }
 
-ul {
+ul.form{
     margin: 0;
     padding: 0;
 }
