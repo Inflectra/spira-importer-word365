@@ -13,7 +13,7 @@
 }
 
 .hidden {
-    display: none;
+    display: none ! important;
 }
 
 .open {
@@ -65,8 +65,7 @@
 }
 
 .mt-md {
-    margin-top: 0.5rem;
-    margin-bottom: 1.75rem;
+    margin-top: 1.5rem;
 }
 
 .mt-lg {
@@ -75,6 +74,10 @@
 
 .ma-0 {
     margin: 0;
+}
+
+.mr-sm {
+    margin-right: 0.75rem;
 }
 
 html,
@@ -90,6 +93,10 @@ body {
 ul {
     margin: 0;
     padding: 0;
+}
+
+.fade {
+    transition: 0.3s;
 }
 
 /*PAGE PARTS*/
@@ -153,6 +160,66 @@ ul {
     margin: 0;
 }
 
+.pop-up {
+    background-color: #f1f1f1;
+    position: fixed;
+    align-self: center;
+    z-index: 1;
+    padding: .5rem;
+    color: black;
+    border: 1px solid #aaaaaa;
+    margin: 0;
+    width: 100%;
+    margin-top: 50px;
+}
+
+.pop-up .close {
+    margin-top: -0.5rem;
+    margin-right: -0.5rem;
+    padding: 0 0 0.25rem;
+    font-size: 1.5rem;
+    color: black;
+    line-height: 0.85rem;
+    float:right;
+    border: solid #aaaaaa 1.5px;
+    background-color: #ff8888;
+}
+
+.pop-up .r {
+    float: right;
+    text-align: left;
+}
+
+.pop-up .l {
+    float: left;
+    text-align: left;
+}
+
+.pop-up .ok.ms-Button {
+    margin-bottom: -0.5rem;
+    min-width: 0;
+}
+
+.pop-up .ok.ms-Button.r {
+    margin-right: -0.5rem;
+}
+
+.pop-up .ok.ms-Button.l {
+    margin-left: -0.5rem;
+}
+
+.pop-up.err{
+    background-color: #fccccc;
+}
+
+.pop-up.sending {
+    background-color: #fcfccc;
+}
+
+.pop-up.sent {
+    background-color: #ccfccc;
+}
+
 .error-message {
     color: red;
     font-weight: 700;
@@ -171,7 +238,8 @@ ul {
 }
 
 .style-button {
-    margin-left: 0.5em;
+    margin-right: 0.5em;
+    margin-bottom: 0.5em;
 }
 
 #main-page-buttons {
@@ -217,30 +285,56 @@ ul {
 #main-screen {
     height: calc(100vh - 100px);
     width: 100%;
-    justify-content: flex-start;
+    justify-content: start;
     flex-direction: column;
     text-align: left;
     margin-top: 50px;
     overflow-y: auto;
-    overflow-x: auto;
+    /* padding: 1rem; */
+}
+#progress-bar {
+    margin-left: auto;
+    margin-right: auto;
+    outline: 1px solid black;
+    width: 80%;
+    background-color: rgb(218, 218, 218);
+}
+
+#progress-bar-progress {
+    width: 1%;
+    height: 12px;
+    background-color:rgb(96, 236, 96);
+}
+
+#bottom-buttons, #artifact-select {
+    width: 95%;
+    align-self: center;
+    align-items: start;
+    text-align: start;
+    justify-content: start;
+    flex-direction: row;
+    position: relative;
 }
 
 .styles-block {
-    margin-left: 5%;
-    width: 90%;
-    align-items: flex-start;
-    justify-content: flex-start;
+    /*display:flex is assigned when the block is shown, display:none when hidden*/
+    width: 95%;
+    align-self: center;
+    align-items: start;
+    text-align: start;
+    justify-content: start;
     flex-direction: column;
-    text-align: left;
-    top: 0px;
-    margin-top: 0px;
+    position: relative;
+    top: 0.5em;
 }
-.styles-block select{
+
+.styles-block select {
     width: 100%;
     align-self: center;
 }
+
 .style-labels {
-    margin-top: 1em;
+    margin-top: 0.5em;
 }
 
 #login-prompt {
@@ -253,19 +347,113 @@ ul {
 }
 
 #artifact-select {
-    display: flex;
-    flex-direction: row;
-    align-items: center;
-    text-align: center;
     width: 100%;
-    height: auto;
 }
 
 #send-to-spira {
-    margin-left: 5%;
+    display: inline-block;
+    margin-left: 2.5%;
     margin-top: 5%;
     margin-bottom: 3%;
 }
+
+#help-screen {
+    height: calc(100vh - 100px);
+    width: 100%;
+    justify-content: start;
+    flex-direction: column;
+    text-align: left;
+    margin-top: 50px;
+    padding: 1rem;
+    overflow-y: auto;
+    position: absolute;
+}
+
+.tooltip {
+    position: relative;
+    background: #eaeaea;
+    border-radius: 100%;
+    padding: 0px 5px;
+    cursor: help;
+}
+
+.tooltip::before, .tooltip::after {
+    position: absolute;
+    left: 50%;
+    opacity: 0;
+}
+.tooltip::before {
+    content: "";
+    border-width: 8px 6.25px 0 6.25px;
+    border-style: solid;
+    border-color: #aaaaaa transparent transparent transparent;
+    margin-left: -7px;
+    top: -8px;
+}
+.tooltip::after {
+    font-size: 10pt;
+    border-style: solid;
+    border-width: 1px;
+    border-color: #aaaaaa;
+    border-radius: 12px;
+    background-color: #f8f8f8;
+    padding: 10px;
+    width: 150px;
+    margin-left: -75px;
+    top: -136px;
+}
+
+.tooltip:hover::before, .tooltip:hover::after {
+    opacity: 1;
+}
+
+.tooltip:hover::after { /* Must be separated so it only appears on hovering the small part */
+    content: attr(tooltip);
+}
+
+.artifact-button {
+    box-sizing:border-box;
+    font-family:Segoe UI WestEuropean,Segoe UI,-apple-system,BlinkMacSystemFont,Roboto,Helvetica Neue,sans-serif;
+    -webkit-font-smoothing:antialiased;
+    color:#333;
+    font-size:14px;
+    font-weight:600;
+    background-color:#f4f4f4;
+    border:1px solid #f4f4f4;
+    cursor:pointer;
+    display:inline-block;
+    height:32px;
+    min-width:80px;
+    padding:4px 20px 6px;
+}
+
+.artifact-button:disabled {
+    background-color: #f4f4f4;
+    color: #a6a6a6;
+}
+
+.artifact-button:disabled.activated{
+    background-color: #abd3f3;
+}
+
+.artifact-button:hover{
+    background-color:#eaeaea;
+    color:black;
+}
+
+.ms-Button--default.activated,
+.artifact-button.activated,
+.artifact-button:focus {
+    background-color: #0078d7;
+    cursor: default;
+    color: white !important;
+}
+
+.ms-Button--primary {
+    color: white;
+    font-weight: 600;
+}
+
 
 /*MS DEFAULT CLASSES*/
 .ms-welcome__header {
@@ -284,13 +472,8 @@ ul {
     display: flex;
     -webkit-flex-direction: column;
     flex-direction: column;
-    -webkit-flex-wrap: nowrap;
-    flex-wrap: nowrap;
-    -webkit-align-items: center;
-    align-items: center;
-    -webkit-flex: 1 0 0;
-    flex: 1 0 0;
-    padding: 10px 20px;
+    align-self: center;
+    width: 95%;
 }
 
 .ms-welcome__main>h2 {
@@ -323,7 +506,7 @@ ul {
 
 .ms-Button.ms-Button--hero:hover .ms-Button-label,
 .ms-Button.ms-Button--hero:focus .ms-Button-label {
-    color: #005a9e;
+    color: #0A0269;
     cursor: pointer;
 }
 

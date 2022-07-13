@@ -8,7 +8,7 @@
     <meta charset="UTF-8" />
     <meta http-equiv="X-UA-Compatible" content="IE=Edge" />
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>Contoso Task Pane Add-in</title>
+    <title>SpiraPlan Importer</title>
 
     <!-- Office JavaScript API -->
     <script type="text/javascript" src="https://appsforoffice.microsoft.com/lib/1.1/hosted/office.js"></script>
@@ -26,9 +26,18 @@
 <body class="ms-font-m ms-welcome ms-Fabric">
     <header class="header">
         <!--We don't have the image asset file as it stands now-->
-        <!--img alt="" src="" class="header-logo"-->
+        <img alt="Spira Logo" src="/assets/inf-icon-80.png" class="header-logo" />
         <h3 class="header-heading">SpiraPlan Importer<br></h3>
     </header>
+    <!-- error pop-up -->
+    <div id="pop-up" class="pop-up hidden">
+        <button type="button" id="pop-up-close" class="close">&#xD7;</button>
+        <p id="pop-up-text">pop!<br></p>
+        <div id="progress-bar" class="hidden mb-md">
+            <div id="progress-bar-progress"></div>
+        </div>
+        <button type="button" id="pop-up-ok" class="ok ms-Button l">Confirm</button>
+    </div>
     <!--auth page-->
     <div id="panel-auth" class="panel">
         <p class="well">
@@ -38,7 +47,7 @@
                 documentation</a>.
         </p>
         <h3 class="mt-md mb-0" id="login-prompt">Connect to your Spira app</h3>
-        <h4 id="login-err-message" class="error-message hidden">Your credentials are invalid</h4>
+        <p id="login-err" class="error-message"></p>
         <ul class="form">
             <li class="form-pair">
                 <label class="form-label ms-Label" for="input-url">
@@ -63,15 +72,16 @@
         </ul>
 
         <div class="mt-md" id="login-buttons">
-            <button class="action ms-Button ms-Button--primary" id="btn-login"
+            <button class="action ms-Button ms-Button--primary fade" id="btn-login"
                 title="Login using details filled out above" type="button">
                 Log In
             </button>
-            <button class="ms-Button ms-Button--default" id="btn-help-login" title="View help screens" type="button">
+            <button class="ms-Button ms-Button--default fade" id="btn-help-login" title="View help screens"
+                type="button">
                 Help
             </button>
             <!--Remove this before deployment-->
-            <button class="ms-Button ms-Button--default" id="dev-mode" title="View help screens" type="button">
+            <button class="ms-Button ms-Button--default fade" id="dev-mode" title="View help screens" type="button">
                 DevMode
             </button>
         </div>
@@ -85,87 +95,110 @@
 
     <!--Main screen-->
     <div id="main-screen" class="hidden">
+
         <div id="app-body" class="ms-welcome__main" style="display: none;">
-            <div role="button" id="log-out" class="action ms-Button ms-Button--default">
-                <span class="ms-Button-label">log-out</span>
-            </div>
-            <p>1. Select the product you wish to import to:</p>
+            <button type="button" id="test">test</button>
+            <p style="left: 0; margin-left: 0">1. Select the product you wish to import to:</p>
             <select id="project-select" class="selectors"></select>
             <!--Turn this into radio buttons of some sort which fit the theming instead of dd-->
-            <p>2. Select the artifact type you want to import:</p>
-            <div id="artifact-select" class="artifact-buttons">
-                <div role="button" id="select-requirements" class="action ms-Button ms-Button--primary">
-                    <span class="ms-Button-label">Requirements</span>
-                </div>
-                <div role="button" id="select-test-cases" class="action ms-Button ms-Button--primary">
-                    <span class="ms-Button-label">Test Cases</span>
-                </div>
+            <p id="artifact-select-text" class="mt-md hidden">2. Select the artifact type you want to import:</p>
+            <div id="artifact-select" class="mt-0">
+                <button type="button" class="action artifact-button fade hidden" id="select-requirements">
+                    Requirements
+                </button>
+                <button type="button" class="action artifact-button fade hidden" id="select-test-cases">
+                    Test Cases
+                </button>
             </div>
-            <h4 class="hidden error-message" id="empty-styles-err">You currently have unselected styles. Please provide a style for all provided inputs.</h4>
-            <h4 class="hidden error-message" id="duplicate-styles-err">You currently have multiple mappings set to the same style. Please only use each style once.</h4>
+            <p class="error-message hidden" id="styles-err"></p>
         </div>
         <!--These style-block elements are hugging the bottom of the page for some reason.
         It looks perfect after you confirm the styles (and they are valid) and the send to
         spira button appears, but before that it behaves oddly. Unsure how to fix.-->
-        <div id="req-style-mappings" class="styles-block hidden">
-            <p class="style-prompt">3. Select the styles used:</p>
+        <div id="req-style-mappings" class="styles-block mt-md hidden">
+            <p class="style-prompt">3. Select the styles to use for Requirements:</p>
             <label for="req-style-select1" class="style-labels">Indent Level 1:</label>
-            <select title="req-style-select1" id="req-style-select1" class="style-selector"></select>
+            <select title="req-style-select1" id="req-style-select1" class="style-selector mb-sm"></select>
             <label for="req-style-select2" class="style-labels">Indent Level 2:</label>
-            <select title="req-style-select2" id="req-style-select2" class="style-selector"></select>
+            <select title="req-style-select2" id="req-style-select2" class="style-selector mb-sm"></select>
             <label for="req-style-select3" class="style-labels">Indent Level 3:</label>
-            <select title="req-style-select3" id="req-style-select3" class="style-selector"></select>
+            <select title="req-style-select3" id="req-style-select3" class="style-selector mb-sm"></select>
             <label for="req-style-select4" class="style-labels">Indent Level 4:</label>
-            <select title="req-style-select4" id="req-style-select4" class="style-selector"></select>
+            <select title="req-style-select4" id="req-style-select4" class="style-selector mb-sm"></select>
             <label for="req-style-select5" class="style-labels">Indent Level 5:</label>
-            <select title="req-style-select5" id="req-style-select5" class="style-selector"></select>
-            <div class="style-buttons">
-                <div role="button" id="confirm-req-style-mappings"
-                    class="action ms-Button ms-Button--primary style-button">
-                    <span class="ms-Button-label">Confirm</span>
-                </div>
+            <select title="req-style-select5" id="req-style-select5" class="style-selector mb-sm"></select>
+            <div class="style-buttons mb-md">
+                <button type="button" id="confirm-req-style-mappings"
+                    class="action ms-Button ms-Button--primary style-button fade">
+                    <span class="ms-Button-label">Validate Styles</span>
+                </button>
             </div>
         </div>
-        <div id="test-style-mappings" class="styles-block hidden">
-            <p class="style-prompt">3. Select the styles used:</p>
+        <div id="test-style-mappings" class="styles-block mt-md hidden">
+            <p class="style-prompt">3. Select the styles to use for Test Cases:</p>
+            <h4 style="margin-top: 1em; margin-bottom: 0;">Test Cases:</h4>
             <label for="test-style-select1" class="style-labels">Folder Name:</label>
             <select title="test-style-select1" id="test-style-select1" class="style-selector"></select>
             <label for="test-style-select2" class="style-labels">Test Name:</label>
             <select title="test-style-select2" id="test-style-select2" class="style-selector"></select>
-            <h4>Test Steps:</h4>
-            <label for="test-style-select3" class="style-labels">Description:</label>
+            <h4 style="margin-top: 1em; margin-bottom: 0;">Test Steps:</h4>
+            <div>
+                <label for="header-check">Using header rows:</label><input type="checkbox" id="header-check"
+                    title="header-check" />
+                <span class="tooltip" tooltip="Check this box if you start each of your Test Step tables with a header row. 
+                    The header row will be omitted when sending to Spira.">?</span>
+            </div>
+            <label for="test-style-select3" class="style-labels" style="margin-top: 0">Description:</label>
             <select title="test-style-select3" id="test-style-select3" class="style-selector"></select>
             <label for="test-style-select4" class="style-labels">Expected Result:</label>
             <select title="test-style-select4" id="test-style-select4" class="style-selector"></select>
             <label for="test-style-select5" class="style-labels">Sample Data:</label>
             <select title="test-style-select5" id="test-style-select5" class="style-selector"></select>
+
             <div class="style-buttons">
-                <div role="button" id="confirm-test-style-mappings"
-                    class="action ms-Button ms-Button--primary style-button">
-                    <span class="ms-Button-label">Confirm</span>
-                </div>
+                <button type="button" id="confirm-test-style-mappings"
+                    class="action ms-Button ms-Button--primary style-button fade">
+                    <span class="ms-Button-label">Validate Styles</span>
+                </button>
             </div>
         </div>
-        <div id="send-to-spira">
-            <h4 id="empty-err" class="error-message">
-                You currently have no valid text selected or within the body of the document.
-                if this is incorrect, check your style mappings and set them as the relevant
-                styles.
-            </h4>
-            <!--Failed-req-error is dynamicly generated on throw in javascript-->
-            <h4 id="failed-req-err" class="error-message"></h4>
-            <h4 id="hierarchy-err" class="error-message">Your style heirarchy is invalid for the 
-                selected area. Please make sure requirements only indent 1 additional level 
-                from the previous requirement as specified in the indent level style selectors above. 
-            </h4>
-            <h4 id="table-err" class="error-message">Your description column for test steps only includes 
-                empty cells or does not exist. If you do not want to send test steps - do not 
-                select tables in your document. If you do, check your selection and try again. 
-            </h4>
+        <div id="send-to-spira" class="hidden">
+            <p id="send-err" class="error-message"></p>
             <p>4. Check your selection, then send to spira:</p>
-            <button class="action ms-Button ms-Button--primary" id="send-to-spira-button" title="Send-to-spira"
+            <button class="action ms-Button ms-Button--primary fade" id="send-to-spira-button" title="Send-to-spira"
                 type="button">
                 Send to Spira
+            </button>
+        </div>
+        <div id="bottom-buttons" class="mt-lg">
+            <button type="button" id="log-out" class="action ms-Button ms-Button--default fade">
+                <span class="ms-Button-label">Log-Out</span>
+            </button>
+            <button type="button" id="btn-help-main" class="action ms-Button ms-Button--default fade">
+                <span class="ms-Button-label">Help</span>
+            </button>
+        </div>
+    </div>
+    <!-- Help Screen -->
+    <div id="help-screen" class="hidden">
+        <button class="ms-Button ms-Button--default flex" id="btn-help-back" type="button">
+            Back
+        </button>
+        <h3>Quick Help Guide</h3>
+        <p class="mt-0">For more information see our
+            <a target="https://spiradoc.inflectra.com/Migration-and-Integration/Importing-from-Microsoft-Word/">
+                documentation. This add-in is for Word 2016+.
+            </a>
+        </p>
+        <div id="help-buttons" class="flex">
+            <button class="btn-help ms-Button ms-Button--default " id="btn-help-section-login" title="Help with the login screen" type="button">
+                Login
+            </button> 
+            <button class="btn-help ms-Button ms-Button--default" id="btn-help-section-modes" title="Which mode of the add-in is right for you" type="button">
+                Modes
+            </button> 
+            <button class="btn-help ms-Button ms-Button--default" id="btn-help-section-versions" title="Help with working with using different versions of the add-in" type="button">
+                Issues
             </button>
         </div>
     </div>
