@@ -79,10 +79,12 @@
 
 html,
 body {
+    font-family: Arial;
     width: 100%;
     height: 100%;
     margin: 0;
     padding: 0;
+    overflow: hidden;
 }
 
 ul {
@@ -92,21 +94,57 @@ ul {
 
 /*PAGE PARTS*/
 
+.header {
+    position: absolute;
+    height: 50px;
+    top: 0;
+    left: 0;
+    align-items: center;
+    display: flex;
+    padding: 10px 5px;
+}
+
+.header-heading {
+    margin: 0 0 0 1rem;
+}
+
+.header-logo {
+    height: 40px;
+    width: 40px;
+}
+
 .panel {
     background-color: white;
-    height: calc(100vh - 100px); /* 150 leaves space around header and footer */
+    height: calc(100vh - 100px);
+    /* 150 leaves space around header and footer */
     left: 0;
+    top: 50px;
     overflow-y: auto;
     padding: 1rem;
     position: absolute;
     transition: left 0.2s;
     visibility: visible;
-    width: 100vw
+    width: 100vw;
 }
+
 .panel.offscreen {
     left: 100%;
     visibility: hidden;
 }
+
+.footer {
+    width: 100vw;
+    height: 35px;
+    bottom: 0;
+    padding: .25rem 1rem;
+    position: fixed;
+    background-color: white;
+}
+
+.footer-logo {
+    height: 25px;
+}
+
 .well {
     background-color: #f1f1f1;
     padding: .5rem;
@@ -114,37 +152,119 @@ ul {
     border: 1px solid #ddd;
     margin: 0;
 }
-.error-message{
-    color:red;
+
+.error-message {
+    color: red;
     font-weight: 700;
 }
+
+.style-prompt {
+    margin-top: 0;
+    position: static;
+}
+
+.style-buttons {
+    margin-top: 0.5em;
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+}
+
+.style-button {
+    margin-left: 0.5em;
+}
+
+#main-page-buttons {
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+}
+
+#main-page-buttons div {
+    margin-top: 10px;
+}
+
+.selectors {
+    width: 100%;
+}
+
 /*FORMS AND SPECIFIC ELEMENTS*/
 
 .form {
     margin: 0;
     padding: 0;
 }
+
 .form-pair {
     list-style-type: none;
     margin-bottom: 0;
 }
-.form-label, 
+
+.form-label,
 .form-input {
     display: block;
 }
+
 .form-label {
     font-size: .9em;
 }
+
 .form-input {
     width: 100%;
 }
-.styles-page{
-    align-items:center;
-    justify-content:center;
+
+#main-screen {
+    height: calc(100vh - 100px);
+    width: 100%;
+    justify-content: flex-start;
     flex-direction: column;
+    text-align: left;
+    margin-top: 50px;
+    overflow-y: auto;
+    overflow-x: auto;
 }
-.style-selector{
-    margin-top: 3em;
+
+.styles-block {
+    margin-left: 5%;
+    width: 90%;
+    align-items: flex-start;
+    justify-content: flex-start;
+    flex-direction: column;
+    text-align: left;
+    top: 0px;
+    margin-top: 0px;
+}
+.styles-block select{
+    width: 100%;
+    align-self: center;
+}
+.style-labels {
+    margin-top: 1em;
+}
+
+#login-prompt {
+    margin-top: 8%;
+    margin-bottom: 0%;
+}
+
+#login-buttons {
+    margin-top: 8%;
+}
+
+#artifact-select {
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    text-align: center;
+    width: 100%;
+    height: auto;
+}
+
+#send-to-spira {
+    margin-left: 5%;
+    margin-top: 5%;
+    margin-bottom: 3%;
 }
 
 /*MS DEFAULT CLASSES*/
