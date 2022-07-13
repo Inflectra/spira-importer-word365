@@ -54,7 +54,7 @@ const setEventListeners = () => {
   document.getElementById("select-test-cases").onclick = () => openStyleMappings("test-");
   document.getElementById("confirm-req-style-mappings").onclick = () => confirmStyleMappings('req-');
   document.getElementById("confirm-test-style-mappings").onclick = () => confirmStyleMappings('test-');
-  document.getElementById('project-select').onchange = () => goToState(states.artifact);
+  document.getElementById('product-select').onchange = () => goToState(states.artifact);
   document.getElementById("pop-up-close").onclick = () => hideElement("pop-up");
   document.getElementById("pop-up-ok").onclick = () => hideElement('pop-up');
   document.getElementById("btn-help-login").onclick = () => goToState(states.helpLogin);
@@ -109,6 +109,7 @@ const loginAttempt = async () => {
       model.user.userCredentials = `?username=${username}&api-key=${rssToken}`;
       //populate the products dropdown & model object with the response body.
       populateProjects(response.body)
+      boldStep('product-select-text');
       //On successful login, hide error message if its visible
       clearErrors();
       return
@@ -152,7 +153,7 @@ const enableMainButtons = () => { // Enables all buttons on the main screen
 const populateProjects = (projects) => {
   addDefaultProject();
   model.projects = projects
-  let dropdown = document.getElementById('project-select')
+  let dropdown = document.getElementById('product-select')
   projects.forEach((project) => {
     /*creates an option for each product which displays the name
      and has a value of its ProjectId for use in API calls*/
@@ -180,6 +181,7 @@ const openStyleMappings = async (pageTag) => {
     document.getElementById("select-test-cases").classList.remove("activated");
     showElement('req-style-mappings');
     hideElement('test-style-mappings');
+    boldStep('req-styles-text');
   }
   //opens the test cases style mappings if test mappings is the selected artifact type
   else {
@@ -187,6 +189,7 @@ const openStyleMappings = async (pageTag) => {
     document.getElementById("select-requirements").classList.remove("activated");
     hideElement('req-style-mappings');
     showElement('test-style-mappings');
+    boldStep('test-styles-text');
   }
   //wont populate styles for requirements if it is already populated
   if (document.getElementById("req-style-select1").childElementCount && pageTag == "req-") {
@@ -242,6 +245,7 @@ const confirmStyleMappings = async (pageTag) => {
         displayError(ERROR_MESSAGES.duplicateStyles)
         //hides the final button if it is already displayed when a user inputs invalid styles.
         hideElement('send-to-spira');
+        boldStep(pageTag + 'styles-text');
         return
       }
       Office.context.document.settings.set(pageTag + 'style' + i.toString(), setting);
@@ -249,6 +253,7 @@ const confirmStyleMappings = async (pageTag) => {
     //gives an error explaining they have empty style mappings.
     else {
       displayError(ERROR_MESSAGES.emptyStyles)
+      boldStep(pageTag + 'styles-text');
       return
     }
   }
@@ -258,6 +263,7 @@ const confirmStyleMappings = async (pageTag) => {
   Office.context.document.settings.saveAsync()
   //show the send to spira button after this is clicked and all style selectors are populated.
   showElement('send-to-spira');
+  boldStep('send-to-spira-text');
 }
 
 //Populates a passed in style-selector with the avaiable word styles
@@ -368,7 +374,7 @@ const goToState = (state) => {
 
       // Show authentication page
       showElement('panel-auth');
-      clearDropdownElement('project-select');
+      clearDropdownElement('product-select');
 
       // Hides style mappings
       hideElement('req-style-mappings');
@@ -402,9 +408,9 @@ const goToState = (state) => {
       showElement('artifact-select-text');
       showElement('select-requirements');
       showElement('select-test-cases');
-
+      boldStep('artifact-select-text');
       // If the dropdown has a null value then clear it away
-      document.getElementById('project-select').remove('null')
+      document.getElementById('product-select').remove('null')
       break;
     case (states.dev):
       //moves us to the main interface without manually entering credentials
@@ -415,7 +421,8 @@ const goToState = (state) => {
       let devOption = document.createElement("option");
       devOption.text = "Test";
       devOption.value = null;
-      document.getElementById("project-select").add(devOption);
+      document.getElementById("product-select").add(devOption);
+      boldStep('product-select-text');
       break;
     case (states.helpLogin):
       // moves us to the help screen and makes the back button take us to the login page
@@ -456,15 +463,22 @@ const addDefaultProject = () => {
   let nullProject = document.createElement("option");
   nullProject.text = "       ";
   nullProject.value = null;
-  document.getElementById("project-select").add(nullProject);
+  document.getElementById("product-select").add(nullProject);
 }
 
-const hideElement = (element_id) => {
-  document.getElementById(element_id).classList.add('hidden');
+const hideElement = (elementId) => {
+  document.getElementById(elementId).classList.add('hidden');
 }
 
-const showElement = (element_id) => {
-  document.getElementById(element_id).classList.remove('hidden');
+const showElement = (elementId) => {
+  document.getElementById(elementId).classList.remove('hidden');
+}
+
+const boldStep = (stepId) => {
+  for (let eachStep of params.collections.sendSteps) {
+    document.getElementById(eachStep).classList.remove('bold');
+  }
+  document.getElementById(stepId).classList.add('bold');
 }
 
 /*********************

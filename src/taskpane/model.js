@@ -111,6 +111,13 @@ var params = {
       "help-section-login",
       "help-section-modes",
       "help-section-versions"
+    ],
+    sendSteps: [
+      "product-select-text",
+      "artifact-select-text",
+      "req-styles-text",
+      "test-styles-text",
+      "send-to-spira-text"
     ]
   }
 }

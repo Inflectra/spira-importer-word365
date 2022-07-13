@@ -98,8 +98,8 @@
 
         <div id="app-body" class="ms-welcome__main" style="display: none;">
             <button type="button" id="test">test</button>
-            <p style="left: 0; margin-left: 0">1. Select the product you wish to import to:</p>
-            <select id="project-select" class="selectors"></select>
+            <p id="product-select-text" style="left: 0; margin-left: 0" class="bold">1. Select the product you wish to import to:</p>
+            <select id="product-select" class="selectors"></select>
             <!--Turn this into radio buttons of some sort which fit the theming instead of dd-->
             <p id="artifact-select-text" class="mt-md hidden">2. Select the artifact type you want to import:</p>
             <div id="artifact-select" class="mt-0">
@@ -116,7 +116,7 @@
         It looks perfect after you confirm the styles (and they are valid) and the send to
         spira button appears, but before that it behaves oddly. Unsure how to fix.-->
         <div id="req-style-mappings" class="styles-block mt-md hidden">
-            <p class="style-prompt">3. Select the styles to use for Requirements:</p>
+            <p id="req-styles-text" class="style-prompt">3. Select the styles to use for Requirements:</p>
             <label for="req-style-select1" class="style-labels">Indent Level 1:</label>
             <select title="req-style-select1" id="req-style-select1" class="style-selector mb-sm"></select>
             <label for="req-style-select2" class="style-labels">Indent Level 2:</label>
@@ -135,7 +135,7 @@
             </div>
         </div>
         <div id="test-style-mappings" class="styles-block mt-md hidden">
-            <p class="style-prompt">3. Select the styles to use for Test Cases:</p>
+            <p id="test-styles-text" class="style-prompt">3. Select the styles to use for Test Cases:</p>
             <h4 style="margin-top: 1em; margin-bottom: 0;">Test Cases:</h4>
             <label for="test-style-select1" class="style-labels">Folder Name:</label>
             <select title="test-style-select1" id="test-style-select1" class="style-selector"></select>
@@ -164,7 +164,7 @@
         </div>
         <div id="send-to-spira" class="hidden">
             <p id="send-err" class="error-message"></p>
-            <p>4. Check your selection, then send to spira:</p>
+            <p id="send-to-spira-text" class="bold">4. Check your selection, then send to spira:</p>
             <button class="action ms-Button ms-Button--primary fade" id="send-to-spira-button" title="Send-to-spira"
                 type="button">
                 Send to Spira

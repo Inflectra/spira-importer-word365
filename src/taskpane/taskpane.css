@@ -171,6 +171,7 @@ ul {
     width: 90%;
     margin: 0 1.5rem 0 0.5rem;
     margin-top: 50px;
+    box-shadow: 3px 5px rgba(0, 0, 0, 0.05);
 }
 
 .pop-up .close {
@@ -349,6 +350,7 @@ ul {
 
 #artifact-select {
     width: 100%;
+    margin-bottom: 0.75rem;
 }
 
 #send-to-spira {
@@ -385,23 +387,23 @@ ul {
 }
 .tooltip::before {
     content: "";
-    border-width: 8px 6.25px 0 6.25px;
+    border-width: 0.5rem 0.4rem 0 0.4rem;
     border-style: solid;
-    border-color: #aaaaaa transparent transparent transparent;
-    margin-left: -7px;
-    top: -8px;
+    border-color: #dedede transparent transparent transparent;
+    margin-top: -0.1rem;
+    margin-left: -0.42rem;
+    top: -0.5rem;
 }
 .tooltip::after {
     font-size: 10pt;
     border-style: solid;
     border-width: 1px;
-    border-color: #aaaaaa;
-    border-radius: 12px;
-    background-color: #f8f8f8;
+    border-color: #dedede;
+    background-color: white;
     padding: 10px;
     width: 150px;
     margin-left: -75px;
-    top: -136px;
+    bottom: 1.7rem;
 }
 
 .tooltip:hover::before, .tooltip:hover::after {
@@ -455,6 +457,10 @@ ul {
     font-weight: 600;
 }
 
+
+.bold {
+    font-weight: bold;
+}
 
 /*MS DEFAULT CLASSES*/
 .ms-welcome__header {

@@ -54,7 +54,7 @@ const parseArtifacts = async (ArtifactTypeId, model, versionSupport) => {
     /***************************
      Start range identification
      **************************/
-    let projectId = document.getElementById("project-select").value
+    let projectId = document.getElementById("product-select").value
     let selection = context.document.getSelection();
     let splitSelection = context.document.getSelection().paragraphs;
     if (versionSupport) {
