@@ -76,7 +76,6 @@ async function test() {
     let html = body.getHtml();
     await context.sync();
     console.log(html.m_value)
-    await axios.post('http://localhost:3000/retrieve', {html: html.m_value})
   })
 }
 
