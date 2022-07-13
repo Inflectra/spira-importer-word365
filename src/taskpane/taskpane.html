@@ -200,7 +200,7 @@
                 title="How to use the importer tool" type="button">
                 Guide
             </button>
-            <button class="btn-help ms-Button ms-Button--default" id="btn-help-section-versions"
+            <button class="btn-help ms-Button ms-Button--default" id="btn-help-section-issues"
                 title="Help with working with using different versions of the add-in" type="button">
                 Issues
             </button>
@@ -245,14 +245,9 @@
                 <li>
                     <p><b>Requirements:</b></p>
                     <small>Each style represents a deeper level of indentation within spira, and a
-                        parent child relationship between them. Indent Level 1 is fully outdented, while
-                        the rest represent the level of indentation of each subsequent style. You may only
-                        increase the indentation by 1 level per requirement when compared to the previous
-                        requirement in your document. You may however outdent as you please. (e.g. having an
-                        indent level 1 requirement as the first requirement means the second one can only be
-                        indent level 1 or 2 - but from indent level 4, your next requirement can be at any
-                        indent level.) Text which is not any of the configured styles will be uploaded as the
-                        description for the requirement name it is under in your Word document.</small>
+                        parent child relationship between them. For a more in depth explanation of this, check out the
+                        <a
+                            href="https://spiradoc.inflectra.com/Spira-User-Manual/Requirements-Management/#requirements-list">SpiraDocs</a>.</small>
                 </li>
                 <li>
                     <p><b>Test Cases:</b></p>
@@ -261,60 +256,63 @@
                         themselves.
                         The second one determines how tables will be turned into test steps for the appropriate test
                         case.
-                        The column number represents the column from the left that a certain type of infomration is
-                        expected
-                        in. For example, if the first column of your table has test step descriptions, you would select
-                        "column 1" for Descriptions. Any text that is not any of the configured styles or within a table
-                        will be
-                        put as the description of the previously named test case when uploaded.
+                        Any text that is not any of the configured styles or within a table will be
+                        put as the description of the previously named test case.
                     </small>
                 </li>
             </ol>
+            <p>After these styles have been set, click the "validate styles" button to check for any empty styles or
+                duplicate style use.</p>
+            <p><b>4. Select the portion of your document you wish to send, then click the "Send to Spira" button.</b>
+            </p>
+            <p>This import tool can either parse a full document or the selected portion of your document. If you wish
+                to parse
+                the full document, simply make sure you do not have any text selected in Word.
+            </p>
         </div>
-        <div id="help-section-versions" class="help-section hidden">
+        <div id="help-section-issues" class="help-section hidden">
             <p>In case you run into any issues while using this addin, review the functionality
                 listed here 
             </p>
             <h4>Issues with Sending Requirements</h4>
             <ul class="list">
                 <li>
-                    <small>
+                    <p>
                         If you are sending multiple requirements in one selection, you must make
-                        sure that the first requirement has a style that is set to Indent level 1
-                        and there are no hierarchy skips within the requirements. That is, each
-                        requirement must be at most 1 indent level higher than the one preceding it.
-                    </small>
+                        sure that the first requirement has a style that is set to Indent level 1 
+                        and follows your Spira products hierarchy rules. To learn more, check out 
+                        the <a href="https://spiradoc.inflectra.com/Spira-User-Manual/Requirements-Management/#requirements-list">SpiraDocs</a>
+                        
+                    </p>
                 </li>
                 <li>
-                    <small>
+                    <p>
                         If you don't have any text selected, then the importer will attempt to send
-                        your entire document according to your style mappings selection, and that
+                        your entire document according to your style mappings selection, even if that
                         may not be your intent.
-                    </small>
+                    </p>
                 </li>
                 <li>
-                    <small>
-                        If you select only a single requirement, it will be sent and maximally outdented
+                    <p>
+                        If you select only a single requirement, it will be sent as maximally outdented
                         as long as its style fits one of the style mapping indent levels. This may be
-                        useful if you miss a requirement and want to send it without worrying about
-                        switching up your style mappings to do so. Just remember to move the requirement
-                        in Spira if it is supposed to be a child of something else.
-                    </small>
+                        useful if you miss a requirement and want to send it alone.
+                    </p>
                 </li>
             </ul>
             <h4>Issues with Sending Test Steps</h4>
             <ul class="list">
                 <li>
-                    <small>
+                    <p>
                         Tables which do not contain any text in any cell within the allocated 
-                        “description” column will throw a table error
-                    </small>
+                        “description” column will throw a table error.
+                    </p>
                 </li>
                 <li>
-                    <small>
+                    <p>
                         Empty cells or non existent cells for the other 2 properties work fine, just 
-                        populates empty string
-                    </small>
+                        populates an empty string for those fields.
+                    </p>
                 </li>
             </ul>
         </div>

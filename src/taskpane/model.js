@@ -85,7 +85,7 @@ var params = {
     help: "btn-help-main",
     helpLogin: "btn-help-section-login",
     helpModes: "btn-help-section-guide",
-    helpVersions: "btn-help-section-versions"
+    helpVersions: "btn-help-section-issues"
   },
   // This is used to move around within the add-in UI
   pageStates: {
@@ -105,12 +105,12 @@ var params = {
     helpButtons: [
       "btn-help-section-login",
       "btn-help-section-guide",
-      "btn-help-section-versions"
+      "btn-help-section-issues"
     ],
     helpSections: [
       "help-section-login",
       "help-section-guide",
-      "help-section-versions"
+      "help-section-issues"
     ],
     sendSteps: [
       "product-select-text",
