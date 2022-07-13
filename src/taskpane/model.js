@@ -84,7 +84,7 @@ var params = {
     logout: "log-out",
     help: "btn-help-main",
     helpLogin: "btn-help-section-login",
-    helpModes: "btn-help-section-modes",
+    helpModes: "btn-help-section-guide",
     helpVersions: "btn-help-section-versions"
   },
   // This is used to move around within the add-in UI
@@ -104,12 +104,12 @@ var params = {
   collections: {
     helpButtons: [
       "btn-help-section-login",
-      "btn-help-section-modes",
+      "btn-help-section-guide",
       "btn-help-section-versions"
     ],
     helpSections: [
       "help-section-login",
-      "help-section-modes",
+      "help-section-guide",
       "help-section-versions"
     ],
     sendSteps: [

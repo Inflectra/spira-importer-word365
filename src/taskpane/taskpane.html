@@ -195,9 +195,9 @@
                 title="Help with the login screen" type="button">
                 Login
             </button>
-            <button class="btn-help ms-Button ms-Button--default" id="btn-help-section-modes"
-                title="Which mode of the add-in is right for you" type="button">
-                Modes
+            <button class="btn-help ms-Button ms-Button--default" id="btn-help-section-guide"
+                title="How to use the importer tool" type="button">
+                Guide
             </button>
             <button class="btn-help ms-Button ms-Button--default" id="btn-help-section-versions"
                 title="Help with working with using different versions of the add-in" type="button">
@@ -232,8 +232,39 @@
                 </li>
             </ol>
         </div>
-        <div id="help-section-modes" class="help-section hidden">
-            <h1>Work in progress :)</h1>
+        <div id="help-section-guide" class="help-section hidden">
+            <h4>1. Select the project you wish to import to</h4>
+            <h4>2. Select the desired artifact type</h4>
+            <p>You can import both Requirements and Test Cases to SpiraTest®, SpiraTeam®, or SpiraPlan® from this tool. 
+                The expected formatting of your document will vary depending on the selected Artifact.
+            </p>
+            <h4>3. Select the styles used within your document</h4>
+            <p>The styles selected should represent the styles used for the purposes described below.</p>
+            <ol>
+                <li>
+                    <p><b>Requirements:</b></p>
+                    <small>Each style represents a deeper level of indentation within spira, and a
+                        parent child relationship between them. Indent Level 1 is fully outdented, while
+                        the rest represent the level of indentation of each subsequent style. You may only 
+                        increase the indentation by 1 level per requirement when compared to the previous 
+                        requirement in your document. You may however outdent as you please. (e.g. having an
+                        indent level 1 requirement as the first requirement means the second one can only be 
+                        indent level 1 or 2 - but from indent level 4, your next requirement can be at any 
+                        indent level.) Text which is not any of the configured styles will be uploaded as the
+                        description for the requirement name it is under in your Word document.</small>
+                </li>
+                <li>
+                    <p><b>Test Cases:</b></p>
+                    <small>For test cases, there are 2 sections of selectors. The first one is the styles used to 
+                        represent the name of the folder that test cases are in, and the name of the test cases themselves.
+                        The second one determines how tables will be turned into test steps for the appropriate test case.
+                        The column number represents the column from the left that a certain type of infomration is expected
+                        in. For example, if the first column of your table has test step descriptions, you would select 
+                        "column 1" for Descriptions. Any text that is not any of the configured styles or within a table will be
+                        put as the description of the previously named test case when uploaded.
+                    </small>
+                </li>
+            </ol>
         </div>
         <div id="help-section-versions" class="help-section hidden">
             <h1>Work in progress :)</h1>
