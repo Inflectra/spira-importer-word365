@@ -469,6 +469,12 @@ const parseArtifacts = async (ArtifactTypeId, model, versionSupport) => {
                 continue
               }
               testStep = { Description: row[parseInt(styles[2].slice(-1)) - 1], ExpectedResult: row[parseInt(styles[3].slice(-1)) - 1], SampleData: row[parseInt(styles[4].slice(-1)) - 1] }
+              for (let [property, value] of Object.entries(testStep)){
+                //this handles tables in which the expected result or sample data columns dont exist.
+                if (value == undefined){
+                  testStep[property] = ""
+                }
+              }
               testSteps.push(testStep)
             }
             testCase.testSteps = [...testCase.testSteps, ...testSteps]
