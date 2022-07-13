@@ -69,8 +69,15 @@ Testing Functions
 *****************/
 //basic testing function for validating code snippet behaviour.
 async function test() {
-  let selection = await updateSelectionArray();
-  console.log(selection)
+  return Word.run(async (context) => {
+    let body = context.document.body
+    context.load(body)
+    await context.sync()
+    let html = body.getHtml();
+    await context.sync();
+    console.log(html.m_value)
+    await axios.post('http://localhost:3000/retrieve', {html: html.m_value})
+  })
 }
 
 /**************
