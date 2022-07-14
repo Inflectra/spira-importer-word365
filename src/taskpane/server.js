@@ -43,12 +43,11 @@ var RETRIEVE = "http://localhost:5000/retrieve"
 //params:
 //ArtifactTypeId: Int - ID based on params.artifactEnums.{artifact-type}
 //model: Object - user model object based on Data() model. (contains user credentials)
-//versionSupport: boolean - expresses if the user supports version 1.3. If not, skips 1.3 functionality
 
 /*This function takes in an ArtifactTypeId and parses the selected text or full body
 of a document, returning digestable objects which can easily be used to send artifacts
 to spira.*/
-const parseArtifacts = async (ArtifactTypeId, model, versionSupport) => {
+const parseArtifacts = async (ArtifactTypeId, model) => {
   return Word.run(async (context) => {
     disableMainButtons();
     /***************************
@@ -56,38 +55,25 @@ const parseArtifacts = async (ArtifactTypeId, model, versionSupport) => {
      **************************/
     let projectId = document.getElementById("product-select").value
     let selection = context.document.getSelection();
-    let splitSelection = context.document.getSelection().paragraphs;
-    if (versionSupport) {
-      splitSelection = context.document.getSelection().split(['\r'])
-    }
+    let splitSelection = context.document.getSelection().split(['\r'])
     context.load(splitSelection, ['text', 'inlinePictures', 'style', 'styleBuiltIn'])
     context.load(selection, ['text', 'inlinePictures', 'style', 'styleBuiltIn']);
     try {
       await context.sync();
     }
     catch (err) {
-      /*there is a crashing error with context.sync(), 
+      /*there is an intermittent crashing error with context.sync(), 
       if your cursor is on an empty line .getSelection() throws error and crashes
       so this handles the fallback and forces full body parsing in this senario.
       May want to add a confirmation for full body parsing and explain
       what can cause this rather than sending the full body without
       user knowledge*/
       selection = {}
-      //we need an error for explaining this (and giving the user the option to confirm or cancel)?
-      // displayError()
     }
     //If there is no selected area, parse the full body of the document instead
     if (!selection.text) {
-      //.getRange is an API v1.3 function. It is only needed for .expandTo calls. paragraphs can handle the rest.
-      if (versionSupport) {
-        selection = context.document.body.getRange();
-        splitSelection = context.document.body.getRange().split(['\r'])
-      }
-      else {
-        selection = context.document.body
-        splitSelection = context.document.body.paragraphs;
-      }
-
+      selection = context.document.body.getRange();
+      splitSelection = context.document.body.getRange().split(['\r'])
       context.load(selection, ['text', 'inlinePictures', 'style', 'styleBuiltIn']);
       context.load(splitSelection, ['text', 'inlinePictures', 'style', 'styleBuiltIn'])
       await context.sync();
@@ -126,73 +112,69 @@ const parseArtifacts = async (ArtifactTypeId, model, versionSupport) => {
       //removes the first item in imageLines as it has been converted to an imageObject;
       imageLines.shift();
     }
-    console.log(imageObjects)
     //end of image formatting
     /*************************
      Start list parsing
      *************************/
-    //lists are not supported in API version 1.1
-    if (versionSupport) {
-      let lists = selection.lists
-      context.load(lists)
+    let lists = selection.lists
+    context.load(lists)
+    await context.sync();
+    var formattedLists = []
+    var formattedSingleItemLists = []
+    for (let list of lists.items) {
+      context.load(list)
+      context.sync();
+      // Inner array to store the elements of each list
+      let newList = [];
+      //set up accessing the paragraphs of a list
+      context.load(list, ['paragraphs'])
       await context.sync();
-      var formattedLists = []
-      var formattedSingleItemLists = []
-      for (let list of lists.items) {
-        context.load(list)
-        context.sync();
-        // Inner array to store the elements of each list
-        let newList = [];
-        //set up accessing the paragraphs of a list
-        context.load(list, ['paragraphs'])
+      let paragraphs = list.paragraphs;
+      context.load(paragraphs);
+      await context.sync();
+      for (let paragraph of paragraphs.items) {
+        context.load(paragraph)
         await context.sync();
-        let paragraphs = list.paragraphs;
-        context.load(paragraphs);
+        let listItem = paragraph.listItemOrNullObject
+        context.load(listItem, ['level', 'listString'])
         await context.sync();
-        for (let paragraph of paragraphs.items) {
-          context.load(paragraph)
-          await context.sync();
-          let listItem = paragraph.listItemOrNullObject
-          context.load(listItem, ['level', 'listString'])
-          await context.sync();
-          /*this covers odd formats with long listStrings (hover listString for details).
-          The "false" newList will get pushed, and serve as a "skip this one" flag for 
-          the later function which places formatted lists into the description.*/
-          if (paragraph.listItemOrNullObject.listString.length > 5 || (newList == false && typeof newList == 'boolean')) {
-            newList = false
-            continue
-          }
-          let html = paragraph.getHtml();
-          await context.sync();
-          let pRegex = params.regexs.paragraphRegex
-          let match = html.m_value.match(pRegex)
-          html = match[0]
-          let spanMatch = html.match(params.regexs.listSpanRegex)
-          if (spanMatch) {
-            html = html.replace(spanMatch[0], "")
-          }
-          let pTagMatches = [...html.matchAll(params.regexs.pTagRegex)]
-          if (pTagMatches) {
-            for (let matchList of pTagMatches) {
-              html = html.replace(matchList[0], "")
-            }
-          }
-          if (listItem.listString.match(params.regexs.orderedListRegex)) {
-            /*the second level unordered list listString is literally an o (letter O)
-            So this prevents that from unintentionally removing an o from the users sentence*/
-            html = html.replace(listItem.listString, "")
-          }
-          newList.push(new templates.ListItem(html, listItem.level))
+        /*this covers odd formats with long listStrings (hover listString for details).
+        The "false" newList will get pushed, and serve as a "skip this one" flag for 
+        the later function which places formatted lists into the description.*/
+        if (paragraph.listItemOrNullObject.listString.length > 5 || (newList == false && typeof newList == 'boolean')) {
+          newList = false
+          continue
         }
-        //single item lists need to be parsed differently than multi item ones
-        if (paragraphs.items.length == 1) {
-          formattedSingleItemLists.push(newList)
+        let html = paragraph.getHtml();
+        await context.sync();
+        let pRegex = params.regexs.paragraphRegex
+        let match = html.m_value.match(pRegex)
+        html = match[0]
+        let spanMatch = html.match(params.regexs.listSpanRegex)
+        if (spanMatch) {
+          html = html.replace(spanMatch[0], "")
         }
-        else {
-          formattedLists.push(newList)
+        let pTagMatches = [...html.matchAll(params.regexs.pTagRegex)]
+        if (pTagMatches) {
+          for (let matchList of pTagMatches) {
+            html = html.replace(matchList[0], "")
+          }
         }
-        newList = []
+        if (listItem.listString.match(params.regexs.orderedListRegex)) {
+          /*the second level unordered list listString is literally an o (letter O)
+          So this prevents that from unintentionally removing an o from the users sentence*/
+          html = html.replace(listItem.listString, "")
+        }
+        newList.push(new templates.ListItem(html, listItem.level))
       }
+      //single item lists need to be parsed differently than multi item ones
+      if (paragraphs.items.length == 1) {
+        formattedSingleItemLists.push(newList)
+      }
+      else {
+        formattedLists.push(newList)
+      }
+      newList = []
     }
     //end of list parsing
     /**********************
@@ -220,10 +202,7 @@ const parseArtifacts = async (ArtifactTypeId, model, versionSupport) => {
               descEnd = body.items[i - 1]
               /*creates a description range given the beginning 
               and end as delimited by lines with mapped styles*/
-              let descRange;
-              if (versionSupport) {
-                descRange = descStart.expandTo(descEnd)
-              }
+              let descRange = descStart.expandTo(descEnd)
               context.load(descRange)
               await context.sync();
               //descRange is null if the descEnd is not valid to extend the descStart
@@ -307,7 +286,7 @@ const parseArtifacts = async (ArtifactTypeId, model, versionSupport) => {
           enableMainButtons();
           //throw hierarchy error and exit function
           displayError(ERROR_MESSAGES.hierarchy, false)
-          return
+          return false
         }
         clearErrors();
         await sendArtifacts(params.artifactEnums.requirements, imageObjects, requirements, projectId, model, styles)
@@ -469,9 +448,9 @@ const parseArtifacts = async (ArtifactTypeId, model, versionSupport) => {
                 continue
               }
               testStep = { Description: row[parseInt(styles[2].slice(-1)) - 1], ExpectedResult: row[parseInt(styles[3].slice(-1)) - 1], SampleData: row[parseInt(styles[4].slice(-1)) - 1] }
-              for (let [property, value] of Object.entries(testStep)){
+              for (let [property, value] of Object.entries(testStep)) {
                 //this handles tables in which the expected result or sample data columns dont exist.
-                if (value == undefined){
+                if (value == undefined) {
                   testStep[property] = ""
                 }
               }
@@ -604,8 +583,9 @@ const sendArtifacts = async (ArtifactTypeId, images, Artifacts, projectId, model
           testCaseFolders.push(newFolder);
         }
         //if the name is empty for the folder, set it as null (root directory)
-        else if (!testCase.folderName){
-          folder.TestCaseFolderId = null
+        else if (!testCase.folderName) {
+          folder = {TestCaseFolderId: null, Name: null}
+          testCaseFolders.push(folder)
         }
         //this returns the full test case object response
         let testCaseArtifact = await sendTestCase(testCase.Name, testCase.testCaseDescription,
@@ -919,6 +899,10 @@ const retrieveStyles = (pageTag) => {
 }
 
 const validateHierarchy = (requirements) => {
+  //if no requirements are parsed due to invalid text selection, this fails out to prevent crashing
+  if (requirements.length == 0){
+    return false
+  }
   //requirements = [{Name: str, Description: str, IndentLevel: int}, ...]
   //the first requirement must always be indent level 0 (level 1 in UI terms)
   if (requirements[0].IndentLevel != 0) {

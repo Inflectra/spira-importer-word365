@@ -18,14 +18,10 @@ import {
   updateSelectionArray
 } from './server'
 
-// Global selection array, used throughout
-/*This is a global variable because the word API call functions are unable to return
-values from within due to the required syntax of returning a Word.run((callback) =>{}) 
-function. */
+//model stores user data (login credentials and projects)
 var model = new Data();
-var SELECTION = [];
+//this is a global variable that expresses whether a user is using a version of word that supports api 1.3
 var versionSupport;
-//setting a user object to maintain credentials when using other parts of the add-in
 
 Office.onReady((info) => {
   if (info.host === Office.HostType.Word) {
@@ -62,6 +58,14 @@ const setEventListeners = () => {
   document.getElementById(params.buttonIds.helpLogin).onclick = () => openHelpSection(params.buttonIds.helpLogin);
   document.getElementById(params.buttonIds.helpModes).onclick = () => openHelpSection(params.buttonIds.helpModes);
   document.getElementById(params.buttonIds.helpVersions).onclick = () => openHelpSection(params.buttonIds.helpVersions);
+  // event listener for pressing enter before login.
+  addEventListener('keydown', async (e) => {
+    //this only does anything if the login page is viewable. 
+    if (e.code == "Enter" && !document.getElementById('panel-auth').classList.contains("hidden")) {
+      await loginAttempt()
+    }
+    return
+  })
 }
 
 /****************
@@ -69,8 +73,10 @@ Testing Functions
 *****************/
 //basic testing function for validating code snippet behaviour.
 async function test() {
-  let selection = await updateSelectionArray();
-  console.log(selection)
+  let nullProject = document.createElement("option");
+  nullProject.text = "lmao";
+  nullProject.value = null;
+  let kiddies = document.getElementById("product-select").prepend(nullProject)
 }
 
 /**************
@@ -294,7 +300,7 @@ const updateProgressBar = (current, total) => {
     document.getElementById('pop-up').classList.add('sent');
     document.getElementById('pop-up-text').textContent = `Sent ${total} 
     ${document.getElementById('select-requirements').classList.contains('activated') ?
-        "Requirements!" : "Test Cases!"}`;
+        "Requirements" : "Test Cases"} successfully!`;
     enableButton('pop-up-ok');
   }
   else {
@@ -326,14 +332,11 @@ const hideProgressBar = () => {
 const displayError = (error, timeOut, failedArtifact) => {
   //We may want to update this to pass in the full object for better readability
   //rather than just passing in the key. (ie. instead of key, pass ERROR_MESSAGES['key'])
-  console.log('got called'
-  )
   let element = document.getElementById(error.htmlId);
   hideProgressBar();
   enableButton('pop-up-ok');
   document.getElementById('pop-up').classList.add('err');
   showElement('pop-up')
-  console.log("getting in")
   if (timeOut) {
     element.textContent = error.message;
     setTimeout(() => {
@@ -556,11 +559,11 @@ const trimStyles = async (styles, prevStyles) => {
 const usedStyles = async () => {
   let styles = [];
   //this is an old method, but makes sense to use here as this occurs before the user 
-  await updateSelectionArray();
-  for (let i = 0; i < SELECTION.length; i++) {
+  let selection = await updateSelectionArray();
+  for (let i = 0; i < selection.length; i++) {
     //normal is a reserved style for descriptions of requirements
-    if (!styles.includes(SELECTION[i].style) && SELECTION[i].style != "Normal") {
-      styles.push(SELECTION[i].style);
+    if (!styles.includes(selection[i].style) && selection[i].style != "Normal") {
+      styles.push(selection[i].style);
     }
   }
   return styles;
