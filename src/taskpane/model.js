@@ -90,12 +90,12 @@ var params = {
   // This is used to move around within the add-in UI
   pageStates: {
     authentication: 0,
-    projects: 1,
+    products: 1,
     artifact: 2,
     req_style: 3,
     test_style: 4,
     req_send: 5,
-    test_send: 6,
+    postSend: 6,
     helpLogin: 7,
     helpMain: 8,
     dev: 42

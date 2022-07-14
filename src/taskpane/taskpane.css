@@ -201,6 +201,7 @@ ul.form{
 
 .pop-up .ok.ms-Button {
     min-width: 0;
+    border: solid 1px #0001;
 }
 
 .pop-up .ok.ms-Button.r {
@@ -461,6 +462,9 @@ ul.form{
     font-weight: 600;
 }
 
+.ms-Button:active {
+    color: white;
+}
 
 .bold {
     font-weight: bold;

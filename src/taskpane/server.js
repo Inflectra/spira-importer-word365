@@ -582,7 +582,6 @@ const sendArtifacts = async (ArtifactTypeId, images, Artifacts, projectId, model
         }
       }
       updateProgressBar(requirements.length + 1, requirements.length + 1);
-      // hideProgressBar();
       document.getElementById("send-to-spira-button").disabled = false;
       return
     }
@@ -606,7 +605,7 @@ const sendArtifacts = async (ArtifactTypeId, images, Artifacts, projectId, model
         }
         //if the name is empty for the folder, set it as null (root directory)
         else if (!testCase.folderName){
-          folder.TestCAseFolderId = null
+          folder.TestCaseFolderId = null
         }
         //this returns the full test case object response
         let testCaseArtifact = await sendTestCase(testCase.Name, testCase.testCaseDescription,
@@ -654,8 +653,7 @@ const sendArtifacts = async (ArtifactTypeId, images, Artifacts, projectId, model
         }
         updateProgressBar(i + 1, testCases.length);
       }
-      updateProgressBar(testCases.length + 1, testCases.length + 1);
-      // hideProgressBar();
+      updateProgressBar(testCases.length, testCases.length);
       enableMainButtons();
     }
   }

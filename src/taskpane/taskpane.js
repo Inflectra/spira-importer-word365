@@ -379,8 +379,6 @@ const goToState = (state) => {
       // Hides style mappings
       hideElement('req-style-mappings');
       hideElement('test-style-mappings');
-      // document.getElementById("req-style-mappings").style.display = 'none'
-      // document.getElementById("test-style-mappings").style.display = 'none'
 
       // Resets artifact button colors
       document.getElementById("select-requirements").classList.remove("activated");
@@ -399,7 +397,7 @@ const goToState = (state) => {
       // Clear any error messages that exist
       clearErrors();
       break;
-    case (states.projects):
+    case (states.products):
       hideElement('panel-auth');
       showElement('main-screen');
       break;
@@ -410,7 +408,11 @@ const goToState = (state) => {
       showElement('select-test-cases');
       boldStep('artifact-select-text');
       // If the dropdown has a null value then clear it away
-      document.getElementById('product-select').remove('null')
+      
+      if (document.getElementById('product-select').children.item(0).textContent == "       ") {
+        console.log("beep beep, REMOVING: " + document.getElementById('product-select').children.item(0).textContent);
+        document.getElementById('product-select').childNodes.item(0).remove();
+      }
       break;
     case (states.dev):
       //moves us to the main interface without manually entering credentials
@@ -439,15 +441,41 @@ const goToState = (state) => {
       showElement('help-screen');
       document.getElementById('btn-help-back').onclick = () => {
         hideElement('help-screen');
-        goToState(states.projects);
+        goToState(states.products);
       }
       break;
+    case (states.postSend):
+      
+      // add back null project and select it
+      addDefaultProject();
+      document.getElementById('product-select').value = null;
+
+      // Hides style mappings
+      hideElement('req-style-mappings');
+      hideElement('test-style-mappings');
+
+      // Resets artifact button colors
+      document.getElementById("select-requirements").classList.remove("activated");
+      document.getElementById("select-test-cases").classList.remove("activated");
+
+      // Hides artifact text and buttons
+      hideElement('artifact-select-text');
+      hideElement('select-requirements');
+      hideElement('select-test-cases');
+
+      // Hides send to spira menu and enables button
+      hideElement('send-to-spira');
+
+      // Bolds the step 1 text
+      boldStep('product-select-text');
+      break;
+    
   }
 }
 
 //section is the Html id of the help section selected
 const openHelpSection = (buttonId) => {
-  for (let buttonId of params.collections.helpButtons){
+  for (let buttonId of params.collections.helpButtons) {
     document.getElementById(buttonId).classList.remove('activated')
   }
   let section = buttonId.replace("btn-", "")
@@ -463,7 +491,7 @@ const addDefaultProject = () => {
   let nullProject = document.createElement("option");
   nullProject.text = "       ";
   nullProject.value = null;
-  document.getElementById("product-select").add(nullProject);
+  document.getElementById("product-select").add(nullProject, 0);
 }
 
 const hideElement = (elementId) => {
@@ -497,6 +525,7 @@ const pushArtifacts = async () => {
   disableMainButtons();
   await parseArtifacts(artifactType, model, versionSupport);
   enableMainButtons();
+  goToState(params.pageStates.postSend);
 }
 
 /* Returns an array with all of the styles intended to be used for the 
