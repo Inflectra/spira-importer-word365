@@ -318,6 +318,7 @@ const parseArtifacts = async (ArtifactTypeId, model) => {
           //validateTestSteps throws the error, this just fails quietly
           return false
         }
+
         /*part of this portion isnt DRY, but due to not being able to pass Word 
         objects between functions cant be made into its own function*/
         for (let [i, item] of splitSelection.items.entries()) {
@@ -401,7 +402,6 @@ const parseArtifacts = async (ArtifactTypeId, model) => {
               else {
                 testCase.Name = itemtext
               }
-              continue
             }
           }
           //tables = [][][] string where [table][row][column]
@@ -584,7 +584,7 @@ const sendArtifacts = async (ArtifactTypeId, images, Artifacts, projectId, model
         }
         //if the name is empty for the folder, set it as null (root directory)
         else if (!testCase.folderName) {
-          folder = {TestCaseFolderId: null, Name: null}
+          folder = { TestCaseFolderId: null, Name: null }
           testCaseFolders.push(folder)
         }
         //this returns the full test case object response
@@ -900,7 +900,7 @@ const retrieveStyles = (pageTag) => {
 
 const validateHierarchy = (requirements) => {
   //if no requirements are parsed due to invalid text selection, this fails out to prevent crashing
-  if (requirements.length == 0){
+  if (requirements.length == 0) {
     return false
   }
   //requirements = [{Name: str, Description: str, IndentLevel: int}, ...]
