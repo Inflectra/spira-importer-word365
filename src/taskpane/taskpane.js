@@ -375,12 +375,13 @@ const displayError = (error, timeOut, failedArtifact) => {
       clearErrors();
     }, ERROR_MESSAGES.stdTimeOut);
   }
+  //special error case for handling hierarchy errors 
+  else if (error.message.includes("hierarchy")){
+    element.textContent = error.message.replace("{hierarchy-line}", failedArtifact.Name)
+  }
   else if (failedArtifact) { // This is a special case error message for more descriptive errors when sending artifacts
     element.textContent =
       `The request to the API has failed on the Artifact: '${failedArtifact.Name}'. All, if any previous Artifacts should be in Spira.`;
-    setTimeout(() => {
-      clearErrors();
-    }, ERROR_MESSAGES.stdTimeOut);
   }
   else {
     element.textContent = error.message;

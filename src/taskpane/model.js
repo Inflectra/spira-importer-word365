@@ -193,7 +193,7 @@ var ERROR_MESSAGES = {
   allIds: { login: "login-err", main: "pop-up-text" },
   login: { htmlId: "pop-up-text", message: "Your credentials are invalid" },
   empty: { htmlId: "pop-up-text", message: "You currently have no valid text selected or within the body of the document. if this is incorrect, check your style mappings and set them as the relevant styles." },
-  hierarchy: { htmlId: "pop-up-text", message: "Your style heirarchy is invalid for the selected area. Please make sure requirements only indent 1 additional level from the previous requirement as specified in the indent level style selectors above." },
+  hierarchy: { htmlId: "pop-up-text", message: "Your style hierarchy is invalid for the selected area. This occured on the line of '{hierarchy-line}'" },
   table: { htmlId: "pop-up-text", message: "Your description column for one or more tables only includes empty cells or does not exist. If you do not want to send test steps - do not select tables in your document. If you do, check your selection and try again." },
   failedReq: { htmlId: "pop-up-text", message: "" },
   duplicateStyles: { htmlId: "pop-up-text", message: "You currently have multiple mappings set to the same style. Please only use each style once." },

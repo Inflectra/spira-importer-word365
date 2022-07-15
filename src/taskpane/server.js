@@ -281,11 +281,13 @@ const parseArtifacts = async (ArtifactTypeId, model) => {
           }
         }
         //if the heirarchy is invalid, clear requirements and throw error
-        if (!validateHierarchy(requirements)) {
+        let validation = validateHierarchy(requirements)
+        console.log(validation)
+        if (validation != true || !typeof validation == "boolean") {
           requirements = false
           enableMainButtons();
           //throw hierarchy error and exit function
-          displayError(ERROR_MESSAGES.hierarchy, false)
+          displayError(ERROR_MESSAGES.hierarchy, false, validation)
           return false
         }
         clearErrors();
@@ -907,13 +909,14 @@ const validateHierarchy = (requirements) => {
   //requirements = [{Name: str, Description: str, IndentLevel: int}, ...]
   //the first requirement must always be indent level 0 (level 1 in UI terms)
   if (requirements[0].IndentLevel != 0) {
-    return false
+    return requirements[0]
   }
   let prevIndent = 0
   for (let i = 0; i < requirements.length; i++) {
     //if there is a jump in indent levels greater than 1, fails validation
     if (requirements[i].IndentLevel > prevIndent + 1) {
-      return false
+      //this is the requirement the error failed on
+      return requirements[i]
     }
     prevIndent = requirements[i].IndentLevel
   }
