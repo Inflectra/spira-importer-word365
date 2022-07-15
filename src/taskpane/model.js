@@ -194,7 +194,7 @@ var ERROR_MESSAGES = {
   login: { htmlId: "pop-up-text", message: "Your credentials are invalid" },
   empty: { htmlId: "pop-up-text", message: "You currently have no valid text selected or within the body of the document. if this is incorrect, check your style mappings and set them as the relevant styles." },
   hierarchy: { htmlId: "pop-up-text", message: "Your style hierarchy is invalid for the selected area. This occured on the line of '{hierarchy-line}'" },
-  table: { htmlId: "pop-up-text", message: "Your description column for one or more tables only includes empty cells or does not exist. If you do not want to send test steps - do not select tables in your document. If you do, check your selection and try again." },
+  table: { htmlId: "pop-up-text", message: "Your table with first cell \"{table-line}\" does not contain any data in the column allocated for test step descriptions. Please update your selected column, or remove this table from your selection." },
   failedReq: { htmlId: "pop-up-text", message: "" },
   duplicateStyles: { htmlId: "pop-up-text", message: "You currently have multiple mappings set to the same style. Please only use each style once." },
   emptyStyles: { htmlId: "pop-up-text", message: "You currently have unselected styles. Please provide a style for all provided inputs." },

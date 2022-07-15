@@ -282,7 +282,6 @@ const parseArtifacts = async (ArtifactTypeId, model) => {
         }
         //if the heirarchy is invalid, clear requirements and throw error
         let validation = validateHierarchy(requirements)
-        console.log(validation)
         if (validation != true || !typeof validation == "boolean") {
           requirements = false
           enableMainButtons();
@@ -924,7 +923,13 @@ const validateHierarchy = (requirements) => {
   return true
 }
 
+
+
 //passes in all relevant tables and description style for test steps (only required field).
+
+//params: 
+//tables: [][][] where [table][row][column]
+//descStyle: string of the column selected for test steps.
 const validateTestSteps = (tables, descStyle) => {
   //the column of descriptions according to the style mappings. -1 for indexing against the arrays
   let column = parseInt(descStyle.slice(-1)) - 1
@@ -941,7 +946,7 @@ const validateTestSteps = (tables, descStyle) => {
     }
     //if there is a table containing no test step descriptions, throws an error and stops execution
     if (!atLeastOneDesc) {
-      displayError(ERROR_MESSAGES.table, false);
+      displayError(ERROR_MESSAGES.table, false, tables[i][0][0]);
       return false
     }
   }
@@ -949,8 +954,18 @@ const validateTestSteps = (tables, descStyle) => {
   return true
 }
 
+/*Uploads images to spira, and replaces placeholders in various text fields with a tag to display
+the uploaded images in their appropriate positions.*/
+
+//params:
+//Artifact: {} - POST response from creating a new artifact which contains an image
+//image: {} - image object passed in following the templates.Image format
+//projectId: string - string of the projectId the user had selected when they pressed send to spira
+//model: {} - global Data object (from model) containing user credentials among other things
+//testCaseId: string - id of the test case a test step belongs to (only exists when pushing images to test steps)
+//styles: []string - users selected styles, organized in the same order as they appear in the UI.
+
 const pushImage = async (Artifact, image, projectId, model, testCaseId, styles) => {
-  //image = {base64: "", name: "", lineNum: int}
   /*upload images and build link of image location in spira 
   ({model.user.url}/{projectID}/Attachment/{AttachmentID}.aspx)*/
   //Add AttachmentURL to each imageObject after they are uploaded

@@ -369,6 +369,7 @@ const displayError = (error, timeOut, failedArtifact) => {
   enableButton('pop-up-ok');
   document.getElementById('pop-up').classList.add('err');
   showElement('pop-up')
+  console.log(failedArtifact)
   if (timeOut) {
     element.textContent = error.message;
     setTimeout(() => {
@@ -378,6 +379,9 @@ const displayError = (error, timeOut, failedArtifact) => {
   //special error case for handling hierarchy errors 
   else if (error.message.includes("hierarchy")){
     element.textContent = error.message.replace("{hierarchy-line}", failedArtifact.Name)
+  }
+  else if (error.message.includes("table")){
+    element.textContent = error.message.replace("{table-line}", failedArtifact)
   }
   else if (failedArtifact) { // This is a special case error message for more descriptive errors when sending artifacts
     element.textContent =
