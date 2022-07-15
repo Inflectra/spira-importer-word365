@@ -25,19 +25,6 @@ import {
   disableMainButtons
 } from './taskpane.js';
 
-/*
-  Functions that should be moved over: 
-  pushImage (i think),
-  indentRequirement
-*/
-
-/*Functions that have been integrated into parseArtifacts: pushArtifacts,
- updateSelectionArray, retrieveImages, parseRequirements, retrieveTables,
- parseTestCases, parseTestSteps
- */
-
-/*LINES THAT NEED ATTENTION: 121 175 214 */
-
 var RETRIEVE = "http://localhost:5000/retrieve"
 
 //params:
@@ -91,6 +78,70 @@ const parseArtifacts = async (ArtifactTypeId, model) => {
     /********************** 
      Start image formatting
     ***********************/
+    /*if test cases are being parsed, this creates an array of "invalid images"
+    which are images that exist in tables, but are not going to be put into any
+    test step fields. Without this, any images in un-used table cells will desync
+    images being placed and result in images from those un-used cells being placed 
+    into various parts of the users artifacts. (each "invalid image" offsets the 
+    synchonization by 1 picture, by inserting its self where another image should of been*/
+    if (ArtifactTypeId == params.artifactEnums.testCases) {
+      //styles = []string - each string is the "style" allocated
+      let styles = retrieveStyles('test-')
+      let usedColumns = []
+      /*styles[2] is the 3rd style - in this case, the test step description column.
+      This slices the number from the end, and turns it into an int to be used for 
+      reference later*/
+      let descriptionColumn = parseInt(styles[2].slice(-1)) - 1
+      //parses out the integer values of the column for each test step field
+      //2 to styles.length is all the "column" selectors for test steps
+      for (let i = 2; i < styles.length; i++) {
+        usedColumns.push(parseInt(styles[i].slice(-1)) - 1)
+      }
+      var invalidImages = []
+      let checkingTables = selection.tables
+      context.load(checkingTables)
+      await context.sync();
+      /*this for loop stack is just iterating through table cells, the API
+      requires me to load at each deeper step of nesting in the API structure*/
+      for (let table of checkingTables.items) {
+        let rows = table.rows
+        context.load(rows)
+        await context.sync();
+        for (let [rowIndex, row] of rows.items.entries()) {
+          let isValidRow = true;
+          let cells = row.cells
+          context.load(cells)
+          await context.sync();
+          /*this blurb checks if there is any text or an image 
+          in the description column of a row. If there is not, it
+          is not a "valid row" and all images from it will be discarded*/
+          if (!cells.items[descriptionColumn].value.trim()) {
+            let descriptionBody = cells.items[descriptionColumn].body
+            context.load(descriptionBody, 'inlinePictures')
+            await context.sync();
+            //if there are no images and no text, the row is not valid
+            if (!descriptionBody.inlinePictures.items[0]) {
+              isValidRow = false
+            }
+          }
+          for (let [cellIndex, cell] of cells.items.entries()) {
+            let cellBody = cell.body
+            context.load(cellBody, ['inlinePictures', 'paragraphs'])
+            await context.sync();
+            /*if an image exists and is not in a cell that 
+            will be used, mark that image as invalid. do the same if the row
+            its self is invalid (has no description for a test step)*/
+            if ((!isValidRow && cellBody.inlinePictures.items[0]) ||
+              (!usedColumns.includes(cellIndex) && cellBody.inlinePictures.items[0])) {
+              for (let picture of cellBody.inlinePictures.items) {
+                invalidImages.push(picture)
+              }
+            }
+          }
+        }
+      }
+    }
+    console.log(invalidImages)
     var imageLines = []
     //i represents each "line" delimited by \r tags
     for (let i = 0; i < splitSelection.items.length; i++) {
@@ -105,12 +156,20 @@ const parseArtifacts = async (ArtifactTypeId, model) => {
     var imageObjects = [];
     let images = selection.inlinePictures;
     for (let i = 0; i < images.items.length; i++) {
-      let base64 = images.items[i].getBase64ImageSrc();
-      await context.sync();
-      let imageObj = new templates.Image(base64.m_value, `inline${i}.jpg`, imageLines[0])
-      imageObjects.push(imageObj)
-      //removes the first item in imageLines as it has been converted to an imageObject;
-      imageLines.shift();
+      let isInvalid;
+      //checks if each image is within the invalidImage array 
+      if (ArtifactTypeId == params.artifactEnums.testCases) {
+        isInvalid = invalidImages.find(image => image._Id == images.items[i]._Id)
+      }
+      //oly adds the image here if it is not an "invalid image"
+      if (!isInvalid) {
+        let base64 = images.items[i].getBase64ImageSrc();
+        await context.sync();
+        let imageObj = new templates.Image(base64.m_value, `inline${i}.jpg`, imageLines[0])
+        imageObjects.push(imageObj)
+        //removes the first item in imageLines as it has been converted to an imageObject;
+        imageLines.shift();
+      }
     }
     //end of image formatting
     /*************************
@@ -1021,10 +1080,15 @@ const pushImage = async (Artifact, image, projectId, model, testCaseId, styles) 
     let placeholderRegex = params.regexs.imageRegex
     //gets an array of all the placeholders for images. 
     let placeholders = [...fullArtifactObj.Description.matchAll(placeholderRegex)]
+    console.log(placeholders)
     /*placeholders[0][0] is the first matched instance - because you need to GET for each change
     this should work each time - each placeholder should have 1 equivalent image in the same
     order they appear throughout the document.*/
-    fullArtifactObj.Description = fullArtifactObj.Description.replace(placeholders[0][0], `<img alt=${image?.name} src=${imgLink}><br />`)
+    let i = 0
+    while (!placeholders[i][0].includes("~")) {
+      i++
+    }
+    fullArtifactObj.Description = fullArtifactObj.Description.replace(placeholders[i][0], `<img alt=${image?.name} src=${imgLink} /><br />`)
     //PUT artifact with new description (including img tags now)
     let putArtifact = model.user.url + "/services/v6_0/RestService.svc/projects/" + pid +
       `/requirements?username=${model.user.username}&api-key=${model.user.api_key}`;
@@ -1200,3 +1264,4 @@ async function updateSelectionArray() {
     return lines
   })
 }
+

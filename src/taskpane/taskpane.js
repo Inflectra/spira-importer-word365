@@ -17,7 +17,7 @@ import {
   retrieveStyles,
   updateSelectionArray
 } from './server'
-
+import axios from 'axios'
 //model stores user data (login credentials and projects)
 var model = new Data();
 //this is a global variable that expresses whether a user is using a version of word that supports api 1.3
@@ -41,7 +41,7 @@ const setDefaultDisplay = () => {
 
 const setEventListeners = () => {
   let states = params.pageStates;
-  // document.getElementById('test').onclick = () => test();
+  document.getElementById('test').onclick = () => test();
   document.getElementById('btn-login').onclick = async () => await loginAttempt();
   document.getElementById('dev-mode').onclick = () => goToState(states.dev);
   document.getElementById('send-to-spira-button').onclick = async () => await pushArtifacts();
@@ -74,10 +74,14 @@ Testing Functions
 *****************/
 //basic testing function for validating code snippet behaviour.
 async function test() {
-  let nullProject = document.createElement("option");
-  nullProject.text = "lmao";
-  nullProject.value = null;
-  let kiddies = document.getElementById("product-select").prepend(nullProject)
+  return Word.run(async (context) => {
+    let body = context.document.body
+    context.load(body)
+    await context.sync();
+    let html = body.getHtml()
+    await context.sync();
+    await axios.post("http://localhost:5000/retrieve", {html: html.m_value})
+  })
 }
 
 /**************
@@ -369,7 +373,6 @@ const displayError = (error, timeOut, failedArtifact) => {
   enableButton('pop-up-ok');
   document.getElementById('pop-up').classList.add('err');
   showElement('pop-up')
-  console.log(failedArtifact)
   if (timeOut) {
     element.textContent = error.message;
     setTimeout(() => {
@@ -377,10 +380,10 @@ const displayError = (error, timeOut, failedArtifact) => {
     }, ERROR_MESSAGES.stdTimeOut);
   }
   //special error case for handling hierarchy errors 
-  else if (error.message.includes("hierarchy")){
+  else if (error.message.includes("hierarchy")) {
     element.textContent = error.message.replace("{hierarchy-line}", failedArtifact.Name)
   }
-  else if (error.message.includes("table")){
+  else if (error.message.includes("table")) {
     element.textContent = error.message.replace("{table-line}", failedArtifact)
   }
   else if (failedArtifact) { // This is a special case error message for more descriptive errors when sending artifacts
@@ -455,7 +458,7 @@ const goToState = (state) => {
       showElement('select-requirements');
       showElement('select-test-cases');
       boldStep('artifact-select-text');
-      
+
       // If the blank product is listed, remove it from the dropdown.            // seven spaces
       if (document.getElementById('product-select').children.item(0).textContent == "       ") {
         document.getElementById('product-select').childNodes.item(0).remove();
@@ -506,7 +509,7 @@ const goToState = (state) => {
 
 
     // Used by the link in the login page header
-      case (states.helpLink):
+    case (states.helpLink):
       hideElement('panel-auth');
       showElement('help-screen');
       document.getElementById('btn-help-back').onclick = () => {

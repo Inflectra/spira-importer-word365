@@ -60,7 +60,9 @@ var params = {
     emptyParagraphRegex: /<p(.)*?>\&nbsp\;<\/p>/g,
     orderedRegex: /.*class=MsoListParagraph.*><span.*>(.*)<span/,
     marginRegex: /style='margin-left:(\d)\.(\d)in/,
-    imageRegex: /<img(.|\n|\r)*("|\s)>/g,
+    //images in requirements always have this \n at the beginning, but not the case everywhere.
+    requirementImageRegex: /<img\n(.|\n|\r)*?("|\s)>/gu,
+    imageRegex: /<img(.|\n|\r)*?("|\s)>/gu,
     listSpanRegex: /<span(.|\r|\n|\s)*?(<\/span>){1,2}/,
     exceptedListRegex: />(\d{1} | \.){2,}<span/u,
     firstListItemRegex: /<p class=MsoListParagraphCxSpFirst(.|\n|\r)*?\/p>/g,
