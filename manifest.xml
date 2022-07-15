@@ -4,7 +4,7 @@ xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
 xmlns:bt="http://schemas.microsoft.com/office/officeappbasictypes/1.0"
  xmlns:ov="http://schemas.microsoft.com/office/taskpaneappversionoverrides" 
  xsi:type="TaskPaneApp">
-  <Id>b015dd25-1f01-46fe-a1dc-ff37f6b1fa08</Id>
+  <Id>11be36d2-31a0-462c-ab56-01a5da5e4dd0</Id>
   <Version>1.0.0.0</Version>
   <ProviderName>Inflectra</ProviderName>
   <DefaultLocale>en-US</DefaultLocale>

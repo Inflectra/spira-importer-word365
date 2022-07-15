@@ -344,6 +344,7 @@ ul.form {
     justify-content: space-around;
     flex-direction: row;
     position: relative;
+    display: inline-block;
 }
 
 .styles-block {
