@@ -33,10 +33,10 @@
     <div id="pop-up" class="pop-up hidden">
         <button type="button" id="pop-up-close" class="close">&#xD7;</button>
         <p id="pop-up-text">pop!<br></p>
-        <div id="progress-bar" class="hidden mb-md">
+        <div id="progress-bar" class="hidden mb-sm">
             <div id="progress-bar-progress"></div>
         </div>
-        <button type="button" id="pop-up-ok" class="ok ms-Button l">Ok</button>
+        <button type="button" id="pop-up-ok" class="ok ms-Button l fade mt-sm">OK</button>
     </div>
     <!--auth page-->
     <div id="panel-auth" class="panel">
@@ -182,30 +182,31 @@
     </div>
     <!-- Help Screen -->
     <div id="help-screen" class="hidden">
-        <button class="ms-Button ms-Button--default flex" id="btn-help-back" type="button">
+        <button class="ms-Button ms-Button--default flex fade" id="btn-help-back" type="button">
             Back
         </button>
         <h3>Quick Help Guide</h3>
         <p class="mt-0">For more information see our
             <a target="https://spiradoc.inflectra.com/Migration-and-Integration/Importing-from-Microsoft-Word/">
-                documentation. This add-in is for Word 2016+.
+                documentation. This add-in is for Word 2019+.
             </a>
         </p>
         <div id="help-buttons" class="flex">
-            <button class="btn-help ms-Button ms-Button--default " id="btn-help-section-login"
+            <button class="btn-help ms-Button ms-Button--default fade" id="btn-help-section-login"
                 title="Help with the login screen" type="button">
                 Login
             </button>
-            <button class="btn-help ms-Button ms-Button--default" id="btn-help-section-guide"
+            <button class="btn-help ms-Button ms-Button--default fade" id="btn-help-section-guide"
                 title="How to use the importer tool" type="button">
                 Guide
             </button>
-            <button class="btn-help ms-Button ms-Button--default" id="btn-help-section-issues"
-                title="Help with working with using different versions of the add-in" type="button">
-                Issues
+            <button class="btn-help ms-Button ms-Button--default fade" id="btn-help-section-issues"
+                title="Frequently encountered issues" type="button">
+                FAQ
             </button>
         </div>
         <div id="help-section-login" class="help-section hidden">
+            <p>If you are having trouble logging in, try these steps.</p>
             <h4>1. Connect to your Spira app</h4>
             <p id="help-connection-google">You can use this add-on with SpiraTest®, SpiraTeam®, or SpiraPlan®. It works
                 with any cloud Spira app. Any on premise Spira needs to be accessible over the internet.</p>
@@ -234,6 +235,7 @@
             </ol>
         </div>
         <div id="help-section-guide" class="help-section hidden">
+            <p>Read over these four steps to learn how to use this Importer.</p>
             <h4>1. Select the project you wish to import to</h4>
             <h4>2. Select the desired artifact type</h4>
             <p>You can import both Requirements and Test Cases to SpiraTest®, SpiraTeam®, or SpiraPlan® from this tool.
@@ -271,10 +273,10 @@
             </p>
         </div>
         <div id="help-section-issues" class="help-section hidden">
-            <p>In case you run into any issues while using this addin, review the functionality
-                listed here
+            <p>In case you run get confused while using this addin, review the 
+                listed here.
             </p>
-            <h4>Issues with Sending Requirements</h4>
+            <h4>Functionality of Sending Requirements</h4>
             <ul class="list">
                 <li>
                     <p>
@@ -289,8 +291,7 @@
                 <li>
                     <p>
                         If you don't have any text selected, then the importer will attempt to send
-                        your entire document according to your style mappings selection, even if that
-                        may not be your intent.
+                        your entire document according to your style mappings selection.
                     </p>
                 </li>
                 <li>
@@ -301,18 +302,19 @@
                     </p>
                 </li>
             </ul>
-            <h4>Issues with Sending Test Steps</h4>
+            <h4>Functionality of Sending Test Cases</h4>
             <ul class="list">
                 <li>
                     <p>
                         Tables which do not contain any text in any cell within the allocated
-                        “description” column will throw a table error.
+                        “description” column will throw a table error. This is because the add-in
+                        recognizes Tables of test steps based on text in the description column.
                     </p>
                 </li>
                 <li>
                     <p>
-                        Empty cells or non existent cells for the other 2 properties work fine, just
-                        populates an empty string for those fields.
+                        Empty cells or non existent cells for the other 2 properties work as you would expect, the
+                        add-in populates an empty string for those fields.
                     </p>
                 </li>
             </ul>

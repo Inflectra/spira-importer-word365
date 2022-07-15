@@ -98,6 +98,7 @@ var params = {
     postSend: 6,
     helpLogin: 7,
     helpMain: 8,
+    helpLink: 9,
     dev: 42
   },
   //these are collections of parameters that are likely to be used as groups

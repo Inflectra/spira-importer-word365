@@ -96,7 +96,6 @@ body {
     height: 100%;
     margin: 0;
     padding: 0;
-    overflow: hidden;
 }
 
 ul.form {
@@ -111,7 +110,9 @@ ul.form {
 /*PAGE PARTS*/
 
 .header {
-    position: absolute;
+    position: fixed;
+    width: 100%;
+    background-color: white;
     height: 50px;
     top: 0;
     left: 0;
@@ -174,13 +175,14 @@ ul.form {
     position: fixed;
     align-self: center;
     z-index: 1;
-    padding: .5rem;
+    padding: .75rem;
     color: black;
     border: 1px solid #eeeeee;
-    width: 90%;
-    margin: 0 1.5rem 0 0.5rem;
-    margin-top: 50px;
-    box-shadow: 3px 5px rgba(0, 0, 0, 0.05);
+    border-radius: 0.5rem;
+    width: calc(100% - 1.5rem);
+    margin: 0 0.75rem;
+    /*match homepage */
+    box-shadow: 3px 5px 5px rgba(0, 0, 0, 0.05);
 }
 
 .pop-up .close {
@@ -192,6 +194,7 @@ ul.form {
     float: right;
     border: none;
     background: none;
+    cursor: pointer;
 }
 
 .pop-up .r {
@@ -224,7 +227,7 @@ ul.form {
 
 .pop-up.sending {
     background-color: #fefeee;
-    border-color: #fdfddd;
+    border-color: #e7e7cc;
 }
 
 .pop-up.sent {
@@ -300,16 +303,15 @@ ul.form {
     justify-content: start;
     flex-direction: column;
     text-align: left;
-    margin-top: 50px;
-    overflow-y: auto;
-    /* padding: 1rem; */
+    margin: 50px 0;
+    padding: 1rem;
 }
 
 #progress-bar {
-    margin-left: auto;
-    margin-right: auto;
-    width: 80%;
+    width: 100%;
     background-color: #eeeeee;
+    border-radius: 0.25rem;
+    overflow: hidden;
 }
 
 #progress-bar-progress {
@@ -321,7 +323,21 @@ ul.form {
 
 #bottom-buttons,
 #artifact-select {
-    width: 95%;
+    width: 100%;
+    align-self: center;
+    align-items: start;
+    text-align: start;
+    justify-content: start;
+    flex-direction: row;
+    position: relative;
+}
+
+#bottom-buttons {
+    padding-bottom: 50px;
+}
+
+#help-buttons {
+    width: 100%;
     align-self: center;
     align-items: start;
     text-align: start;
@@ -332,8 +348,7 @@ ul.form {
 
 .styles-block {
     /*display:flex is assigned when the block is shown, display:none when hidden*/
-    width: 95%;
-    align-self: center;
+    align-self: left;
     align-items: start;
     text-align: start;
     justify-content: start;
@@ -499,8 +514,7 @@ ul.form {
     display: flex;
     -webkit-flex-direction: column;
     flex-direction: column;
-    align-self: center;
-    width: 95%;
+    align-self: left;
 }
 
 .ms-welcome__main>h2 {

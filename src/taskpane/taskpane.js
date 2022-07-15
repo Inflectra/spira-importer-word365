@@ -55,6 +55,7 @@ const setEventListeners = () => {
   document.getElementById("pop-up-ok").onclick = () => hideElement('pop-up');
   document.getElementById("btn-help-login").onclick = () => goToState(states.helpLogin);
   document.getElementById("btn-help-main").onclick = () => goToState(states.helpMain);
+  document.getElementById('lnk-help-login').onclick = () => goToState(states.helpLink);
   document.getElementById(params.buttonIds.helpLogin).onclick = () => openHelpSection(params.buttonIds.helpLogin);
   document.getElementById(params.buttonIds.helpModes).onclick = () => openHelpSection(params.buttonIds.helpModes);
   document.getElementById(params.buttonIds.helpVersions).onclick = () => openHelpSection(params.buttonIds.helpVersions);
@@ -127,6 +128,9 @@ const loginAttempt = async () => {
     document.getElementById("btn-login").disabled = false;
     return
   }
+  // Turn the header check box on here so that it won't get set just by navigating
+  // around the send to spira menu
+  document.getElementById('header-check').checked = true;
 }
 
 /********************
@@ -142,18 +146,46 @@ const enableButton = (htmlId) => {
   document.getElementById(htmlId).disabled = false
 }
 
-const disableMainButtons = () => { // Disables all buttons on the main screen
+// Called when sending to Spira so the user can't double-send
+const disableMainButtons = () => {
   let buttons = Object.values(params.buttonIds);
   for (let button of buttons) {
     disableButton(button);
   }
 }
 
-const enableMainButtons = () => { // Enables all buttons on the main screen
+// Called after sending succeeds or fails so the user do things again
+const enableMainButtons = () => {
   let buttons = Object.values(params.buttonIds);
   for (let button of buttons) {
     enableButton(button);
   }
+}
+
+// Same use as disableMainButtons
+const disableDropdowns = () => {
+  for (let i = 1; i < 6; i++) {
+
+    // using disableButton but it works the same for dropdowns
+    disableButton(`test-style-select${i}`);
+  }
+  for (let i = 1; i < 6; i++) {
+    disableButton(`req-style-select${i}`);
+  }
+  disableButton('product-select');
+}
+
+// Same use as enableMainButtons
+const enableDropdowns = () => {
+  for (let i = 1; i < 6; i++) {
+
+    // using enableButton but it works the same for dropdowns
+    enableButton(`test-style-select${i}`);
+  }
+  for (let i = 1; i < 6; i++) {
+    enableButton(`req-style-select${i}`);
+  }
+  enableButton('product-select');
 }
 
 const populateProjects = (projects) => {
@@ -361,9 +393,13 @@ const clearErrors = () => {
   document.getElementById('pop-up-text').textContent = "";
 }
 
+
+// Takes you to a specific page or UI setup within the taskpane
 const goToState = (state) => {
   let states = params.pageStates;
   switch (state) {
+
+    // Case for logging out (back to authentication page)
     case (states.authentication):
 
       // clear stored user data
@@ -400,20 +436,23 @@ const goToState = (state) => {
       // Clear any error messages that exist
       clearErrors();
       break;
+
+    // Currently used to get back to the sending screen from help
     case (states.products):
       hideElement('panel-auth');
       showElement('main-screen');
       break;
+
+    // Case for after a user selects a product and now needs to select artifact type
     case (states.artifact):
       // Show artifact text and buttons
       showElement('artifact-select-text');
       showElement('select-requirements');
       showElement('select-test-cases');
       boldStep('artifact-select-text');
-      // If the dropdown has a null value then clear it away
       
+      // If the blank product is listed, remove it from the dropdown.            // seven spaces
       if (document.getElementById('product-select').children.item(0).textContent == "       ") {
-        console.log("beep beep, REMOVING: " + document.getElementById('product-select').children.item(0).textContent);
         document.getElementById('product-select').childNodes.item(0).remove();
       }
       break;
@@ -428,9 +467,41 @@ const goToState = (state) => {
       devOption.value = null;
       document.getElementById("product-select").add(devOption);
       boldStep('product-select-text');
+
+      // Turn the header check box on here so that it won't get set just by navigating
+      // around the send to spira menu
+      document.getElementById('header-check').checked = true;
       break;
+
+    // moves us to the help screen and makes the back button take us to the login page
     case (states.helpLogin):
-      // moves us to the help screen and makes the back button take us to the login page
+      hideElement('panel-auth');
+      showElement('help-screen');
+      document.getElementById('btn-help-back').onclick = () => {
+        hideElement('help-screen');
+        goToState(states.authentication);
+      };
+
+      // Automatically shows the login section when pressing help on the login screen.
+      document.getElementById('btn-help-section-login').click();
+      break;
+
+    // moves us to the help screen and makes the back button take us to the project select page
+    case (states.helpMain):
+      hideElement('main-screen');
+      showElement('help-screen');
+      document.getElementById('btn-help-back').onclick = () => {
+        hideElement('help-screen');
+        goToState(states.products);
+      }
+
+      // Automatically shows the guide section when pressing help on the main screen.
+      document.getElementById('btn-help-section-guide').click();
+      break;
+
+
+    // Used by the link in the login page header
+      case (states.helpLink):
       hideElement('panel-auth');
       showElement('help-screen');
       document.getElementById('btn-help-back').onclick = () => {
@@ -438,17 +509,10 @@ const goToState = (state) => {
         goToState(states.authentication);
       };
       break;
-    case (states.helpMain):
-      // moves us to the help screen and makes the back button take us to the project select page
-      hideElement('main-screen');
-      showElement('help-screen');
-      document.getElementById('btn-help-back').onclick = () => {
-        hideElement('help-screen');
-        goToState(states.products);
-      }
-      break;
+
+    // takes the user back to the start of the sending process after pushing their artifacts.
     case (states.postSend):
-      
+
       // add back null project and select it
       addDefaultProject();
       document.getElementById('product-select').value = null;
@@ -472,7 +536,7 @@ const goToState = (state) => {
       // Bolds the step 1 text
       boldStep('product-select-text');
       break;
-    
+
   }
 }
 
@@ -526,8 +590,10 @@ const pushArtifacts = async () => {
     artifactType = params.artifactEnums.requirements
   }
   disableMainButtons();
+  disableDropdowns();
   await parseArtifacts(artifactType, model, versionSupport);
   enableMainButtons();
+  enableDropdowns();
   goToState(params.pageStates.postSend);
 }
 
