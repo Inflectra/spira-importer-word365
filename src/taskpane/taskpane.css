@@ -341,7 +341,7 @@ ul.form {
     align-self: center;
     align-items: start;
     text-align: start;
-    justify-content: start;
+    justify-content: space-around;
     flex-direction: row;
     position: relative;
 }

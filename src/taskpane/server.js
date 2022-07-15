@@ -650,6 +650,7 @@ const retrieveTestCaseFolders = async (projectId, model) => {
   }
   catch (err) {
     displayError(ERROR_MESSAGES.testCaseFolders, false)
+    return []
   }
 }
 

@@ -198,10 +198,7 @@ var ERROR_MESSAGES = {
   failedReq: { htmlId: "pop-up-text", message: "" },
   duplicateStyles: { htmlId: "pop-up-text", message: "You currently have multiple mappings set to the same style. Please only use each style once." },
   emptyStyles: { htmlId: "pop-up-text", message: "You currently have unselected styles. Please provide a style for all provided inputs." },
-  failedImageReq: { htmlId: "pop-up-text", message: "Sending artifacts failed on sending an image. Sending artifacts will continue until a fatal error occurs. Some images may not appear in Spira." },
-  testCaseFolders: { htmlId: "pop-up-text", message: "Loading or retriving test case folders failed. If retrieving failed, you may still have your test cases imported in a new folder." },
-  //this will be an info message - not an error (but can be in certain edge cases, see first catch block in parseArtifacts)
-  invalidSelection: { htmlId: "pop-up-text", message: "It appears you have no text selected. the importer will proceed by parsing the full document." }
+  testCaseFolders: { htmlId: "pop-up-text", message: "Loading or retriving test case folders failed. If retrieving failed, you may still have your test cases imported in a new folder." }
 }
 
 export { Data, params, templates, ERROR_MESSAGES }

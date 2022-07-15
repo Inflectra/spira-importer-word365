@@ -41,7 +41,7 @@ const setDefaultDisplay = () => {
 
 const setEventListeners = () => {
   let states = params.pageStates;
-  document.getElementById('test').onclick = () => test();
+  // document.getElementById('test').onclick = () => test();
   document.getElementById('btn-login').onclick = async () => await loginAttempt();
   document.getElementById('dev-mode').onclick = () => goToState(states.dev);
   document.getElementById('send-to-spira-button').onclick = async () => await pushArtifacts();
