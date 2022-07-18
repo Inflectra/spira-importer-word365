@@ -83,7 +83,8 @@ const parseArtifacts = async (ArtifactTypeId, model) => {
     test step fields. Without this, any images in un-used table cells will desync
     images being placed and result in images from those un-used cells being placed 
     into various parts of the users artifacts. (each "invalid image" offsets the 
-    synchonization by 1 picture, by inserting its self where another image should of been*/
+    synchonization by 1 picture, by inserting its self where another image should
+     of been)*/
     if (ArtifactTypeId == params.artifactEnums.testCases) {
       //styles = []string - each string is the "style" allocated
       let styles = retrieveStyles('test-')
@@ -112,10 +113,14 @@ const parseArtifacts = async (ArtifactTypeId, model) => {
           let cells = row.cells
           context.load(cells)
           await context.sync();
+          //this verifies the cell exists - the application crashes without this
+          if (!cells.items[descriptionColumn]) {
+            continue
+          }
           /*this blurb checks if there is any text or an image 
           in the description column of a row. If there is not, it
           is not a "valid row" and all images from it will be discarded*/
-          if (!cells.items[descriptionColumn].value.trim()) {
+          else if (!cells.items[descriptionColumn].value.trim()) {
             let descriptionBody = cells.items[descriptionColumn].body
             context.load(descriptionBody, 'inlinePictures')
             await context.sync();
@@ -152,6 +157,10 @@ const parseArtifacts = async (ArtifactTypeId, model) => {
         }
       }
     }
+    /*tableImageObjects allows us to support tables with images above a test case
+     description which also contains images by separating images in tables from 
+     ones that arent.*/
+    var tableImageObjects = []
     var imageObjects = [];
     let images = selection.inlinePictures;
     for (let i = 0; i < images.items.length; i++) {
@@ -160,7 +169,7 @@ const parseArtifacts = async (ArtifactTypeId, model) => {
       if (ArtifactTypeId == params.artifactEnums.testCases) {
         isInvalid = invalidImages.find(image => image._Id == images.items[i]._Id)
       }
-      //oly adds the image here if it is not an "invalid image"
+      //only adds the image to an image objects array if it is not an "invalid image"
       if (!isInvalid) {
         let base64 = images.items[i].getBase64ImageSrc();
         await context.sync();
