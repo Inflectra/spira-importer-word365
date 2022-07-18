@@ -9,6 +9,8 @@ This add-in works with Microsoft Word 2019+, Word with Office 365, Word in the c
 ## Important Notice (Legacy documents)
 **Older Word documents (Created or edited in a version of Word 2016 or earlier) may have images embedded in a fashion not consistent with what the Word JavaScript API supports.** If your Word document was initially created in a version of Word from 2016 or earlier, you may want to upload your document to Google Docs, then re-download it as a .docx file before importing from that version of the document. This will update the embedding of images to the newer method used by modern versions of Word. If this is not an option due to regulations in your industry or any other reason, see the [manual version](#dealing-with-images-within-old-documents) at the bottom of this guide. Failure to do so may result in the incorrect images being populated in your Spira artifacts, or no images appearing at all.
 
+**Lists sometimes have issues within Word's JavaScript API.** Word will sometimes combine lists into 1 long list even when they are clearly separated from the users perspective. We cannot do anything about this formatting oddity, and it may result in multiple lists in the location where only 1 of them was before. The ones which are merged in this fashion will be deleted from where they should have been. There is no known fix besides re-typing lists, and no known way to check if any 2 lists are combined from the API's perspective.
+
 ## Installation
 
 To install the add-in:
