@@ -4,7 +4,7 @@ This add-in works with Microsoft Word 2019+, Word with Office 365, Word in the c
 
 **The add-in works for:**
 1. Requirements
-2. Test Cases with their Test Steps
+2. Test Cases with or without Test Steps
 
 ## Important Notice (Legacy documents)
 **Older Word documents (Created or edited in a version of Word 2016 or earlier) may have images embedded in a fashion not consistent with what the Word JavaScript API supports.** If your Word document was initially created in a version of Word from 2016 or earlier, you may want to upload your document to Google Docs, then re-download it as a .docx file before importing from that version of the document. This will update the embedding of images to the newer method used by modern versions of Word. If this is not an option due to regulations in your industry or any other reason, see the [manual version](#dealing-with-images-within-old-documents) at the bottom of this guide. Failure to do so may result in the incorrect images being populated in your Spira artifacts, or no images appearing at all.
@@ -26,7 +26,7 @@ If you are using Word in the browser, make sure your SpiraPlan® is accessible o
 
 ![Spira add-in login screen](img/word365-log-in-screen.png)
 
-* **Your Spira URL:** The web address that you use to access SpiraPlan® in your browser. Use the web address you use to access Spira in your browser. This is usually of the form 'http://**company**.spiraservice.net'. Make sure you remove any suffixes from the address (e.g. Default.aspx or "/")
+* **Your Spira URL:** The web address that you use to access SpiraPlan® in your browser. This is usually of the form 'http://**company**.spiraservice.net'. Make sure you remove any suffixes from the address (e.g. Default.aspx or "/")
 * **Your Username:** This is the exact same username you use to log in to Spira. (Not Case Sensitive)
 * **Enter your RSS token:** You can find or generate this from your user profile page inside Spira - "{ExampleRSS}". Make sure to include the curly braces and *make sure to hit Save after generating a new RSS token.*
 
@@ -40,7 +40,7 @@ The add-in provides a dropdown with the various products within your Spira insta
 
 ![Spira product selection screen](img/word365-product-select.png)
 
-Once you have selected your product, a second option should appear giving you a choice between Requirements or Test Cases. This selection can be changed at any time by selecting the opposite option.
+Once you have selected your product, a second option should appear giving you a choice between Requirements or Test Cases. This selection can be changed at any time.
 
 ![Spira Artifact selection screen](img/word365-artifact-select.png)
 
@@ -54,9 +54,9 @@ For requirements, the 5 indent levels represent the hierarchical relationship of
 
 ![Add-in requirement styles selection screen](img/word365-requirement-styles.png)
 
-### Test Steps
+### Test Cases
 
-For test steps, the first 2 style dropdowns represent the folder name, of which the test cases below it will be put in, as well as the style which will be treated as the title of test cases. The last 3 selectors are for determining where within your tables of test steps each field is located in. Every table within the selection must have at least 1 cell in the column for Descriptions with valid text within. If this is not the case, the importer will throw an error explaining that there is an invalid table. Please note, the importer will not create a test case folder with a name which already exists as a test case folder. Instead, the tool will import the test cases into the existing folder with that name. It is case sensitive, but can be a valuable tool if you wish to add the test cases from a document into an existing test case folder.
+For test cases, the first style dropdown matches your test folder name(s), which any following test cases will be put into, and the second dropdown will match the style of test cases names. The last 3 selectors are for determining where within your tables of test steps each field is located in. Every table within the selection must have at least 1 cell in the column for Descriptions with valid text within. If this is not the case, the importer will throw an error explaining that there is an invalid table. Please note, the importer will not create a test case folder with a name which already exists as a test case folder. Instead, the tool will import the test cases into the existing folder with that name. It is case sensitive, and can be a valuable tool if you wish to add the test cases from a document into an existing test case folder.
 
 ![Add-in test case styles selection screen](img/word365-test-case-styles.jpg)
 
