@@ -594,7 +594,8 @@ const parseArtifacts = async (ArtifactTypeId, model) => {
     }
   })
 }
-//params:
+
+//sendArtifacts params:
 //images = [{base64: b64encoded string, name: "", lineNum: ""}]
 //ArtifactTypeId based on params.artifactEnums.{artifact-type}
 //Artifacts is the array of parsed artifacts ready for sending
@@ -602,6 +603,9 @@ const parseArtifacts = async (ArtifactTypeId, model) => {
 //model: Data() object; used for user object containing user credentials
 /*styles: []string; The user selected styles, needed for determining order of test step
 properties inside a table.*/
+/*tableImages: same as images, but are the ones which are within tables (only for
+   test cases). See line ~160 for explanation of why this is separate.
+*/
 
 /*This function takes the already parsed artifacts and images and sends
 them to spira*/
@@ -739,6 +743,9 @@ const sendArtifacts = async (ArtifactTypeId, images, Artifacts, projectId, model
   }
 }
 
+//retrieveTestCaseFolders params:
+//projectId: string of the ProjectId of the selected project
+//model: Data() object with user credentials.
 
 //this function retrieves an array of all testCaseFolders in the selected project
 const retrieveTestCaseFolders = async (projectId, model) => {
@@ -753,6 +760,12 @@ const retrieveTestCaseFolders = async (projectId, model) => {
     return []
   }
 }
+
+//createTestCaseFolder params:
+//folderName: name of the folder to be created
+//description: description ^ ^ ^
+//projectId: Project ID of the selected project as a string
+//model: Data() object with user credentials
 
 //This function creates a new test case folder in spira and returns its TestCaseFolderId
 const createTestCaseFolder = async (folderName, description, projectId, model) => {
@@ -770,6 +783,14 @@ const createTestCaseFolder = async (folderName, description, projectId, model) =
     return null;
   }
 }
+
+//sendTestCase params:
+//testCaseName: string - name of test case to be created
+// testCaseDescription: string - description ^ ^ ^ 
+//testFolderId: id of the folder the new test case should be within
+//projectId: Project ID of the selected project
+//model: Data() object with user credentials
+
 //sends a test case to spira
 const sendTestCase = async (testCaseName, testCaseDescription, testFolderId, projectId, model) => {
   try {
@@ -787,6 +808,12 @@ const sendTestCase = async (testCaseName, testCaseDescription, testFolderId, pro
     return null;
   }
 }
+
+//sendTestStep params:
+//testCaseId: ID of the test case this test step will be created under
+//testStep: populated templates.TestStep() object (model.js)
+//model: Data() object with user credentials
+//projectId: Project ID of user selected project 
 
 //sends a test step to spira
 const sendTestStep = async (testCaseId, testStep, model, projectId) => {
@@ -982,6 +1009,9 @@ const listConstructor = (isOrdered, list) => {
   return listHtml
 }
 
+//pageTag: string - represents what artifact type the user will be parsing
+
+//retrieves any existing style settings when a user opens the style selectors
 const retrieveStyles = (pageTag) => {
   let styles = []
   for (let i = 1; i <= 5; i++) {
@@ -1001,6 +1031,9 @@ const retrieveStyles = (pageTag) => {
   return styles
 }
 
+//requirements: [] template.Requirement - all the parsed requirements from the document
+
+//validates the requirements heirarchy of the selected section of the document
 const validateHierarchy = (requirements) => {
   //if no requirements are parsed due to invalid text selection, this fails out to prevent crashing
   if (requirements.length == 0) {
@@ -1024,13 +1057,11 @@ const validateHierarchy = (requirements) => {
   return true
 }
 
-
-
-//passes in all relevant tables and description style for test steps (only required field).
-
 //params: 
 //tables: [][][] where [table][row][column]
 //descStyle: string of the column selected for test steps.
+
+//passes in all relevant tables and description style for test steps (only required field).
 const validateTestSteps = (tables, descStyle) => {
   //the column of descriptions according to the style mappings. -1 for indexing against the arrays
   let column = parseInt(descStyle.slice(-1)) - 1
@@ -1238,11 +1269,16 @@ const pushImage = async (Artifact, image, projectId, model, placeholder, testCas
   return true
 }
 
+//indentRequirement params:
+//apiCall: string - formatted URL for the initial POST creation call
+//RequirementId: string - RequirementId from spira of the created requirement
+//indent: int - change in indent level. If negative, outdents that many times. 
+
 /*indents requirements to the appropriate level, relative to the last requirement in the product
 before this add-on begins to add more. (No way to find out indent level of the last requirement
   in a product from the Spira API (i think))*/
-const indentRequirement = async (apiCall, id, indent) => {
-  apiCall = apiCall.replace("requirements", `requirements/${id}/${indent > 0 ? "indent" : "outdent"}`)
+const indentRequirement = async (apiCall, RequirementId, indent) => {
+  apiCall = apiCall.replace("requirements", `requirements/${RequirementId}/${indent > 0 ? "indent" : "outdent"}`)
   indent = Math.abs(indent);
   //loop for indenting/outdenting requirement
   for (let i = 0; i < indent; i++) {
@@ -1258,11 +1294,19 @@ const indentRequirement = async (apiCall, id, indent) => {
   return true
 }
 
+//apiUrl: string - formatted API call url for GETing /projects
+
+/*GETs /projects to validate credentials and returns the response object with the 
+users projects to populate dropdown*/
 const loginCall = async (apiUrl) => {
-  var response = await superagent.get(apiUrl).set('accept', 'application/json').set("Content-Type", "application/json")
+  var response = await superagent.get(apiUrl).set(
+    'accept', 'application/json').set("Content-Type", "application/json")
   return response
 }
 
+//DEPRECIATED -- was used for updating the users selection for various purposes.
+/*is still used for checking the styles used in the users document (to populate 
+  custom styles and place used styles at the top of their style selector)*/
 async function updateSelectionArray() {
   return Word.run(async (context) => {
     //check for highlighted text  

@@ -3,20 +3,6 @@
 
 
 
-
-
-/*
- *
- * ==========
- * DATA MODEL
- * ==========
- *
- * This holds all the information about the user and all template configuration information. 
- * Future versions of this program can add their artifact to the `templateFields` object.
- *
- */
-
-
 // Main area for global constants, IE hardcoded values
 var params = {
   //enums for different artifact types
@@ -160,7 +146,16 @@ var templates = {
   }
 }
 
-// Constructor function for globally accessible data that might change.
+/*
+ *
+ * ==========
+ * DATA MODEL
+ * ==========
+ *
+ * This holds all the information about the user and all template configuration information. 
+ * Future versions of this program can add their artifact to the `templateFields` object.
+ *
+ */
 function Data() {
   //global user object
   this.user = {
@@ -190,9 +185,11 @@ function Data() {
   };
 }
 
+/*error messages and their potential location (used to be multiple)
+ as well as other relevant information about them.*/
 var ERROR_MESSAGES = {
   stdTimeOut: 8000, // 8000 is 8 seconds when used in setTimeout()
-  allIds: { login: "login-err", main: "pop-up-text" },
+  allIds: { main: "pop-up-text" },
   login: { htmlId: "pop-up-text", message: "Your credentials are invalid" },
   empty: { htmlId: "pop-up-text", message: "You currently have no valid text selected or within the body of the document. if this is incorrect, check your style mappings and set them as the relevant styles." },
   hierarchy: { htmlId: "pop-up-text", message: "Your style hierarchy is invalid for the selected area. This occured on the line of '{hierarchy-line}'" },
