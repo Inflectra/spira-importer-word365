@@ -75,26 +75,12 @@ Testing Functions
 async function test() {
   return Word.run(async (context) => {
     let body = context.document.body
-    context.load(body, ['inlinePictures', 'tables', 'text'])
+    let lists = body.lists
+    context.load(body)
+    context.load(lists, ['paragraphs'])
     await context.sync();
-    for (let picture of body.inlinePictures.items) {
-      var isTablePicture = false
-      for (let table of body.tables.items) {
-        let tableRange = table.getRange()
-        let pictureRange = picture.getRange();
-        await context.sync();
-        let isInTable = pictureRange.intersectWithOrNullObject(tableRange)
-        context.load(isInTable)
-        await context.sync();
-        //if this is not null, the image is within a table
-        if (!isInTable.isNull) {
-          isTablePicture = true
-          console.log("this is a table image")
-          continue
-          //tableImages is the sendArtifacts id of tableImageObjects
-        }
-      }
-      console.log(isTablePicture)
+    for (let list of lists.items){
+      console.log(list.paragraphs)
     }
   })
 }

@@ -857,7 +857,6 @@ const formatDescriptionLists = (description, lists, singleItemLists) => {
 
     return description
   }
-
   //listStarts is the starting element of every list, single list starts is needed to
   //know how many single lists are parsed here.
   let singleItemListStarts = [...description.matchAll(params.regexs.singleListItemRegex)]
@@ -919,6 +918,9 @@ const formatDescriptionLists = (description, lists, singleItemLists) => {
 //isOrdered: {boolean} represents whether it is an ordered list or not
 const listConstructor = (isOrdered, list) => {
   //provides a boolean value for if a list is an item with a single lists
+  if (!list){
+    return ""
+  }
   let isSingle = (list.length == 1)
   /*this logic determines what tags/regexs to use depending on whether the regex ive used to 
   populate the "isOrdered" parameter thinks it looks like an ordered list 
