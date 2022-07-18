@@ -119,6 +119,7 @@ ul.form {
     align-items: center;
     display: flex;
     padding: 10px 5px;
+    z-index: 1;
 }
 
 .header-heading {
