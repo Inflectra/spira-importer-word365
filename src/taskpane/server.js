@@ -1103,7 +1103,7 @@ const pushImage = async (Artifact, image, projectId, model, placeholder, testCas
     try {
       //makes a get request for the target artifact which will be updated to contain an image
       let getArtifact = model.user.url + params.apiComponents.apiBase + pid +
-        params.apiComponents.getRequirement + model.user.userCredentials;
+        params.apiComponents.getRequirement + Artifact.RequirementId + model.user.userCredentials;
       let getArtifactCall = await superagent.get(getArtifact).set('accept', 'application/json').set('Content-Type', 'application/json');
       //This is the body of the get response in its entirety.
       fullArtifactObj = getArtifactCall.body
