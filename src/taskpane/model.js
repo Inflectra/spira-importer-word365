@@ -37,7 +37,7 @@ var params = {
     postOrGetTestFolders: "/test-folders",
     postImage: "/documents/file",
     //these fields will be populated when the full URL is made for this
-    imageSrc: "/{project-id}/Attachent/{AttachmentId}.aspx",
+    imageSrc: "/{project-id}/Attachment/{AttachmentId}.aspx",
     //this is the initial outdent value for the first requirement sent (-20)
     initialOutdent: "/indent/-20",
     //have to replace {project-id} with tempDataStore.currentProjectId
@@ -60,8 +60,8 @@ var params = {
     emptyParagraphRegex: /<p(.)*?>\&nbsp\;<\/p>/g,
     orderedRegex: /.*class=MsoListParagraph.*><span.*>(.*)<span/,
     marginRegex: /style='margin-left:(\d)\.(\d)in/,
-    //images in requirements always have this \n at the beginning, but not the case everywhere.
-    requirementImageRegex: /<img\n(.|\n|\r)*?("|\s)>/gu,
+    //images in tables always have this \n at the beginning, but not the case everywhere.
+    tableImageRegex: /<img\n(.|\n|\r)*?("|\s)>/gu,
     imageRegex: /<img(.|\n|\r)*?("|\s)>/gu,
     listSpanRegex: /<span(.|\r|\n|\s)*?(<\/span>){1,2}/,
     exceptedListRegex: />(\d{1} | \.){2,}<span/u,

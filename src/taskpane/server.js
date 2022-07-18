@@ -141,7 +141,6 @@ const parseArtifacts = async (ArtifactTypeId, model) => {
         }
       }
     }
-    console.log(invalidImages)
     var imageLines = []
     //i represents each "line" delimited by \r tags
     for (let i = 0; i < splitSelection.items.length; i++) {
@@ -590,8 +589,8 @@ const sendArtifacts = async (ArtifactTypeId, images, Artifacts, projectId, model
         let firstCall = await axios.post(outdentCall, requirements[0])
 
         let placeholders = [...requirements[0].Description.matchAll(imgRegex)]
-        for (let i = 0; i < placeholders.length; i++) {
-          await pushImage(firstCall.data, images[0], projectId, model)
+        for (let placeholder of placeholders) {
+          await pushImage(firstCall.data, images[0], projectId, model, placeholder[0])
           images.shift();
         }
         updateProgressBar(1, requirements.length)
@@ -610,8 +609,8 @@ const sendArtifacts = async (ArtifactTypeId, images, Artifacts, projectId, model
           lastIndent = req.IndentLevel;
           let placeholders = [...req.Description.matchAll(imgRegex)]
           //the 'p' itemization of placeholders isnt needed - just needs to happen once per placeholder
-          for (let p of placeholders) {
-            await pushImage(call.data, images[0], projectId, model)
+          for (let placeholder of placeholders) {
+            await pushImage(call.data, images[0], projectId, model, placeholder[0])
             images.shift();
           }
           updateProgressBar(i + 2, requirements.length + 1);
@@ -657,9 +656,9 @@ const sendArtifacts = async (ArtifactTypeId, images, Artifacts, projectId, model
         //imgRegex defined at the top of the sendArtifacts function
         let placeholders = [...testCase.testCaseDescription.matchAll(imgRegex)]
         //p isnt needed but I do need to iterate through the placeholders(this is shorter syntax)
-        for (let p of placeholders) {
+        for (let placeholder of placeholders) {
           try {
-            await pushImage(testCaseArtifact, images[0], projectId, model)
+            await pushImage(testCaseArtifact, images[0], projectId, model, placeholder[0])
           }
           catch (err) {
             console.log(err)
@@ -677,11 +676,11 @@ const sendArtifacts = async (ArtifactTypeId, images, Artifacts, projectId, model
           let placeholders = [...testStep.Description.matchAll(imgRegex),
           ...testStep.SampleData.matchAll(imgRegex),
           ...testStep.ExpectedResult.matchAll(imgRegex)]
-          for (let p of placeholders) {
+          for (let placeholder of placeholders) {
             if (images[0]) {
               //this handles images for all 3 test step fields. 
               try {
-                await pushImage(step, images[0], projectId, model, testCaseArtifact.TestCaseId, styles);
+                await pushImage(step, images[0], projectId, model, placeholder[0], testCaseArtifact.TestCaseId, styles);
               }
               catch (err) {
                 displayError(ERROR_MESSAGES.failedReq, false, testCase)
@@ -1024,38 +1023,32 @@ the uploaded images in their appropriate positions.*/
 //testCaseId: string - id of the test case a test step belongs to (only exists when pushing images to test steps)
 //styles: []string - users selected styles, organized in the same order as they appear in the UI.
 
-const pushImage = async (Artifact, image, projectId, model, testCaseId, styles) => {
+const pushImage = async (Artifact, image, projectId, model, placeholder, testCaseId, styles) => {
   /*upload images and build link of image location in spira 
   ({model.user.url}/{projectID}/Attachment/{AttachmentID}.aspx)*/
   //Add AttachmentURL to each imageObject after they are uploaded
   let pid = projectId
   let imgLink;
-  let imageApiCall = model.user.url + "/services/v6_0/RestService.svc/projects/"
-    + pid + `/documents/file?username=${model.user.username}&api-key=${model.user.api_key}`
+  let imageApiCall = model.user.url + params.apiComponents.apiBase
+    + pid + params.apiComponents.postImage + model.user.userCredentials
+  let attachment;
+  if (Artifact.RequirementId) {
+    attachment = [{ ArtifactId: Artifact.RequirementId, ArtifactTypeId: params.artifactEnums.requirements }]
+  }
+  //checks if the artifact is a test step
+  else if (Artifact.TestStepId) {
+    attachment = [{ ArtifactId: Artifact.TestStepId, ArtifactTypeId: params.artifactEnums.testSteps }]
+  }
+  //test steps have TestCaseId's, so checks for TestStepId before this.
+  else if (Artifact.TestCaseId) {
+    attachment = [{ ArtifactId: Artifact.TestCaseId, ArtifactTypeId: params.artifactEnums.testCases }]
+  }
   try {
-    if (Artifact.RequirementId) {
-      let imageCall = await axios.post(imageApiCall, {
-        FilenameOrUrl: image.name, BinaryData: image.base64,
-        AttachedArtifacts: [{ ArtifactId: Artifact.RequirementId, ArtifactTypeId: 1 }]
-      })
-      imgLink = model.user.url + `/${pid}/Attachment/${imageCall.data.AttachmentId}.aspx`
-    }
-    //checks if the artifact is a test step
-    else if (Artifact.TestStepId) {
-      let imageCall = await axios.post(imageApiCall, {
-        FilenameOrUrl: image.name, BinaryData: image.base64,
-        AttachedArtifacts: [{ ArtifactId: Artifact.TestStepId, ArtifactTypeId: 7 }]
-      })
-      imgLink = model.user.url + `/${pid}/Attachment/${imageCall.data.AttachmentId}.aspx`
-    }
-    //test steps have TestCaseId's, so checks for TestStepId first.
-    else if (Artifact.TestCaseId) {
-      let imageCall = await axios.post(imageApiCall, {
-        FilenameOrUrl: image.name, BinaryData: image.base64,
-        AttachedArtifacts: [{ ArtifactId: Artifact.TestCaseId, ArtifactTypeId: 2 }]
-      })
-      imgLink = model.user.url + `/${pid}/Attachment/${imageCall.data.AttachmentId}.aspx`
-    }
+    let imageCall = await axios.post(imageApiCall, {
+      FilenameOrUrl: image.name, BinaryData: image.base64,
+      AttachedArtifacts: attachment
+    })
+    imgLink = model.user.url + params.apiComponents.imageSrc.replace("{project-id}", pid).replace("{AttachmentId}", imageCall.data.AttachmentId)
   }
   catch (err) {
     console.log(err)
@@ -1066,8 +1059,8 @@ const pushImage = async (Artifact, image, projectId, model, testCaseId, styles) 
   if (Artifact.RequirementId) {
     try {
       //makes a get request for the target artifact which will be updated to contain an image
-      let getArtifact = model.user.url + "/services/v6_0/RestService.svc/projects/" + pid +
-        `/requirements/${Artifact.RequirementId}?username=${model.user.username}&api-key=${model.user.api_key}`;
+      let getArtifact = model.user.url + params.apiComponents.apiBase + pid +
+        params.apiComponents.getRequirement + model.user.userCredentials;
       let getArtifactCall = await superagent.get(getArtifact).set('accept', 'application/json').set('Content-Type', 'application/json');
       //This is the body of the get response in its entirety.
       fullArtifactObj = getArtifactCall.body
@@ -1076,22 +1069,11 @@ const pushImage = async (Artifact, image, projectId, model, testCaseId, styles) 
       console.log(err)
       return
     }
-    // now replace the placeholder in the description with img tags
-    let placeholderRegex = params.regexs.imageRegex
-    //gets an array of all the placeholders for images. 
-    let placeholders = [...fullArtifactObj.Description.matchAll(placeholderRegex)]
-    console.log(placeholders)
-    /*placeholders[0][0] is the first matched instance - because you need to GET for each change
-    this should work each time - each placeholder should have 1 equivalent image in the same
-    order they appear throughout the document.*/
-    let i = 0
-    while (!placeholders[i][0].includes("~")) {
-      i++
-    }
-    fullArtifactObj.Description = fullArtifactObj.Description.replace(placeholders[i][0], `<img alt=${image?.name} src=${imgLink} /><br />`)
+    // now replace the placeholder in the description with relevant img tags
+    fullArtifactObj.Description = fullArtifactObj.Description.replace(placeholder, `<img alt=${image?.name} src=${imgLink} /><br />`)
     //PUT artifact with new description (including img tags now)
-    let putArtifact = model.user.url + "/services/v6_0/RestService.svc/projects/" + pid +
-      `/requirements?username=${model.user.username}&api-key=${model.user.api_key}`;
+    let putArtifact = model.user.url + params.apiComponents.apiBase + pid +
+      params.apiComponents.postOrPutRequirement + model.user.userCredentials;
     try {
       await axios.put(putArtifact, fullArtifactObj)
     }
@@ -1105,8 +1087,10 @@ const pushImage = async (Artifact, image, projectId, model, testCaseId, styles) 
     try {
       //this needs to have a different way of getting TestCaseId
       //makes a get request for the target artifact which will be updated to contain an image
-      let getArtifact = model.user.url + "/services/v6_0/RestService.svc/projects/" + pid +
-        `/test-cases/${testCaseId}/test-steps/${Artifact.TestStepId}?username=${model.user.username}&api-key=${model.user.api_key}`;
+      let getArtifact = model.user.url + params.apiComponents.apiBase + pid +
+        params.apiComponents.getTestCase + testCaseId + params.apiComponents.getTestStep
+        + Artifact.TestStepId + model.user.userCredentials
+      // `/test-cases/${testCaseId}/test-steps/${Artifact.TestStepId}?username=${model.user.username}&api-key=${model.user.api_key}`;
       let getArtifactCall = await superagent.get(getArtifact).set('accept', 'application/json').set('Content-Type', 'application/json');
       //This is the body of the get response in its entirety.
       fullArtifactObj = getArtifactCall.body
@@ -1122,8 +1106,8 @@ const pushImage = async (Artifact, image, projectId, model, testCaseId, styles) 
     //This is needed to determine the order of how images will appear throughout
     //the document relative to the TestStep field they represent.
     let styleOrganizer = [{ column: parseInt(styles[2].substring(styles[2].length - 1)), for: "descPlaceholders" },
-    { column: parseInt(styles[3].substring(styles[2].length - 1)), for: "expectedPlaceholders" },
-    { column: parseInt(styles[4].substring(styles[2].length - 1)), for: "samplePlaceholders" }]
+    { column: parseInt(styles[3].substring(styles[3].length - 1)), for: "expectedPlaceholders" },
+    { column: parseInt(styles[4].substring(styles[4].length - 1)), for: "samplePlaceholders" }]
 
     //this sorts the styles by increasing order of column number (lowest column first)
     styleOrganizer.sort((a, b) => (a.column > b.column) ? 1 : -1)
@@ -1165,8 +1149,9 @@ const pushImage = async (Artifact, image, projectId, model, testCaseId, styles) 
       continue
     }
     //PUT artifact with new description (including img tags now)
-    let putArtifact = model.user.url + "/services/v6_0/RestService.svc/projects/" + pid +
-      `/test-cases/${fullArtifactObj.TestCaseId}/test-steps?username=${model.user.username}&api-key=${model.user.api_key}`;
+    let putArtifact = model.user.url + params.apiComponents.apiBase + pid +
+      params.apiComponents.getTestCase + fullArtifactObj.TestCaseId +
+      params.apiComponents.postOrPutTestStep + model.user.userCredentials;
     try {
       await axios.put(putArtifact, fullArtifactObj)
     }
@@ -1180,9 +1165,11 @@ const pushImage = async (Artifact, image, projectId, model, testCaseId, styles) 
     try {
       //handle test cases
       //makes a get request for the target artifact which will be updated to contain an image
-      let getArtifact = model.user.url + "/services/v6_0/RestService.svc/projects/" + pid +
-        `/test-cases/${Artifact.TestCaseId}?username=${model.user.username}&api-key=${model.user.api_key}`;
-      let getArtifactCall = await superagent.get(getArtifact).set('accept', 'application/json').set('Content-Type', 'application/json');
+      let getArtifact = model.user.url + params.apiComponents.apiBase + pid +
+        params.apiComponents.getTestCase + Artifact.TestCaseId
+        + model.user.userCredentials
+      let getArtifactCall = await superagent.get(getArtifact).set(
+        'accept', 'application/json').set('Content-Type', 'application/json');
       //This is the body of the get response in its entirety.
       fullArtifactObj = getArtifactCall.body
     }
@@ -1191,20 +1178,11 @@ const pushImage = async (Artifact, image, projectId, model, testCaseId, styles) 
       console.log(err)
       return
     }
-    //crashing HERE
-    //dsajdhsjkda
-    //dhasdjkl
-    // now replace the placeholder in the description with img tags
-    let placeholderRegex = /<img(.|\n|\r)*("|\s)\>/g
-    //gets an array of all the placeholders for images. 
-    let placeholders = [...fullArtifactObj.Description.matchAll(placeholderRegex)]
-    /*placeholders[0][0] is the first matched instance - because you need to GET for each change
-    this should work each time - each placeholder should have 1 equivalent image in the same
-    order they appear throughout the document.*/
-    fullArtifactObj.Description = fullArtifactObj.Description.replace(placeholders[0][0], `<img alt=${image?.name} src=${imgLink}><br />`)
+    // now replace the placeholder in the description with relevant img tag
+    fullArtifactObj.Description = fullArtifactObj.Description.replace(placeholder, `<img alt=${image?.name} src=${imgLink}><br />`)
     //PUT artifact with new description (including img tags now)
-    let putArtifact = model.user.url + "/services/v6_0/RestService.svc/projects/" + pid +
-      `/test-cases?username=${model.user.username}&api-key=${model.user.api_key}`;
+    let putArtifact = model.user.url + params.apiComponents.apiBase + pid +
+      params.apiComponents.postOrPutTestCase + model.user.userCredentials;
     try {
       await axios.put(putArtifact, fullArtifactObj)
     }
