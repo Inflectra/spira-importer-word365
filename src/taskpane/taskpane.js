@@ -17,7 +17,6 @@ import {
   retrieveStyles,
   updateSelectionArray
 } from './server'
-import axios from 'axios'
 //model stores user data (login credentials and projects)
 var model = new Data();
 //this is a global variable that expresses whether a user is using a version of word that supports api 1.3
@@ -76,11 +75,27 @@ Testing Functions
 async function test() {
   return Word.run(async (context) => {
     let body = context.document.body
-    context.load(body)
+    context.load(body, ['inlinePictures', 'tables', 'text'])
     await context.sync();
-    let html = body.getHtml()
-    await context.sync();
-    await axios.post("http://localhost:5000/retrieve", {html: html.m_value})
+    for (let picture of body.inlinePictures.items) {
+      var isTablePicture = false
+      for (let table of body.tables.items) {
+        let tableRange = table.getRange()
+        let pictureRange = picture.getRange();
+        await context.sync();
+        let isInTable = pictureRange.intersectWithOrNullObject(tableRange)
+        context.load(isInTable)
+        await context.sync();
+        //if this is not null, the image is within a table
+        if (!isInTable.isNull) {
+          isTablePicture = true
+          console.log("this is a table image")
+          continue
+          //tableImages is the sendArtifacts id of tableImageObjects
+        }
+      }
+      console.log(isTablePicture)
+    }
   })
 }
 

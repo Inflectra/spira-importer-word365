@@ -43,8 +43,8 @@ const parseArtifacts = async (ArtifactTypeId, model) => {
     let projectId = document.getElementById("product-select").value
     let selection = context.document.getSelection();
     let splitSelection = context.document.getSelection().split(['\r'])
-    context.load(splitSelection, ['text', 'inlinePictures', 'style', 'styleBuiltIn'])
-    context.load(selection, ['text', 'inlinePictures', 'style', 'styleBuiltIn']);
+    context.load(splitSelection, ['text', 'inlinePictures', 'style', 'styleBuiltIn', 'tables'])
+    context.load(selection, ['text', 'inlinePictures', 'style', 'styleBuiltIn', 'tables']);
     try {
       await context.sync();
     }
@@ -61,8 +61,8 @@ const parseArtifacts = async (ArtifactTypeId, model) => {
     if (!selection.text) {
       selection = context.document.body.getRange();
       splitSelection = context.document.body.getRange().split(['\r'])
-      context.load(selection, ['text', 'inlinePictures', 'style', 'styleBuiltIn']);
-      context.load(splitSelection, ['text', 'inlinePictures', 'style', 'styleBuiltIn'])
+      context.load(selection, ['text', 'inlinePictures', 'style', 'styleBuiltIn', 'tables']);
+      context.load(splitSelection, ['text', 'inlinePictures', 'style', 'styleBuiltIn', 'tables'])
       await context.sync();
     }
     /*this verifies that the body has been detected successfully / that it exists. 
@@ -160,7 +160,7 @@ const parseArtifacts = async (ArtifactTypeId, model) => {
     /*tableImageObjects allows us to support tables with images above a test case
      description which also contains images by separating images in tables from 
      ones that arent.*/
-    var tableImageObjects = []
+    var tableImageObjects = [];
     var imageObjects = [];
     let images = selection.inlinePictures;
     for (let i = 0; i < images.items.length; i++) {
@@ -174,11 +174,43 @@ const parseArtifacts = async (ArtifactTypeId, model) => {
         let base64 = images.items[i].getBase64ImageSrc();
         await context.sync();
         let imageObj = new templates.Image(base64.m_value, `inline${i}.jpg`, imageLines[0])
-        imageObjects.push(imageObj)
+        //check if the image is within a table (if test cases are being parsed)
+        if (ArtifactTypeId == params.artifactEnums.testCases) {
+          let isTablePicture = false
+          for (let table of selection.tables.items) {
+            let tableRange = table.getRange();
+            let pictureRange = images.items[i].getRange();
+            await context.sync();
+            //checks if the pictures range intersects with the tables range
+            let isInTable = pictureRange.intersectWithOrNullObject(tableRange)
+            context.load(isInTable)
+            await context.sync();
+            /*if there is an intersection between a picture and a table,
+             it is within a table*/
+            if (!isInTable.isNull || isTablePicture) {
+              isTablePicture = true
+              continue
+            }
+          }
+          /*tableImageObjects is used to allow images in tables to not interfere
+          with images in descriptions of test cases - separates test case & test step
+          images. Otherwise, they may be placed incorrectly.*/
+          if (isTablePicture) {
+            tableImageObjects.push(imageObj)
+          }
+          else {
+            imageObjects.push(imageObj)
+          }
+        }
+        else {
+          imageObjects.push(imageObj)
+        }
         //removes the first item in imageLines as it has been converted to an imageObject;
         imageLines.shift();
       }
     }
+    console.log(imageObjects)
+    console.log(tableImageObjects)
     //end of image formatting
     /*************************
      Start list parsing
@@ -556,7 +588,7 @@ const parseArtifacts = async (ArtifactTypeId, model) => {
             }
           }
         }
-        await sendArtifacts(params.artifactEnums.testCases, imageObjects, testCases, projectId, model, styles)
+        await sendArtifacts(params.artifactEnums.testCases, imageObjects, testCases, projectId, model, styles, tableImageObjects)
         return testCases
       }
     }
@@ -573,7 +605,7 @@ properties inside a table.*/
 
 /*This function takes the already parsed artifacts and images and sends
 them to spira*/
-const sendArtifacts = async (ArtifactTypeId, images, Artifacts, projectId, model, styles) => {
+const sendArtifacts = async (ArtifactTypeId, images, Artifacts, projectId, model, styles, tableImages) => {
   //this checks if an empty artifact array is passed in (should never happen)
   if (Artifacts.length == 0) {
     //empty is the error message key for the model object.
@@ -686,15 +718,15 @@ const sendArtifacts = async (ArtifactTypeId, images, Artifacts, projectId, model
           ...testStep.SampleData.matchAll(imgRegex),
           ...testStep.ExpectedResult.matchAll(imgRegex)]
           for (let placeholder of placeholders) {
-            if (images[0]) {
+            if (tableImages[0]) {
               //this handles images for all 3 test step fields. 
               try {
-                await pushImage(step, images[0], projectId, model, placeholder[0], testCaseArtifact.TestCaseId, styles);
+                await pushImage(step, tableImages[0], projectId, model, placeholder[0], testCaseArtifact.TestCaseId, styles);
               }
               catch (err) {
                 displayError(ERROR_MESSAGES.failedReq, false, testCase)
               }
-              images.shift();
+              tableImages.shift();
             }
           }
 
