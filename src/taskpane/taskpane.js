@@ -605,10 +605,12 @@ const pushArtifacts = async () => {
   }
   disableMainButtons();
   disableDropdowns();
-  await parseArtifacts(artifactType, model, versionSupport);
+
+  // Store a true/false value based on if parseArtifacts succeeded or threw an error. Only reset the menu if it succeeded.
+  let success = await parseArtifacts(artifactType, model, versionSupport);
   enableMainButtons();
   enableDropdowns();
-  goToState(params.pageStates.postSend);
+  if (success) goToState(params.pageStates.postSend);
 }
 
 /* Returns an array with all of the styles intended to be used for the 
