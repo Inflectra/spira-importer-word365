@@ -209,8 +209,6 @@ const parseArtifacts = async (ArtifactTypeId, model) => {
         imageLines.shift();
       }
     }
-    console.log(imageObjects)
-    console.log(tableImageObjects)
     //end of image formatting
     /*************************
      Start list parsing

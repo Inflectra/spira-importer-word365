@@ -77,14 +77,12 @@ Testing Functions
 //basic testing function for validating code snippet behaviour.
 async function test() {
   return Word.run(async (context) => {
-    let body = context.document.body
+    let body = context.document.getSelection();
     let lists = body.lists
     context.load(body)
     context.load(lists, ['paragraphs'])
     await context.sync();
-    for (let list of lists.items) {
-      console.log(list.paragraphs)
-    }
+    for (let list of lists.items) {    }
   })
 }
 
