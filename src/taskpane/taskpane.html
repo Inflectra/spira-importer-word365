@@ -31,20 +31,24 @@
     </header>
     <!-- error pop-up -->
     <div id="pop-up" class="pop-up hidden">
+        <!--This inner text is the X symbol-->
         <button type="button" id="pop-up-close" class="close">&#xD7;</button>
-        <p id="pop-up-text">pop!<br></p>
+        <p id="pop-up-text"><br></p>
         <div id="progress-bar" class="hidden mb-sm">
             <div id="progress-bar-progress"></div>
         </div>
         <button type="button" id="pop-up-ok" class="ok ms-Button l fade mt-sm">OK</button>
+        <button type="button" id="pop-up-cancel" class="ok ms-Button l fade mt-sm ml-sm hidden">Cancel</button>
     </div>
     <!--auth page-->
     <div id="panel-auth" class="panel">
         <p class="well">
-            Learn how to use this app via the <a id="lnk-help-login" href="#">mini help</a>, or read our <a
-                target="_blank"
-                href="https://spiradoc.inflectra.com/Unit-Testing-Integration/Using-Test-Runner-For-Excel/">full
-                documentation</a>.
+            If you are an existing SpiraTest/Team/Plan user, this add-in allows you to
+            import requirements or test cases from any Word document.
+            Learn how to use this app via the <a id="lnk-help-login" href="#">mini help</a>
+            , or read our <a target="_blank"
+                href="https://spiradoc.inflectra.com/Unit-Testing-Integration/Using-Test-Runner-For-Excel/">
+                full documentation</a>.
         </p>
         <h3 class="mt-md mb-0" id="login-prompt">Connect to your Spira app</h3>
         <p id="login-err" class="error-message"></p>
@@ -80,6 +84,7 @@
                 type="button">
                 Help
             </button>
+            <button id="test" type="button">test</button>
         </div>
         <p class="mt-md mb-0">
             <small>
@@ -267,7 +272,7 @@
             </p>
         </div>
         <div id="help-section-issues" class="help-section hidden">
-            <p>In case you run get confused while using this addin, review the 
+            <p>In case you run get confused while using this addin, review the
                 listed here.
             </p>
             <h4>Functionality of Sending Requirements</h4>

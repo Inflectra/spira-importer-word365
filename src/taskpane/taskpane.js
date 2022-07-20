@@ -9,18 +9,32 @@
 Initialization Functions
 ***********************/
 
+export {
+  disableButton,
+  displayError,
+  clearErrors,
+  showProgressBar,
+  updateProgressBar,
+  hideProgressBar,
+  enableButton,
+  enableMainButtons,
+  disableMainButtons,
+  confirmSelectionPrompt
+}
 
-import { Data, params, templates, ERROR_MESSAGES } from './model'
+
+import { Data, params, templates, ERROR_MESSAGES, awaitConfirmationDataStore } from './model'
 import {
   parseArtifacts,
   loginCall,
   retrieveStyles,
-  updateSelectionArray
+  updateSelectionArray,
+  sendArtifacts
 } from './server'
 //model stores user data (login credentials and projects)
 var model = new Data();
-//this is a global variable that expresses whether a user is using a version of word that supports api 1.3
-var versionSupport;
+//this will be used during the "confirm sending" step to store required parameters for sendArtifacts
+var confirmationDataStore;
 
 //boilerplate initialization with a few calls
 Office.onReady((info) => {
@@ -28,8 +42,6 @@ Office.onReady((info) => {
     setDefaultDisplay();
     setEventListeners();
     document.body.classList.add('ms-office');
-    //This checks if a users Word versions supports WordApi 1.3, then sets this in a global variable
-    versionSupport = Office.context.requirements.isSetSupported("WordApi", "1.3")
     // this element doesn't currently exist
     // document.getElementById("help-connection-google").style.display = "none";
   }
@@ -43,7 +55,7 @@ const setDefaultDisplay = () => {
 //sets the event listeners of buttons 
 const setEventListeners = () => {
   let states = params.pageStates;
-  // document.getElementById('test').onclick = () => test();
+  document.getElementById('test').onclick = () => test();
   document.getElementById('btn-login').onclick = async () => await loginAttempt();
   // document.getElementById('dev-mode').onclick = () => goToState(states.dev);
   document.getElementById('send-to-spira-button').onclick = async () => await pushArtifacts();
@@ -61,7 +73,9 @@ const setEventListeners = () => {
   document.getElementById(params.buttonIds.helpLogin).onclick = () => openHelpSection(params.buttonIds.helpLogin);
   document.getElementById(params.buttonIds.helpModes).onclick = () => openHelpSection(params.buttonIds.helpModes);
   document.getElementById(params.buttonIds.helpVersions).onclick = () => openHelpSection(params.buttonIds.helpVersions);
-  // event listener for pressing enter before login.
+  document.getElementById("pop-up-cancel").onclick = () => { cancelSending(confirmationDataStore) }
+
+  // event listener for pressing enter before login. e = KeyboardEvent
   addEventListener('keydown', async (e) => {
     //this only does anything if the login page is viewable. 
     if (e.code == "Enter" && !document.getElementById('panel-auth').classList.contains("hidden")) {
@@ -82,7 +96,9 @@ async function test() {
     context.load(body)
     context.load(lists, ['paragraphs'])
     await context.sync();
-    for (let list of lists.items) {    }
+    for (let list of lists.items) {
+      console.log(list)
+    }
   })
 }
 
@@ -380,6 +396,7 @@ const displayError = (error, timeOut, failedArtifact) => {
     element.textContent = error.message.replace("{hierarchy-line}", failedArtifact.Name)
   }
   else if (error.message.includes("table")) {
+    //in this scenario (only happens once) i pass in the name directly instead of the artifact object
     element.textContent = error.message.replace("{table-line}", failedArtifact)
   }
   else if (failedArtifact) { // This is a special case error message for more descriptive errors when sending artifacts
@@ -514,7 +531,6 @@ const goToState = (state) => {
         goToState(states.authentication);
       };
       break;
-
     // takes the user back to the start of the sending process after pushing their artifacts.
     case (states.postSend):
 
@@ -551,8 +567,8 @@ const openHelpSection = (buttonId) => {
   for (let buttonId of params.collections.helpButtons) {
     document.getElementById(buttonId).classList.remove('activated')
   }
-  let section = buttonId.replace("btn-", "")
   document.getElementById(buttonId).classList.add('activated')
+  let section = buttonId.replace("btn-", "")
   //hides the help sections before showing the relevant one
   for (let section of params.collections.helpSections) {
     hideElement(section)
@@ -588,6 +604,59 @@ const boldStep = (stepId) => {
   document.getElementById(stepId).classList.add('bold');
 }
 
+//params: these are mostly passthroughs to sendArtifacts - will explain relevant ones
+//ArtifactTypeId: ID of the artifact type from params.artifactEnums
+//Artifacts: array of artifact objects which are formatted for sending to spira
+
+//populates a confirmation prompt in the 'pop-up'
+const confirmSelectionPrompt = (ArtifactTypeId, images, Artifacts, projectId, model, styles, tableImages) => {
+  console.log("got to confirm function")
+  let artifactCount = (Artifacts.length).toString()
+  let artifactTypeName;
+  if (ArtifactTypeId == params.artifactEnums.requirements) {
+    artifactTypeName = "Requirement(s)"
+  }
+  else {
+    artifactTypeName = "Test Case(s)"
+  }
+  //makes this data global so the onclick action for the 'OK' button can have this information
+  confirmationDataStore = new awaitConfirmationDataStore(ArtifactTypeId, images, Artifacts, projectId, model, styles, tableImages)
+  showElement('pop-up')
+  showElement('pop-up-cancel')
+  hideProgressBar();
+  document.getElementById('pop-up').classList.remove("sent")
+  document.getElementById('pop-up').classList.add('sending')
+  //changes the onclick to confirm instead of simply closing the pop-up window
+  document.getElementById("pop-up-ok").onclick = async () => { await confirmSending(confirmationDataStore) }
+  document.getElementById('pop-up-text').innerText = `You are about to send ${artifactCount} ${artifactTypeName}. If this seems correct, click OK. Otherwise, click Cancel and review your selection and styles.`
+  return
+  // sendArtifacts(ArtifactTypeId, images, Artifacts, projectId, model, styles, tableImages)
+}
+
+const cancelSending = (confirmationDataStore) => {
+  //clears the confirmation data store as the user has selected not to send it
+  confirmationDataStore = {}
+  //re-hides cancel button to not appear in other pop-up states
+  hideElement('pop-up-cancel')
+  //changes the onclick back to default function for the OK button
+  document.getElementById("pop-up-ok").onclick = () => { hideElement('pop-up'); }
+  document.getElementById('pop-up-text').innerText = "You have canceled sending. Please make the desired changes then try again."
+  //enables main screen buttons and dropdowns
+  enableMainButtons();
+  enableDropdowns();
+}
+
+const confirmSending = async (confirmationDataStore) => {
+  //changes the onclick back to default function for this button
+  hideElement('pop-up-cancel')
+  document.getElementById("pop-up-ok").onclick = () => { hideElement('pop-up'); }
+  //destructures the object so i dont have to type confirmationDataStore.property every time
+  let { ArtifactTypeId, images, Artifacts, projectId, model, styles, tableImages } = confirmationDataStore
+  let success = await sendArtifacts(ArtifactTypeId, images, Artifacts, projectId, model, styles, tableImages)
+  enableMainButtons();
+  enableDropdowns();
+  if (success) goToState(params.pageStates.postSend);
+}
 /*********************
 Pure data manipulation
 **********************/
@@ -605,10 +674,10 @@ const pushArtifacts = async () => {
   disableDropdowns();
 
   // Store a true/false value based on if parseArtifacts succeeded or threw an error. Only reset the menu if it succeeded.
-  let success = await parseArtifacts(artifactType, model, versionSupport);
-  enableMainButtons();
-  enableDropdowns();
-  if (success) goToState(params.pageStates.postSend);
+  let success = await parseArtifacts(artifactType, model);
+  // enableMainButtons();
+  // enableDropdowns();
+  // if (success) goToState(params.pageStates.postSend);
 }
 
 /* Returns an array with all of the styles intended to be used for the 
@@ -648,16 +717,4 @@ const usedStyles = async () => {
     }
   }
   return styles;
-}
-
-export {
-  disableButton,
-  displayError,
-  clearErrors,
-  showProgressBar,
-  updateProgressBar,
-  hideProgressBar,
-  enableButton,
-  enableMainButtons,
-  disableMainButtons
 }

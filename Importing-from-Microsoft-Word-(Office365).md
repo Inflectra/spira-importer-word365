@@ -6,10 +6,10 @@ This add-in works with Microsoft Word 2019+, Word with Office 365, Word in the c
 1. Requirements
 2. Test Cases with or without Test Steps
 
-## Important Notice (Legacy documents)
+## Important Notices (Legacy documents)
 **Older Word documents (Created or edited in a version of Word 2016 or earlier) may have images embedded in a fashion not consistent with what the Word JavaScript API supports.** If your Word document was initially created in a version of Word from 2016 or earlier, you may want to upload your document to Google Docs, then re-download it as a .docx file before importing from that version of the document. This will update the embedding of images to the newer method used by modern versions of Word. If this is not an option due to regulations in your industry or any other reason, see the [manual version](#dealing-with-images-within-old-documents) at the bottom of this guide. Failure to do so may result in the incorrect images being populated in your Spira artifacts, or no images appearing at all.
 
-**Lists sometimes have issues within Word's JavaScript API.** If a list is split into 2 or more lists, Word will treat them as the same list until the portions are cleared of formatting which will lead to the wrong lists being populated throughout your Spira artifacts. It is unfortunately difficult to know if this has occured retrospectively, as the Word UI will display them as if they are separate.   Another potential issue is older documents format lists differently than newer ones, similar to the issue with images. Both of these issues can be fixed by taking any list, clearing its formatting, then making it back into a list in your new version of Word. 
+**Lists sometimes have issues within Word's JavaScript API.** If a list is split into 2 or more lists, Word will treat them as the same list until the portions are cleared of formatting, then re-made into lists. If this is not done, it will lead to the wrong lists being populated throughout your Spira artifacts. It is unfortunately difficult to know if this has occured retrospectively, as the Word UI will display them as if they are separate. Another potential issue is older documents format lists differently than newer ones, similar to the issue with images. Both of these list issues can be fixed by taking any list, clearing its formatting, then making it back into a list in your new version of Word. 
 
 ## Installation
 

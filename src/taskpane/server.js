@@ -9,7 +9,8 @@ export {
   parseArtifacts,
   loginCall,
   retrieveStyles,
-  updateSelectionArray
+  updateSelectionArray,
+  sendArtifacts
 }
 
 import { Data, ERROR_MESSAGES, params, templates } from './model.js'
@@ -22,7 +23,8 @@ import {
   hideProgressBar,
   enableButton,
   enableMainButtons,
-  disableMainButtons
+  disableMainButtons,
+  confirmSelectionPrompt
 } from './taskpane.js';
 
 var RETRIEVE = "http://localhost:5000/retrieve"
@@ -387,8 +389,8 @@ const parseArtifacts = async (ArtifactTypeId, model) => {
           return false
         }
         clearErrors();
-        await sendArtifacts(params.artifactEnums.requirements, imageObjects, requirements, projectId, model, styles)
-        return requirements
+        confirmSelectionPrompt(params.artifactEnums.requirements, imageObjects, requirements, projectId, model, styles)
+        return 
       }
       case (params.artifactEnums.testCases): {
         /*when parsing multiple tables tableCounter serves as an index throughout all
@@ -586,8 +588,8 @@ const parseArtifacts = async (ArtifactTypeId, model) => {
             }
           }
         }
-        await sendArtifacts(params.artifactEnums.testCases, imageObjects, testCases, projectId, model, styles, tableImageObjects)
-        return testCases
+        confirmSelectionPrompt(params.artifactEnums.testCases, imageObjects, testCases, projectId, model, styles, tableImageObjects)
+        return
       }
     }
   })
@@ -613,7 +615,7 @@ const sendArtifacts = async (ArtifactTypeId, images, Artifacts, projectId, model
     //empty is the error message key for the model object.
     displayError(ERROR_MESSAGES.empty, false);
     enableButton(params.buttonIds.sendToSpira)
-    return
+    return false
   }
   let imgRegex = params.regexs.imageRegex
   showProgressBar();
@@ -663,8 +665,7 @@ const sendArtifacts = async (ArtifactTypeId, images, Artifacts, projectId, model
         }
       }
       updateProgressBar(requirements.length + 1, requirements.length + 1);
-      document.getElementById("send-to-spira-button").disabled = false;
-      return
+      return true
     }
     case (params.artifactEnums.testCases): {
       let testCaseFolders = await retrieveTestCaseFolders(projectId, model);
@@ -678,7 +679,7 @@ const sendArtifacts = async (ArtifactTypeId, images, Artifacts, projectId, model
             testCase.folderDescription, projectId, model);
           if (!newFolder.TestCaseFolderId) {
             displayError(ERROR_MESSAGES.failedReq, false, testCase)
-            return
+            return false
           }
           newFolder.Name = testCase.folderName;
           folder = newFolder
@@ -694,7 +695,7 @@ const sendArtifacts = async (ArtifactTypeId, images, Artifacts, projectId, model
           folder.TestCaseFolderId, projectId, model)
         if (!testCaseArtifact) {
           displayError(ERROR_MESSAGES.failedReq, false, testCase)
-          return
+          return false
         }
         //imgRegex defined at the top of the sendArtifacts function
         let placeholders = [...testCase.testCaseDescription.matchAll(imgRegex)]
@@ -713,7 +714,7 @@ const sendArtifacts = async (ArtifactTypeId, images, Artifacts, projectId, model
           let step = await sendTestStep(testCaseArtifact.TestCaseId, testStep, model, projectId);
           if (!step) {
             displayError(ERROR_MESSAGES.failedReq, false, testCase)
-            return
+            return false
           }
           //these are the <img> 'placeholders' for all 3 testStep fields
           let placeholders = [...testStep.Description.matchAll(imgRegex),
@@ -727,6 +728,7 @@ const sendArtifacts = async (ArtifactTypeId, images, Artifacts, projectId, model
               }
               catch (err) {
                 displayError(ERROR_MESSAGES.failedReq, false, testCase)
+                return false
               }
               tableImages.shift();
             }
@@ -737,6 +739,8 @@ const sendArtifacts = async (ArtifactTypeId, images, Artifacts, projectId, model
       }
       updateProgressBar(testCases.length, testCases.length);
       enableMainButtons();
+      hideProgressBar();
+      return true
     }
   }
 }
@@ -1183,6 +1187,7 @@ const pushImage = async (Artifact, image, projectId, model, placeholder, testCas
 
     //this sorts the styles by increasing order of column number (lowest column first)
     styleOrganizer.sort((a, b) => (a.column > b.column) ? 1 : -1)
+
     let descPlaceholders = [...fullArtifactObj.Description.matchAll(placeholderRegex)]
     let samplePlaceholders = [...fullArtifactObj.SampleData.matchAll(placeholderRegex)]
     let expectedPlaceholders = [...fullArtifactObj.ExpectedResult.matchAll(placeholderRegex)]

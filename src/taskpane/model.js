@@ -197,7 +197,19 @@ var ERROR_MESSAGES = {
   failedReq: { htmlId: "pop-up-text", message: "" },
   duplicateStyles: { htmlId: "pop-up-text", message: "You currently have multiple mappings set to the same style. Please only use each style once." },
   emptyStyles: { htmlId: "pop-up-text", message: "You currently have unselected styles. Please provide a style for all provided inputs." },
-  testCaseFolders: { htmlId: "pop-up-text", message: "Loading or retriving test case folders failed. If retrieving failed, you may still have your test cases imported in a new folder." }
+  testCaseFolders: { htmlId: "pop-up-text", message: "Loading or retriving test case folders failed. If retrieving failed, you may still have your test cases imported in a new folder as this error is not fatal. Importing will continue in the background." }
 }
 
-export { Data, params, templates, ERROR_MESSAGES }
+/*this stores the data that is passed into sendArtifacts so it can be referenced in
+onclick functions on the confirmation screen.*/
+function awaitConfirmationDataStore(ArtifactTypeId, images, Artifacts, projectId, model, styles, tableImages) {
+  this.ArtifactTypeId = ArtifactTypeId
+  this.images = images
+  this.Artifacts = Artifacts
+  this.projectId = projectId
+  this.model = model
+  this.styles = styles
+  this.tableImages = tableImages
+}
+
+export { Data, params, templates, ERROR_MESSAGES, awaitConfirmationDataStore }
