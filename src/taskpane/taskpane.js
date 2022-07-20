@@ -345,8 +345,9 @@ const updateProgressBar = (current, total) => {
   let bar = document.getElementById("progress-bar-progress");
   bar.style.width = width + "%";
   if (current == total) {
-    document.getElementById('pop-up').classList.remove('sending');
-    document.getElementById('pop-up').classList.add('sent');
+    let popUp = document.getElementById('pop-up')
+    popUp.classList.add('sent')
+    popUp.classList.remove('sending');
     document.getElementById('pop-up-text').textContent = `Sent ${total} 
     ${document.getElementById('select-requirements').classList.contains('activated') ?
         "Requirements" : "Test Cases"} successfully!`;
@@ -612,7 +613,6 @@ const boldStep = (stepId) => {
 
 //populates a confirmation prompt in the 'pop-up'
 const confirmSelectionPrompt = (ArtifactTypeId, images, Artifacts, projectId, model, styles, tableImages) => {
-  console.log("got to confirm function")
   let artifactCount = (Artifacts.length).toString()
   let artifactTypeName;
   if (ArtifactTypeId == params.artifactEnums.requirements) {
@@ -623,6 +623,7 @@ const confirmSelectionPrompt = (ArtifactTypeId, images, Artifacts, projectId, mo
   }
   //makes this data global so the onclick action for the 'OK' button can have this information
   confirmationDataStore = new awaitConfirmationDataStore(ArtifactTypeId, images, Artifacts, projectId, model, styles, tableImages)
+
   showElement('pop-up')
   showElement('pop-up-cancel')
   hideProgressBar();

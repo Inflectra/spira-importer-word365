@@ -743,7 +743,6 @@ const sendArtifacts = async (ArtifactTypeId, images, Artifacts, projectId, model
       }
       updateProgressBar(testCases.length, testCases.length);
       enableMainButtons();
-      hideProgressBar();
       return true
     }
   }
@@ -1342,8 +1341,7 @@ async function updateSelectionArray() {
   of order. Also removes the tags from the description of the test case folder*/
 const checkForImages = (testCase, images) => {
   let imageTags = [...testCase.folderDescription.matchAll(params.regexs.imageRegex)]
-  console.log(imageTags)
-  console.log(images)
+
   for (let match of imageTags) {
     images.shift()
     testCase.folderDescription = testCase.folderDescription.replace(match[0], "")
