@@ -390,7 +390,7 @@ const parseArtifacts = async (ArtifactTypeId, model) => {
         }
         clearErrors();
         confirmSelectionPrompt(params.artifactEnums.requirements, imageObjects, requirements, projectId, model, styles)
-        return 
+        return
       }
       case (params.artifactEnums.testCases): {
         /*when parsing multiple tables tableCounter serves as an index throughout all
@@ -671,6 +671,10 @@ const sendArtifacts = async (ArtifactTypeId, images, Artifacts, projectId, model
       let testCaseFolders = await retrieveTestCaseFolders(projectId, model);
       let testCases = Artifacts
       for (let [i, testCase] of testCases.entries()) {
+        //filters out images that will not be placed (because test case folders do not support images)
+        if (testCase.folderDescription) {
+          checkForImages(testCase, images)
+        }
         let folder = testCaseFolders.find(folder => folder.Name == testCase.folderName)
         //if the folder doesnt exist, create a new folder on spira
         if (!folder && testCase.folderName) {
@@ -947,7 +951,7 @@ const formatDescriptionLists = (description, lists, singleItemLists) => {
 //isOrdered: {boolean} represents whether it is an ordered list or not
 const listConstructor = (isOrdered, list) => {
   //provides a boolean value for if a list is an item with a single lists
-  if (!list){
+  if (!list) {
     return ""
   }
   let isSingle = (list.length == 1)
@@ -1333,3 +1337,15 @@ async function updateSelectionArray() {
   })
 }
 
+/*this function checks if test case folder descriptions have images within them.
+  if they do, it is removed from the images array to prevent images being populated out 
+  of order. Also removes the tags from the description of the test case folder*/
+const checkForImages = (testCase, images) => {
+  let imageTags = [...testCase.folderDescription.matchAll(params.regexs.imageRegex)]
+  console.log(imageTags)
+  console.log(images)
+  for (let match of imageTags) {
+    images.shift()
+    testCase.folderDescription = testCase.folderDescription.replace(match[0], "")
+  }
+}

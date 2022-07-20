@@ -55,7 +55,7 @@ const setDefaultDisplay = () => {
 //sets the event listeners of buttons 
 const setEventListeners = () => {
   let states = params.pageStates;
-  document.getElementById('test').onclick = () => test();
+  // document.getElementById('test').onclick = () => test();
   document.getElementById('btn-login').onclick = async () => await loginAttempt();
   // document.getElementById('dev-mode').onclick = () => goToState(states.dev);
   document.getElementById('send-to-spira-button').onclick = async () => await pushArtifacts();
@@ -91,11 +91,13 @@ Testing Functions
 //basic testing function for validating code snippet behaviour.
 async function test() {
   return Word.run(async (context) => {
-    let body = context.document.getSelection();
-    let lists = body.lists
+    console.log('called')
+    let body = context.document.body;
+    let lists = body.inlinePictures
     context.load(body)
-    context.load(lists, ['paragraphs'])
+    context.load(lists)
     await context.sync();
+    console.log(lists.items)
     for (let list of lists.items) {
       console.log(list)
     }
