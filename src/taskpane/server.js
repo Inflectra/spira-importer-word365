@@ -582,9 +582,12 @@ const parseArtifacts = async (ArtifactTypeId, model) => {
             if (testCase.Name) {
               testCases.push(testCase)
             }
-            else if ((styles.includes(item.style) || styles.includes(item.styleBuiltIn)) && itemtext) {
+            else if ((styles[1] == (item.style) || styles[1] == (item.styleBuiltIn)) && itemtext) {
               testCase.Name = itemtext
               testCases.push(testCase)
+            }
+            else{
+              //do nothing
             }
           }
         }

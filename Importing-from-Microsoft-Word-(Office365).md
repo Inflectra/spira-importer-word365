@@ -92,5 +92,6 @@ If for any reason you cannot upload your Word document to the cloud with Google 
 
 **What can the Classic Word add-in do that the Word365 add-in cannot?**
 
+* Parse images of older formatting styles (Legacy Documents)
 * Work with versions of spira older than 6.3.0.1
 * Work with versions of Word 2016 or earlier
