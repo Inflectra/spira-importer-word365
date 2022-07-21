@@ -55,7 +55,7 @@ const setDefaultDisplay = () => {
 //sets the event listeners of buttons 
 const setEventListeners = () => {
   let states = params.pageStates;
-  // document.getElementById('test').onclick = () => test();
+  document.getElementById('test').onclick = () => test();
   document.getElementById('btn-login').onclick = async () => await loginAttempt();
   // document.getElementById('dev-mode').onclick = () => goToState(states.dev);
   document.getElementById('send-to-spira-button').onclick = async () => await pushArtifacts();
@@ -85,9 +85,9 @@ const setEventListeners = () => {
   })
 }
 
-/****************
-Testing Functions 
-*****************/
+/***************
+Testing Function 
+****************/
 //basic testing function for validating code snippet behaviour.
 async function test() {
   return Word.run(async (context) => {
@@ -631,7 +631,7 @@ const confirmSelectionPrompt = (ArtifactTypeId, images, Artifacts, projectId, mo
   document.getElementById('pop-up').classList.add('sending')
   //changes the onclick to confirm instead of simply closing the pop-up window
   document.getElementById("pop-up-ok").onclick = async () => { await confirmSending(confirmationDataStore) }
-  document.getElementById('pop-up-text').innerText = `You are about to send ${artifactCount} ${artifactTypeName}. If this seems correct, click OK. Otherwise, click Cancel and review your selection and styles.`
+  document.getElementById('pop-up-text').innerText = `Do you want to create ${artifactCount} ${artifactTypeName} in SpiraPlan? If so, click OK.`
   return
   // sendArtifacts(ArtifactTypeId, images, Artifacts, projectId, model, styles, tableImages)
 }

@@ -586,6 +586,7 @@ const parseArtifacts = async (ArtifactTypeId, model) => {
               testCase.Name = itemtext
               testCases.push(testCase)
             }
+            //this is reached when a user has the last line in their selection as a folder name
             else{
               //do nothing
             }
