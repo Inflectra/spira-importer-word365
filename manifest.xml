@@ -15,7 +15,7 @@ xmlns:bt="http://schemas.microsoft.com/office/officeappbasictypes/1.0"
   <IconUrl DefaultValue="https://files.inflectra.com/office365/word/assets/icon-32.png"/>
   <HighResolutionIconUrl DefaultValue="https://files.inflectra.com/office365/word/assets/icon-80.png"/>
   <!--This is assuming the title of the url for Word365 will be the same as excel-->
-  <SupportUrl DefaultValue='https://spiradoc.inflectra.com/Migration-and-Integration/Importing-from-Microsoft-Word-%28Office365%29/'>
+  <SupportUrl DefaultValue='https://spiradoc.inflectra.com/Migration-and-Integration/Importing-from-Microsoft-Word-%28Office365%29/'/>
 
   <AppDomains>
     <AppDomain>inflectra.com</AppDomain> 
