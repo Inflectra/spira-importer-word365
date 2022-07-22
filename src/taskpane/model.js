@@ -3,20 +3,6 @@
 
 
 
-
-
-/*
- *
- * ==========
- * DATA MODEL
- * ==========
- *
- * This holds all the information about the user and all template configuration information. 
- * Future versions of this program can add their artifact to the `templateFields` object.
- *
- */
-
-
 // Main area for global constants, IE hardcoded values
 var params = {
   //enums for different artifact types
@@ -37,7 +23,7 @@ var params = {
     postOrGetTestFolders: "/test-folders",
     postImage: "/documents/file",
     //these fields will be populated when the full URL is made for this
-    imageSrc: "/{project-id}/Attachent/{AttachmentId}.aspx",
+    imageSrc: "/{project-id}/Attachment/{AttachmentId}.aspx",
     //this is the initial outdent value for the first requirement sent (-20)
     initialOutdent: "/indent/-20",
     //have to replace {project-id} with tempDataStore.currentProjectId
@@ -60,7 +46,9 @@ var params = {
     emptyParagraphRegex: /<p(.)*?>\&nbsp\;<\/p>/g,
     orderedRegex: /.*class=MsoListParagraph.*><span.*>(.*)<span/,
     marginRegex: /style='margin-left:(\d)\.(\d)in/,
-    imageRegex: /<img(.|\n|\r)*("|\s)>/g,
+    //images in tables always have this \n at the beginning, but not the case everywhere.
+    tableImageRegex: /<img\n(.|\n|\r)*?("|\s)>/gu,
+    imageRegex: /<img(.|\n|\r)*?("|\s)>/gu,
     listSpanRegex: /<span(.|\r|\n|\s)*?(<\/span>){1,2}/,
     exceptedListRegex: />(\d{1} | \.){2,}<span/u,
     firstListItemRegex: /<p class=MsoListParagraphCxSpFirst(.|\n|\r)*?\/p>/g,
@@ -82,20 +70,44 @@ var params = {
     validateStylesReq: "confirm-req-style-mappings",
     validateStylesTest: "confirm-test-style-mappings",
     logout: "log-out",
-    help: "btn-help-main"
+    help: "btn-help-main",
+    helpLogin: "btn-help-section-login",
+    helpModes: "btn-help-section-guide",
+    helpVersions: "btn-help-section-issues"
   },
   // This is used to move around within the add-in UI
   pageStates: {
     authentication: 0,
-    projects: 1,
+    products: 1,
     artifact: 2,
     req_style: 3,
     test_style: 4,
     req_send: 5,
-    test_send: 6,
+    postSend: 6,
     helpLogin: 7,
     helpMain: 8,
+    helpLink: 9,
     dev: 42
+  },
+  //these are collections of parameters that are likely to be used as groups
+  collections: {
+    helpButtons: [
+      "btn-help-section-login",
+      "btn-help-section-guide",
+      "btn-help-section-issues"
+    ],
+    helpSections: [
+      "help-section-login",
+      "help-section-guide",
+      "help-section-issues"
+    ],
+    sendSteps: [
+      "product-select-text",
+      "artifact-select-text",
+      "req-styles-text",
+      "test-styles-text",
+      "send-to-spira-text"
+    ]
   }
 }
 
@@ -134,7 +146,16 @@ var templates = {
   }
 }
 
-// Constructor function for globally accessible data that might change.
+/*
+ *
+ * ==========
+ * DATA MODEL
+ * ==========
+ *
+ * This holds all the information about the user and all template configuration information. 
+ * Future versions of this program can add their artifact to the `templateFields` object.
+ *
+ */
 function Data() {
   //global user object
   this.user = {
@@ -164,20 +185,31 @@ function Data() {
   };
 }
 
+/*error messages and their potential location (used to be multiple)
+ as well as other relevant information about them.*/
 var ERROR_MESSAGES = {
   stdTimeOut: 8000, // 8000 is 8 seconds when used in setTimeout()
-  allIds: { login: "login-err", main: "pop-up-text" },
+  allIds: { main: "pop-up-text" },
   login: { htmlId: "pop-up-text", message: "Your credentials are invalid" },
   empty: { htmlId: "pop-up-text", message: "You currently have no valid text selected or within the body of the document. if this is incorrect, check your style mappings and set them as the relevant styles." },
-  hierarchy: { htmlId: "pop-up-text", message: "Your style heirarchy is invalid for the selected area. Please make sure requirements only indent 1 additional level from the previous requirement as specified in the indent level style selectors above." },
-  table: { htmlId: "pop-up-text", message: "Your description column for one or more tables only includes empty cells or does not exist. If you do not want to send test steps - do not select tables in your document. If you do, check your selection and try again." },
+  hierarchy: { htmlId: "pop-up-text", message: "Your style hierarchy is invalid for the selected area. This occured on the line of '{hierarchy-line}'" },
+  table: { htmlId: "pop-up-text", message: "Your table with first cell \"{table-line}\" does not contain any data in the column allocated for test step descriptions. Please update your selected column, or remove this table from your selection." },
   failedReq: { htmlId: "pop-up-text", message: "" },
   duplicateStyles: { htmlId: "pop-up-text", message: "You currently have multiple mappings set to the same style. Please only use each style once." },
   emptyStyles: { htmlId: "pop-up-text", message: "You currently have unselected styles. Please provide a style for all provided inputs." },
-  failedImageReq: { htmlId: "pop-up-text", message: "Sending artifacts failed on sending an image. Sending artifacts will continue until a fatal error occurs. Some images may not appear in Spira."},
-  testCaseFolders: { htmlId: "pop-up-text", message: "Loading or retriving test case folders failed. If retrieving failed, you may still have your test cases imported in a new folder."},
-  //this will be an info message - not an error (but can be in certain edge cases, see first catch block in parseArtifacts)
-  invalidSelection: { htmlId: "pop-up-text", message: "It appears you have no text selected. the importer will proceed by parsing the full document."}
+  testCaseFolders: { htmlId: "pop-up-text", message: "Loading or retriving test case folders failed. If retrieving failed, you may still have your test cases imported in a new folder as this error is not fatal. Importing will continue in the background." }
 }
 
-export { Data, params, templates, ERROR_MESSAGES }
+/*this stores the data that is passed into sendArtifacts so it can be referenced in
+onclick functions on the confirmation screen.*/
+function awaitConfirmationDataStore(ArtifactTypeId, images, Artifacts, projectId, model, styles, tableImages) {
+  this.ArtifactTypeId = ArtifactTypeId
+  this.images = images
+  this.Artifacts = Artifacts
+  this.projectId = projectId
+  this.model = model
+  this.styles = styles
+  this.tableImages = tableImages
+}
+
+export { Data, params, templates, ERROR_MESSAGES, awaitConfirmationDataStore }

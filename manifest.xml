@@ -4,15 +4,19 @@ xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
 xmlns:bt="http://schemas.microsoft.com/office/officeappbasictypes/1.0"
  xmlns:ov="http://schemas.microsoft.com/office/taskpaneappversionoverrides" 
  xsi:type="TaskPaneApp">
-  <Id>b015dd25-1f01-46fe-a1dc-ff37f6b1fa08</Id>
+  <Id>11be36d2-31a0-462c-ab56-01a5da5e4dd0</Id>
   <Version>1.0.0.0</Version>
   <ProviderName>Inflectra</ProviderName>
   <DefaultLocale>en-US</DefaultLocale>
+
   <DisplayName DefaultValue="SpiraPlan Importer"/>
   <Description DefaultValue="Tool for importing artifacts to SpiraPlan"/>
-  <IconUrl DefaultValue="https://localhost:3000/assets/inf-icon-32.png"/>
-  <HighResolutionIconUrl DefaultValue="https://localhost:3000/assets/inf-icon-64.png"/>
-  <SupportUrl DefaultValue="https://www.contoso.com/help"/>
+
+  <IconUrl DefaultValue="https://files.inflectra.com/office365/word/assets/icon-32.png"/>
+  <HighResolutionIconUrl DefaultValue="https://files.inflectra.com/office365/word/assets/icon-80.png"/>
+  <!--This is assuming the title of the url for Word365 will be the same as excel-->
+  <SupportUrl DefaultValue='https://spiradoc.inflectra.com/Migration-and-Integration/Importing-from-Microsoft-Word-%28Office365%29/'>
+
   <AppDomains>
     <AppDomain>inflectra.com</AppDomain> 
     <AppDomain>https://www.inflectra.com</AppDomain> 
@@ -21,16 +25,21 @@ xmlns:bt="http://schemas.microsoft.com/office/officeappbasictypes/1.0"
   <Hosts>
     <Host Name="Document"/>
   </Hosts>
+
+<!-- Sets the required API version to 1.3 to gate word 2016/2013 from being supported. -->
+  <Requirements>
+    <Sets DefaultMinVersion="1.3">
+      <Set Name="WordApi" MinVersion="1.3"/>
+    </Sets>
+  </Requirements>
+
   <DefaultSettings>
-    <SourceLocation DefaultValue="https://localhost:3000/taskpane.html"/>
+    <!-- <SourceLocation DefaultValue="https://localhost:3000/taskpane.html"/> -->
+    <SourceLocation DefaultValue="https://files.inflectra.com/office365/word/taskpane.html"/>
   </DefaultSettings>
+
   <Permissions>ReadWriteDocument</Permissions>
   <VersionOverrides xmlns="http://schemas.microsoft.com/office/taskpaneappversionoverrides" xsi:type="VersionOverridesV1_0">
-    <Requirements xmlns="http://schemas.microsoft.com/office/taskpaneappversionoverrides">
-      <Sets DefaultMinVersion="1.1" xmlns="http://schemas.microsoft.com/office/officeappbasictypes/1.0">
-        <Set Name="WordApi" MinVersion="1.1"/>
-      </Sets>
-    </Requirements>
     <Hosts>
       <Host xsi:type="Document">
         <DesktopFormFactor>
@@ -47,7 +56,6 @@ xmlns:bt="http://schemas.microsoft.com/office/officeappbasictypes/1.0"
                 <Icon>
                   <bt:Image size="16" resid="Icon.16x16"/>
                   <bt:Image size="32" resid="Icon.32x32"/>
-                  <bt:Image size="64" resid="Icon.64x64"/>
                   <bt:Image size="80" resid="Icon.80x80"/>
                 </Icon>
                 <Control xsi:type="Button" id="TaskpaneButton">
@@ -59,7 +67,6 @@ xmlns:bt="http://schemas.microsoft.com/office/officeappbasictypes/1.0"
                   <Icon>
                     <bt:Image size="16" resid="Icon.16x16"/>
                     <bt:Image size="32" resid="Icon.32x32"/>
-                    <bt:Image size="64" resid="Icon.64x64"/>
                     <bt:Image size="80" resid="Icon.80x80"/>
                   </Icon>
                   <Action xsi:type="ShowTaskpane">
@@ -75,15 +82,16 @@ xmlns:bt="http://schemas.microsoft.com/office/officeappbasictypes/1.0"
     </Hosts>
     <Resources>
       <bt:Images>
-        <bt:Image id="Icon.16x16" DefaultValue="https://localhost:3000/assets/inf-icon-16.png"/>
-        <bt:Image id="Icon.32x32" DefaultValue="https://localhost:3000/assets/inf-icon-32.png"/>
-        <bt:Image id="Icon.64x64" DefaultValue="https://localhost:3000/assets/inf-icon-64.png"/>
-        <bt:Image id="Icon.80x80" DefaultValue="https://localhost:3000/assets/inf-icon-80.png"/>
+        <bt:Image id="Icon.16x16" DefaultValue="https://files.inflectra.com/office365/word/assets/icon-16.png"/>
+        <bt:Image id="Icon.32x32" DefaultValue="https://files.inflectra.com/office365/word/assets/icon-32.png"/>
+        <bt:Image id="Icon.80x80" DefaultValue="https://files.inflectra.com/office365/word/assets/icon-80.png"/>
       </bt:Images>
       <bt:Urls>
         <bt:Url id="GetStarted.LearnMoreUrl" DefaultValue="https://go.microsoft.com/fwlink/?LinkId=276812"/>
-        <bt:Url id="Commands.Url" DefaultValue="https://localhost:3000/commands.html"/>
-        <bt:Url id="Taskpane.Url" DefaultValue="https://localhost:3000/taskpane.html"/>
+        <!-- <bt:Url id="Commands.Url" DefaultValue="https://localhost:3000/commands.html"/> -->
+        <!-- <bt:Url id="Taskpane.Url" DefaultValue="https://localhost:3000/taskpane.html"/> -->
+        <bt:Url id="Commands.Url" DefaultValue="https://files.inflectra.com/office365/word/commands.html"/>
+        <bt:Url id="Taskpane.Url" DefaultValue="https://files.inflectra.com/office365/word/taskpane.html"/>
       </bt:Urls>
       <bt:ShortStrings>
         <bt:String id="GetStarted.Title" DefaultValue="Get started with the SpiraPlan Importer"/>

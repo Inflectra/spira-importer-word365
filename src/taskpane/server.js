@@ -9,7 +9,8 @@ export {
   parseArtifacts,
   loginCall,
   retrieveStyles,
-  updateSelectionArray
+  updateSelectionArray,
+  sendArtifacts
 }
 
 import { Data, ERROR_MESSAGES, params, templates } from './model.js'
@@ -22,74 +23,48 @@ import {
   hideProgressBar,
   enableButton,
   enableMainButtons,
-  disableMainButtons
+  disableMainButtons,
+  confirmSelectionPrompt
 } from './taskpane.js';
-
-/*
-  Functions that should be moved over: 
-  pushImage (i think),
-  indentRequirement
-*/
-
-/*Functions that have been integrated into parseArtifacts: pushArtifacts,
- updateSelectionArray, retrieveImages, parseRequirements, retrieveTables,
- parseTestCases, parseTestSteps
- */
-
-/*LINES THAT NEED ATTENTION: 121 175 214 */
 
 var RETRIEVE = "http://localhost:5000/retrieve"
 
 //params:
 //ArtifactTypeId: Int - ID based on params.artifactEnums.{artifact-type}
 //model: Object - user model object based on Data() model. (contains user credentials)
-//versionSupport: boolean - expresses if the user supports version 1.3. If not, skips 1.3 functionality
 
 /*This function takes in an ArtifactTypeId and parses the selected text or full body
 of a document, returning digestable objects which can easily be used to send artifacts
 to spira.*/
-const parseArtifacts = async (ArtifactTypeId, model, versionSupport) => {
+const parseArtifacts = async (ArtifactTypeId, model) => {
   return Word.run(async (context) => {
     disableMainButtons();
     /***************************
      Start range identification
      **************************/
-    let projectId = document.getElementById("project-select").value
+    let projectId = document.getElementById("product-select").value
     let selection = context.document.getSelection();
-    let splitSelection = context.document.getSelection().paragraphs;
-    if (versionSupport) {
-      splitSelection = context.document.getSelection().split(['\r'])
-    }
-    context.load(splitSelection, ['text', 'inlinePictures', 'style', 'styleBuiltIn'])
-    context.load(selection, ['text', 'inlinePictures', 'style', 'styleBuiltIn']);
+    let splitSelection = context.document.getSelection().split(['\r'])
+    context.load(splitSelection, ['text', 'inlinePictures', 'style', 'styleBuiltIn', 'tables'])
+    context.load(selection, ['text', 'inlinePictures', 'style', 'styleBuiltIn', 'tables']);
     try {
       await context.sync();
     }
     catch (err) {
-      /*there is a crashing error with context.sync(), 
+      /*there is an intermittent crashing error with context.sync(), 
       if your cursor is on an empty line .getSelection() throws error and crashes
       so this handles the fallback and forces full body parsing in this senario.
       May want to add a confirmation for full body parsing and explain
       what can cause this rather than sending the full body without
       user knowledge*/
       selection = {}
-      //we need an error for explaining this (and giving the user the option to confirm or cancel)?
-      // displayError()
     }
     //If there is no selected area, parse the full body of the document instead
     if (!selection.text) {
-      //.getRange is an API v1.3 function. It is only needed for .expandTo calls. paragraphs can handle the rest.
-      if (versionSupport) {
-        selection = context.document.body.getRange();
-        splitSelection = context.document.body.getRange().split(['\r'])
-      }
-      else {
-        selection = context.document.body
-        splitSelection = context.document.body.paragraphs;
-      }
-
-      context.load(selection, ['text', 'inlinePictures', 'style', 'styleBuiltIn']);
-      context.load(splitSelection, ['text', 'inlinePictures', 'style', 'styleBuiltIn'])
+      selection = context.document.body.getRange();
+      splitSelection = context.document.body.getRange().split(['\r'])
+      context.load(selection, ['text', 'inlinePictures', 'style', 'styleBuiltIn', 'tables']);
+      context.load(splitSelection, ['text', 'inlinePictures', 'style', 'styleBuiltIn', 'tables'])
       await context.sync();
     }
     /*this verifies that the body has been detected successfully / that it exists. 
@@ -105,6 +80,74 @@ const parseArtifacts = async (ArtifactTypeId, model, versionSupport) => {
     /********************** 
      Start image formatting
     ***********************/
+    /*if test cases are being parsed, this creates an array of "invalid images"
+    which are images that exist in tables, but are not going to be put into any
+    test step fields. Without this, any images in un-used table cells will desync
+    images being placed and result in images from those un-used cells being placed 
+    into various parts of the users artifacts. (each "invalid image" offsets the 
+    synchonization by 1 picture, by inserting its self where another image should
+     of been)*/
+    if (ArtifactTypeId == params.artifactEnums.testCases) {
+      //styles = []string - each string is the "style" allocated
+      let styles = retrieveStyles('test-')
+      let usedColumns = []
+      /*styles[2] is the 3rd style - in this case, the test step description column.
+      This slices the number from the end, and turns it into an int to be used for 
+      reference later*/
+      let descriptionColumn = parseInt(styles[2].slice(-1)) - 1
+      //parses out the integer values of the column for each test step field
+      //2 to styles.length is all the "column" selectors for test steps
+      for (let i = 2; i < styles.length; i++) {
+        usedColumns.push(parseInt(styles[i].slice(-1)) - 1)
+      }
+      var invalidImages = []
+      let checkingTables = selection.tables
+      context.load(checkingTables)
+      await context.sync();
+      /*this for loop stack is just iterating through table cells, the API
+      requires me to load at each deeper step of nesting in the API structure*/
+      for (let table of checkingTables.items) {
+        let rows = table.rows
+        context.load(rows)
+        await context.sync();
+        for (let [rowIndex, row] of rows.items.entries()) {
+          let isValidRow = true;
+          let cells = row.cells
+          context.load(cells)
+          await context.sync();
+          //this verifies the cell exists - the application crashes without this
+          if (!cells.items[descriptionColumn]) {
+            continue
+          }
+          /*this blurb checks if there is any text or an image 
+          in the description column of a row. If there is not, it
+          is not a "valid row" and all images from it will be discarded*/
+          else if (!cells.items[descriptionColumn].value.trim()) {
+            let descriptionBody = cells.items[descriptionColumn].body
+            context.load(descriptionBody, 'inlinePictures')
+            await context.sync();
+            //if there are no images and no text, the row is not valid
+            if (!descriptionBody.inlinePictures.items[0]) {
+              isValidRow = false
+            }
+          }
+          for (let [cellIndex, cell] of cells.items.entries()) {
+            let cellBody = cell.body
+            context.load(cellBody, ['inlinePictures', 'paragraphs'])
+            await context.sync();
+            /*if an image exists and is not in a cell that 
+            will be used, mark that image as invalid. do the same if the row
+            its self is invalid (has no description for a test step)*/
+            if ((!isValidRow && cellBody.inlinePictures.items[0]) ||
+              (!usedColumns.includes(cellIndex) && cellBody.inlinePictures.items[0])) {
+              for (let picture of cellBody.inlinePictures.items) {
+                invalidImages.push(picture)
+              }
+            }
+          }
+        }
+      }
+    }
     var imageLines = []
     //i represents each "line" delimited by \r tags
     for (let i = 0; i < splitSelection.items.length; i++) {
@@ -116,83 +159,121 @@ const parseArtifacts = async (ArtifactTypeId, model, versionSupport) => {
         }
       }
     }
+    /*tableImageObjects allows us to support tables with images above a test case
+     description which also contains images by separating images in tables from 
+     ones that arent.*/
+    var tableImageObjects = [];
     var imageObjects = [];
     let images = selection.inlinePictures;
     for (let i = 0; i < images.items.length; i++) {
-      let base64 = images.items[i].getBase64ImageSrc();
-      await context.sync();
-      let imageObj = new templates.Image(base64.m_value, `inline${i}.jpg`, imageLines[0])
-      imageObjects.push(imageObj)
-      //removes the first item in imageLines as it has been converted to an imageObject;
-      imageLines.shift();
+      let isInvalid;
+      //checks if each image is within the invalidImage array 
+      if (ArtifactTypeId == params.artifactEnums.testCases) {
+        isInvalid = invalidImages.find(image => image._Id == images.items[i]._Id)
+      }
+      //only adds the image to an image objects array if it is not an "invalid image"
+      if (!isInvalid) {
+        let base64 = images.items[i].getBase64ImageSrc();
+        await context.sync();
+        let imageObj = new templates.Image(base64.m_value, `inline${i}.jpg`, imageLines[0])
+        //check if the image is within a table (if test cases are being parsed)
+        if (ArtifactTypeId == params.artifactEnums.testCases) {
+          let isTablePicture = false
+          for (let table of selection.tables.items) {
+            let tableRange = table.getRange();
+            let pictureRange = images.items[i].getRange();
+            await context.sync();
+            //checks if the pictures range intersects with the tables range
+            let isInTable = pictureRange.intersectWithOrNullObject(tableRange)
+            context.load(isInTable)
+            await context.sync();
+            /*if there is an intersection between a picture and a table,
+             it is within a table*/
+            if (!isInTable.isNull || isTablePicture) {
+              isTablePicture = true
+              continue
+            }
+          }
+          /*tableImageObjects is used to allow images in tables to not interfere
+          with images in descriptions of test cases - separates test case & test step
+          images. Otherwise, they may be placed incorrectly.*/
+          if (isTablePicture) {
+            tableImageObjects.push(imageObj)
+          }
+          else {
+            imageObjects.push(imageObj)
+          }
+        }
+        else {
+          imageObjects.push(imageObj)
+        }
+        //removes the first item in imageLines as it has been converted to an imageObject;
+        imageLines.shift();
+      }
     }
-    console.log(imageObjects)
     //end of image formatting
     /*************************
      Start list parsing
      *************************/
-    //lists are not supported in API version 1.1
-    if (versionSupport) {
-      let lists = selection.lists
-      context.load(lists)
+    let lists = selection.lists
+    context.load(lists)
+    await context.sync();
+    var formattedLists = []
+    var formattedSingleItemLists = []
+    for (let list of lists.items) {
+      context.load(list)
+      context.sync();
+      // Inner array to store the elements of each list
+      let newList = [];
+      //set up accessing the paragraphs of a list
+      context.load(list, ['paragraphs'])
       await context.sync();
-      var formattedLists = []
-      var formattedSingleItemLists = []
-      for (let list of lists.items) {
-        context.load(list)
-        context.sync();
-        // Inner array to store the elements of each list
-        let newList = [];
-        //set up accessing the paragraphs of a list
-        context.load(list, ['paragraphs'])
+      let paragraphs = list.paragraphs;
+      context.load(paragraphs);
+      await context.sync();
+      for (let paragraph of paragraphs.items) {
+        context.load(paragraph)
         await context.sync();
-        let paragraphs = list.paragraphs;
-        context.load(paragraphs);
+        let listItem = paragraph.listItemOrNullObject
+        context.load(listItem, ['level', 'listString'])
         await context.sync();
-        for (let paragraph of paragraphs.items) {
-          context.load(paragraph)
-          await context.sync();
-          let listItem = paragraph.listItemOrNullObject
-          context.load(listItem, ['level', 'listString'])
-          await context.sync();
-          /*this covers odd formats with long listStrings (hover listString for details).
-          The "false" newList will get pushed, and serve as a "skip this one" flag for 
-          the later function which places formatted lists into the description.*/
-          if (paragraph.listItemOrNullObject.listString.length > 5 || (newList == false && typeof newList == 'boolean')) {
-            newList = false
-            continue
-          }
-          let html = paragraph.getHtml();
-          await context.sync();
-          let pRegex = params.regexs.paragraphRegex
-          let match = html.m_value.match(pRegex)
-          html = match[0]
-          let spanMatch = html.match(params.regexs.listSpanRegex)
-          if (spanMatch) {
-            html = html.replace(spanMatch[0], "")
-          }
-          let pTagMatches = [...html.matchAll(params.regexs.pTagRegex)]
-          if (pTagMatches) {
-            for (let matchList of pTagMatches) {
-              html = html.replace(matchList[0], "")
-            }
-          }
-          if (listItem.listString.match(params.regexs.orderedListRegex)) {
-            /*the second level unordered list listString is literally an o (letter O)
-            So this prevents that from unintentionally removing an o from the users sentence*/
-            html = html.replace(listItem.listString, "")
-          }
-          newList.push(new templates.ListItem(html, listItem.level))
+        /*this covers odd formats with long listStrings (hover listString for details).
+        The "false" newList will get pushed, and serve as a "skip this one" flag for 
+        the later function which places formatted lists into the description.*/
+        if (paragraph.listItemOrNullObject.listString.length > 5 || (newList == false && typeof newList == 'boolean')) {
+          newList = false
+          continue
         }
-        //single item lists need to be parsed differently than multi item ones
-        if (paragraphs.items.length == 1) {
-          formattedSingleItemLists.push(newList)
+        let html = paragraph.getHtml();
+        await context.sync();
+        let pRegex = params.regexs.paragraphRegex
+        let match = html.m_value.match(pRegex)
+        html = match[0]
+        let spanMatch = html.match(params.regexs.listSpanRegex)
+        if (spanMatch) {
+          html = html.replace(spanMatch[0], "")
         }
-        else {
-          formattedLists.push(newList)
+        let pTagMatches = [...html.matchAll(params.regexs.pTagRegex)]
+        if (pTagMatches) {
+          for (let matchList of pTagMatches) {
+            html = html.replace(matchList[0], "")
+          }
         }
-        newList = []
+        if (listItem.listString.match(params.regexs.orderedListRegex)) {
+          /*the second level unordered list listString is literally an o (letter O)
+          So this prevents that from unintentionally removing an o from the users sentence*/
+          html = html.replace(listItem.listString, "")
+        }
+        newList.push(new templates.ListItem(html, listItem.level))
       }
+      //single item lists need to be parsed differently than multi item ones
+      if (paragraphs.items.length == 1) {
+        formattedSingleItemLists.push(newList)
+      }
+      else {
+        formattedLists.push(newList)
+      }
+      newList = []
     }
     //end of list parsing
     /**********************
@@ -220,10 +301,7 @@ const parseArtifacts = async (ArtifactTypeId, model, versionSupport) => {
               descEnd = body.items[i - 1]
               /*creates a description range given the beginning 
               and end as delimited by lines with mapped styles*/
-              let descRange;
-              if (versionSupport) {
-                descRange = descStart.expandTo(descEnd)
-              }
+              let descRange = descStart.expandTo(descEnd)
               context.load(descRange)
               await context.sync();
               //descRange is null if the descEnd is not valid to extend the descStart
@@ -302,16 +380,17 @@ const parseArtifacts = async (ArtifactTypeId, model, versionSupport) => {
           }
         }
         //if the heirarchy is invalid, clear requirements and throw error
-        if (!validateHierarchy(requirements)) {
+        let validation = validateHierarchy(requirements)
+        if (validation != true || !typeof validation == "boolean") {
           requirements = false
           enableMainButtons();
           //throw hierarchy error and exit function
-          displayError(ERROR_MESSAGES.hierarchy, true)
-          return
+          displayError(ERROR_MESSAGES.hierarchy, false, validation)
+          return false
         }
         clearErrors();
-        await sendArtifacts(params.artifactEnums.requirements, imageObjects, requirements, projectId, model, styles)
-        return requirements
+        confirmSelectionPrompt(params.artifactEnums.requirements, imageObjects, requirements, projectId, model, styles)
+        return
       }
       case (params.artifactEnums.testCases): {
         /*when parsing multiple tables tableCounter serves as an index throughout all
@@ -339,6 +418,7 @@ const parseArtifacts = async (ArtifactTypeId, model, versionSupport) => {
           //validateTestSteps throws the error, this just fails quietly
           return false
         }
+
         /*part of this portion isnt DRY, but due to not being able to pass Word 
         objects between functions cant be made into its own function*/
         for (let [i, item] of splitSelection.items.entries()) {
@@ -422,7 +502,6 @@ const parseArtifacts = async (ArtifactTypeId, model, versionSupport) => {
               else {
                 testCase.Name = itemtext
               }
-              continue
             }
           }
           //tables = [][][] string where [table][row][column]
@@ -469,6 +548,12 @@ const parseArtifacts = async (ArtifactTypeId, model, versionSupport) => {
                 continue
               }
               testStep = { Description: row[parseInt(styles[2].slice(-1)) - 1], ExpectedResult: row[parseInt(styles[3].slice(-1)) - 1], SampleData: row[parseInt(styles[4].slice(-1)) - 1] }
+              for (let [property, value] of Object.entries(testStep)) {
+                //this handles tables in which the expected result or sample data columns dont exist.
+                if (value == undefined) {
+                  testStep[property] = ""
+                }
+              }
               testSteps.push(testStep)
             }
             testCase.testSteps = [...testCase.testSteps, ...testSteps]
@@ -497,19 +582,24 @@ const parseArtifacts = async (ArtifactTypeId, model, versionSupport) => {
             if (testCase.Name) {
               testCases.push(testCase)
             }
-            else if ((styles.includes(item.style) || styles.includes(item.styleBuiltIn)) && itemtext) {
+            else if ((styles[1] == (item.style) || styles[1] == (item.styleBuiltIn)) && itemtext) {
               testCase.Name = itemtext
               testCases.push(testCase)
             }
+            //this is reached when a user has the last line in their selection as a folder name
+            else{
+              //do nothing
+            }
           }
         }
-        await sendArtifacts(params.artifactEnums.testCases, imageObjects, testCases, projectId, model, styles)
-        return testCases
+        confirmSelectionPrompt(params.artifactEnums.testCases, imageObjects, testCases, projectId, model, styles, tableImageObjects)
+        return
       }
     }
   })
 }
-//params:
+
+//sendArtifacts params:
 //images = [{base64: b64encoded string, name: "", lineNum: ""}]
 //ArtifactTypeId based on params.artifactEnums.{artifact-type}
 //Artifacts is the array of parsed artifacts ready for sending
@@ -517,16 +607,19 @@ const parseArtifacts = async (ArtifactTypeId, model, versionSupport) => {
 //model: Data() object; used for user object containing user credentials
 /*styles: []string; The user selected styles, needed for determining order of test step
 properties inside a table.*/
+/*tableImages: same as images, but are the ones which are within tables (only for
+   test cases). See line ~160 for explanation of why this is separate.
+*/
 
 /*This function takes the already parsed artifacts and images and sends
 them to spira*/
-const sendArtifacts = async (ArtifactTypeId, images, Artifacts, projectId, model, styles) => {
+const sendArtifacts = async (ArtifactTypeId, images, Artifacts, projectId, model, styles, tableImages) => {
   //this checks if an empty artifact array is passed in (should never happen)
   if (Artifacts.length == 0) {
     //empty is the error message key for the model object.
-    displayError(ERROR_MESSAGES.empty, true);
+    displayError(ERROR_MESSAGES.empty, false);
     enableButton(params.buttonIds.sendToSpira)
-    return
+    return false
   }
   let imgRegex = params.regexs.imageRegex
   showProgressBar();
@@ -545,8 +638,8 @@ const sendArtifacts = async (ArtifactTypeId, images, Artifacts, projectId, model
         let firstCall = await axios.post(outdentCall, requirements[0])
 
         let placeholders = [...requirements[0].Description.matchAll(imgRegex)]
-        for (let i = 0; i < placeholders.length; i++) {
-          await pushImage(firstCall.data, images[0], projectId, model)
+        for (let placeholder of placeholders) {
+          await pushImage(firstCall.data, images[0], projectId, model, placeholder[0])
           images.shift();
         }
         updateProgressBar(1, requirements.length)
@@ -565,52 +658,59 @@ const sendArtifacts = async (ArtifactTypeId, images, Artifacts, projectId, model
           lastIndent = req.IndentLevel;
           let placeholders = [...req.Description.matchAll(imgRegex)]
           //the 'p' itemization of placeholders isnt needed - just needs to happen once per placeholder
-          for (let p of placeholders) {
-            await pushImage(call.data, images[0], projectId, model)
+          for (let placeholder of placeholders) {
+            await pushImage(call.data, images[0], projectId, model, placeholder[0])
             images.shift();
           }
-          updateProgressBar(i + 1, requirements.length);
+          updateProgressBar(i + 2, requirements.length + 1);
         }
         catch (err) {
           displayError(ERROR_MESSAGES.failedReq, false, req)
         }
       }
-      updateProgressBar(requirements.length, requirements.length);
-      // hideProgressBar();
-      document.getElementById("send-to-spira-button").disabled = false;
-      return
+      updateProgressBar(requirements.length + 1, requirements.length + 1);
+      return true
     }
     case (params.artifactEnums.testCases): {
       let testCaseFolders = await retrieveTestCaseFolders(projectId, model);
       let testCases = Artifacts
       for (let [i, testCase] of testCases.entries()) {
+        //filters out images that will not be placed (because test case folders do not support images)
+        if (testCase.folderDescription) {
+          checkForImages(testCase, images)
+        }
         let folder = testCaseFolders.find(folder => folder.Name == testCase.folderName)
         //if the folder doesnt exist, create a new folder on spira
-        if (!folder) {
+        if (!folder && testCase.folderName) {
           let newFolder = {}
           newFolder.TestCaseFolderId = await createTestCaseFolder(testCase.folderName,
             testCase.folderDescription, projectId, model);
           if (!newFolder.TestCaseFolderId) {
             displayError(ERROR_MESSAGES.failedReq, false, testCase)
-            return
+            return false
           }
           newFolder.Name = testCase.folderName;
           folder = newFolder
           testCaseFolders.push(newFolder);
+        }
+        //if the name is empty for the folder, set it as null (root directory)
+        else if (!testCase.folderName) {
+          folder = { TestCaseFolderId: null, Name: null }
+          testCaseFolders.push(folder)
         }
         //this returns the full test case object response
         let testCaseArtifact = await sendTestCase(testCase.Name, testCase.testCaseDescription,
           folder.TestCaseFolderId, projectId, model)
         if (!testCaseArtifact) {
           displayError(ERROR_MESSAGES.failedReq, false, testCase)
-          return
+          return false
         }
         //imgRegex defined at the top of the sendArtifacts function
         let placeholders = [...testCase.testCaseDescription.matchAll(imgRegex)]
         //p isnt needed but I do need to iterate through the placeholders(this is shorter syntax)
-        for (let p of placeholders) {
+        for (let placeholder of placeholders) {
           try {
-            await pushImage(testCaseArtifact, images[0], projectId, model)
+            await pushImage(testCaseArtifact, images[0], projectId, model, placeholder[0])
           }
           catch (err) {
             console.log(err)
@@ -622,22 +722,23 @@ const sendArtifacts = async (ArtifactTypeId, images, Artifacts, projectId, model
           let step = await sendTestStep(testCaseArtifact.TestCaseId, testStep, model, projectId);
           if (!step) {
             displayError(ERROR_MESSAGES.failedReq, false, testCase)
-            return
+            return false
           }
           //these are the <img> 'placeholders' for all 3 testStep fields
           let placeholders = [...testStep.Description.matchAll(imgRegex),
           ...testStep.SampleData.matchAll(imgRegex),
           ...testStep.ExpectedResult.matchAll(imgRegex)]
-          for (let p of placeholders) {
-            if (images[0]) {
+          for (let placeholder of placeholders) {
+            if (tableImages[0]) {
               //this handles images for all 3 test step fields. 
               try {
-                await pushImage(step, images[0], projectId, model, testCaseArtifact.TestCaseId, styles);
+                await pushImage(step, tableImages[0], projectId, model, placeholder[0], testCaseArtifact.TestCaseId, styles);
               }
               catch (err) {
                 displayError(ERROR_MESSAGES.failedReq, false, testCase)
+                return false
               }
-              images.shift();
+              tableImages.shift();
             }
           }
 
@@ -645,12 +746,15 @@ const sendArtifacts = async (ArtifactTypeId, images, Artifacts, projectId, model
         updateProgressBar(i + 1, testCases.length);
       }
       updateProgressBar(testCases.length, testCases.length);
-      // hideProgressBar();
       enableMainButtons();
+      return true
     }
   }
 }
 
+//retrieveTestCaseFolders params:
+//projectId: string of the ProjectId of the selected project
+//model: Data() object with user credentials.
 
 //this function retrieves an array of all testCaseFolders in the selected project
 const retrieveTestCaseFolders = async (projectId, model) => {
@@ -662,8 +766,15 @@ const retrieveTestCaseFolders = async (projectId, model) => {
   }
   catch (err) {
     displayError(ERROR_MESSAGES.testCaseFolders, false)
+    return []
   }
 }
+
+//createTestCaseFolder params:
+//folderName: name of the folder to be created
+//description: description ^ ^ ^
+//projectId: Project ID of the selected project as a string
+//model: Data() object with user credentials
 
 //This function creates a new test case folder in spira and returns its TestCaseFolderId
 const createTestCaseFolder = async (folderName, description, projectId, model) => {
@@ -681,6 +792,14 @@ const createTestCaseFolder = async (folderName, description, projectId, model) =
     return null;
   }
 }
+
+//sendTestCase params:
+//testCaseName: string - name of test case to be created
+// testCaseDescription: string - description ^ ^ ^ 
+//testFolderId: id of the folder the new test case should be within
+//projectId: Project ID of the selected project
+//model: Data() object with user credentials
+
 //sends a test case to spira
 const sendTestCase = async (testCaseName, testCaseDescription, testFolderId, projectId, model) => {
   try {
@@ -698,6 +817,12 @@ const sendTestCase = async (testCaseName, testCaseDescription, testFolderId, pro
     return null;
   }
 }
+
+//sendTestStep params:
+//testCaseId: ID of the test case this test step will be created under
+//testStep: populated templates.TestStep() object (model.js)
+//model: Data() object with user credentials
+//projectId: Project ID of user selected project 
 
 //sends a test step to spira
 const sendTestStep = async (testCaseId, testStep, model, projectId) => {
@@ -768,7 +893,6 @@ const formatDescriptionLists = (description, lists, singleItemLists) => {
 
     return description
   }
-
   //listStarts is the starting element of every list, single list starts is needed to
   //know how many single lists are parsed here.
   let singleItemListStarts = [...description.matchAll(params.regexs.singleListItemRegex)]
@@ -830,6 +954,9 @@ const formatDescriptionLists = (description, lists, singleItemLists) => {
 //isOrdered: {boolean} represents whether it is an ordered list or not
 const listConstructor = (isOrdered, list) => {
   //provides a boolean value for if a list is an item with a single lists
+  if (!list) {
+    return ""
+  }
   let isSingle = (list.length == 1)
   /*this logic determines what tags/regexs to use depending on whether the regex ive used to 
   populate the "isOrdered" parameter thinks it looks like an ordered list 
@@ -891,6 +1018,9 @@ const listConstructor = (isOrdered, list) => {
   return listHtml
 }
 
+//pageTag: string - represents what artifact type the user will be parsing
+
+//retrieves any existing style settings when a user opens the style selectors
 const retrieveStyles = (pageTag) => {
   let styles = []
   for (let i = 1; i <= 5; i++) {
@@ -910,23 +1040,35 @@ const retrieveStyles = (pageTag) => {
   return styles
 }
 
+//requirements: [] template.Requirement - all the parsed requirements from the document
+
+//validates the requirements heirarchy of the selected section of the document
 const validateHierarchy = (requirements) => {
+  //if no requirements are parsed due to invalid text selection, this fails out to prevent crashing
+  if (requirements.length == 0) {
+    return false
+  }
   //requirements = [{Name: str, Description: str, IndentLevel: int}, ...]
   //the first requirement must always be indent level 0 (level 1 in UI terms)
   if (requirements[0].IndentLevel != 0) {
-    return false
+    return requirements[0]
   }
   let prevIndent = 0
   for (let i = 0; i < requirements.length; i++) {
     //if there is a jump in indent levels greater than 1, fails validation
     if (requirements[i].IndentLevel > prevIndent + 1) {
-      return false
+      //this is the requirement the error failed on
+      return requirements[i]
     }
     prevIndent = requirements[i].IndentLevel
   }
   //if the loop goes through without returning false, the hierarchy is valid so returns true
   return true
 }
+
+//params: 
+//tables: [][][] where [table][row][column]
+//descStyle: string of the column selected for test steps.
 
 //passes in all relevant tables and description style for test steps (only required field).
 const validateTestSteps = (tables, descStyle) => {
@@ -945,7 +1087,7 @@ const validateTestSteps = (tables, descStyle) => {
     }
     //if there is a table containing no test step descriptions, throws an error and stops execution
     if (!atLeastOneDesc) {
-      displayError(ERROR_MESSAGES.table, true);
+      displayError(ERROR_MESSAGES.table, false, tables[i][0][0]);
       return false
     }
   }
@@ -953,39 +1095,43 @@ const validateTestSteps = (tables, descStyle) => {
   return true
 }
 
-const pushImage = async (Artifact, image, projectId, model, testCaseId, styles) => {
-  //image = {base64: "", name: "", lineNum: int}
+/*Uploads images to spira, and replaces placeholders in various text fields with a tag to display
+the uploaded images in their appropriate positions.*/
+
+//params:
+//Artifact: {} - POST response from creating a new artifact which contains an image
+//image: {} - image object passed in following the templates.Image format
+//projectId: string - string of the projectId the user had selected when they pressed send to spira
+//model: {} - global Data object (from model) containing user credentials among other things
+//testCaseId: string - id of the test case a test step belongs to (only exists when pushing images to test steps)
+//styles: []string - users selected styles, organized in the same order as they appear in the UI.
+
+const pushImage = async (Artifact, image, projectId, model, placeholder, testCaseId, styles) => {
   /*upload images and build link of image location in spira 
   ({model.user.url}/{projectID}/Attachment/{AttachmentID}.aspx)*/
   //Add AttachmentURL to each imageObject after they are uploaded
   let pid = projectId
   let imgLink;
-  let imageApiCall = model.user.url + "/services/v6_0/RestService.svc/projects/"
-    + pid + `/documents/file?username=${model.user.username}&api-key=${model.user.api_key}`
+  let imageApiCall = model.user.url + params.apiComponents.apiBase
+    + pid + params.apiComponents.postImage + model.user.userCredentials
+  let attachment;
+  if (Artifact.RequirementId) {
+    attachment = [{ ArtifactId: Artifact.RequirementId, ArtifactTypeId: params.artifactEnums.requirements }]
+  }
+  //checks if the artifact is a test step
+  else if (Artifact.TestStepId) {
+    attachment = [{ ArtifactId: Artifact.TestStepId, ArtifactTypeId: params.artifactEnums.testSteps }]
+  }
+  //test steps have TestCaseId's, so checks for TestStepId before this.
+  else if (Artifact.TestCaseId) {
+    attachment = [{ ArtifactId: Artifact.TestCaseId, ArtifactTypeId: params.artifactEnums.testCases }]
+  }
   try {
-    if (Artifact.RequirementId) {
-      let imageCall = await axios.post(imageApiCall, {
-        FilenameOrUrl: image.name, BinaryData: image.base64,
-        AttachedArtifacts: [{ ArtifactId: Artifact.RequirementId, ArtifactTypeId: 1 }]
-      })
-      imgLink = model.user.url + `/${pid}/Attachment/${imageCall.data.AttachmentId}.aspx`
-    }
-    //checks if the artifact is a test step
-    else if (Artifact.TestStepId) {
-      let imageCall = await axios.post(imageApiCall, {
-        FilenameOrUrl: image.name, BinaryData: image.base64,
-        AttachedArtifacts: [{ ArtifactId: Artifact.TestStepId, ArtifactTypeId: 7 }]
-      })
-      imgLink = model.user.url + `/${pid}/Attachment/${imageCall.data.AttachmentId}.aspx`
-    }
-    //test steps have TestCaseId's, so checks for TestStepId first.
-    else if (Artifact.TestCaseId) {
-      let imageCall = await axios.post(imageApiCall, {
-        FilenameOrUrl: image.name, BinaryData: image.base64,
-        AttachedArtifacts: [{ ArtifactId: Artifact.TestCaseId, ArtifactTypeId: 2 }]
-      })
-      imgLink = model.user.url + `/${pid}/Attachment/${imageCall.data.AttachmentId}.aspx`
-    }
+    let imageCall = await axios.post(imageApiCall, {
+      FilenameOrUrl: image.name, BinaryData: image.base64,
+      AttachedArtifacts: attachment
+    })
+    imgLink = model.user.url + params.apiComponents.imageSrc.replace("{project-id}", pid).replace("{AttachmentId}", imageCall.data.AttachmentId)
   }
   catch (err) {
     console.log(err)
@@ -996,8 +1142,8 @@ const pushImage = async (Artifact, image, projectId, model, testCaseId, styles) 
   if (Artifact.RequirementId) {
     try {
       //makes a get request for the target artifact which will be updated to contain an image
-      let getArtifact = model.user.url + "/services/v6_0/RestService.svc/projects/" + pid +
-        `/requirements/${Artifact.RequirementId}?username=${model.user.username}&api-key=${model.user.api_key}`;
+      let getArtifact = model.user.url + params.apiComponents.apiBase + pid +
+        params.apiComponents.getRequirement + Artifact.RequirementId + model.user.userCredentials;
       let getArtifactCall = await superagent.get(getArtifact).set('accept', 'application/json').set('Content-Type', 'application/json');
       //This is the body of the get response in its entirety.
       fullArtifactObj = getArtifactCall.body
@@ -1006,17 +1152,11 @@ const pushImage = async (Artifact, image, projectId, model, testCaseId, styles) 
       console.log(err)
       return
     }
-    // now replace the placeholder in the description with img tags
-    let placeholderRegex = params.regexs.imageRegex
-    //gets an array of all the placeholders for images. 
-    let placeholders = [...fullArtifactObj.Description.matchAll(placeholderRegex)]
-    /*placeholders[0][0] is the first matched instance - because you need to GET for each change
-    this should work each time - each placeholder should have 1 equivalent image in the same
-    order they appear throughout the document.*/
-    fullArtifactObj.Description = fullArtifactObj.Description.replace(placeholders[0][0], `<img alt=${image?.name} src=${imgLink}><br />`)
+    // now replace the placeholder in the description with relevant img tags
+    fullArtifactObj.Description = fullArtifactObj.Description.replace(placeholder, `<img alt=${image?.name} src=${imgLink} /><br />`)
     //PUT artifact with new description (including img tags now)
-    let putArtifact = model.user.url + "/services/v6_0/RestService.svc/projects/" + pid +
-      `/requirements?username=${model.user.username}&api-key=${model.user.api_key}`;
+    let putArtifact = model.user.url + params.apiComponents.apiBase + pid +
+      params.apiComponents.postOrPutRequirement + model.user.userCredentials;
     try {
       await axios.put(putArtifact, fullArtifactObj)
     }
@@ -1030,8 +1170,10 @@ const pushImage = async (Artifact, image, projectId, model, testCaseId, styles) 
     try {
       //this needs to have a different way of getting TestCaseId
       //makes a get request for the target artifact which will be updated to contain an image
-      let getArtifact = model.user.url + "/services/v6_0/RestService.svc/projects/" + pid +
-        `/test-cases/${testCaseId}/test-steps/${Artifact.TestStepId}?username=${model.user.username}&api-key=${model.user.api_key}`;
+      let getArtifact = model.user.url + params.apiComponents.apiBase + pid +
+        params.apiComponents.getTestCase + testCaseId + params.apiComponents.getTestStep
+        + Artifact.TestStepId + model.user.userCredentials
+      // `/test-cases/${testCaseId}/test-steps/${Artifact.TestStepId}?username=${model.user.username}&api-key=${model.user.api_key}`;
       let getArtifactCall = await superagent.get(getArtifact).set('accept', 'application/json').set('Content-Type', 'application/json');
       //This is the body of the get response in its entirety.
       fullArtifactObj = getArtifactCall.body
@@ -1047,11 +1189,12 @@ const pushImage = async (Artifact, image, projectId, model, testCaseId, styles) 
     //This is needed to determine the order of how images will appear throughout
     //the document relative to the TestStep field they represent.
     let styleOrganizer = [{ column: parseInt(styles[2].substring(styles[2].length - 1)), for: "descPlaceholders" },
-    { column: parseInt(styles[3].substring(styles[2].length - 1)), for: "expectedPlaceholders" },
-    { column: parseInt(styles[4].substring(styles[2].length - 1)), for: "samplePlaceholders" }]
+    { column: parseInt(styles[3].substring(styles[3].length - 1)), for: "expectedPlaceholders" },
+    { column: parseInt(styles[4].substring(styles[4].length - 1)), for: "samplePlaceholders" }]
 
     //this sorts the styles by increasing order of column number (lowest column first)
     styleOrganizer.sort((a, b) => (a.column > b.column) ? 1 : -1)
+
     let descPlaceholders = [...fullArtifactObj.Description.matchAll(placeholderRegex)]
     let samplePlaceholders = [...fullArtifactObj.SampleData.matchAll(placeholderRegex)]
     let expectedPlaceholders = [...fullArtifactObj.ExpectedResult.matchAll(placeholderRegex)]
@@ -1090,8 +1233,9 @@ const pushImage = async (Artifact, image, projectId, model, testCaseId, styles) 
       continue
     }
     //PUT artifact with new description (including img tags now)
-    let putArtifact = model.user.url + "/services/v6_0/RestService.svc/projects/" + pid +
-      `/test-cases/${fullArtifactObj.TestCaseId}/test-steps?username=${model.user.username}&api-key=${model.user.api_key}`;
+    let putArtifact = model.user.url + params.apiComponents.apiBase + pid +
+      params.apiComponents.getTestCase + fullArtifactObj.TestCaseId +
+      params.apiComponents.postOrPutTestStep + model.user.userCredentials;
     try {
       await axios.put(putArtifact, fullArtifactObj)
     }
@@ -1105,9 +1249,11 @@ const pushImage = async (Artifact, image, projectId, model, testCaseId, styles) 
     try {
       //handle test cases
       //makes a get request for the target artifact which will be updated to contain an image
-      let getArtifact = model.user.url + "/services/v6_0/RestService.svc/projects/" + pid +
-        `/test-cases/${Artifact.TestCaseId}?username=${model.user.username}&api-key=${model.user.api_key}`;
-      let getArtifactCall = await superagent.get(getArtifact).set('accept', 'application/json').set('Content-Type', 'application/json');
+      let getArtifact = model.user.url + params.apiComponents.apiBase + pid +
+        params.apiComponents.getTestCase + Artifact.TestCaseId
+        + model.user.userCredentials
+      let getArtifactCall = await superagent.get(getArtifact).set(
+        'accept', 'application/json').set('Content-Type', 'application/json');
       //This is the body of the get response in its entirety.
       fullArtifactObj = getArtifactCall.body
     }
@@ -1116,20 +1262,11 @@ const pushImage = async (Artifact, image, projectId, model, testCaseId, styles) 
       console.log(err)
       return
     }
-    //crashing HERE
-    //dsajdhsjkda
-    //dhasdjkl
-    // now replace the placeholder in the description with img tags
-    let placeholderRegex = /<img(.|\n|\r)*("|\s)\>/g
-    //gets an array of all the placeholders for images. 
-    let placeholders = [...fullArtifactObj.Description.matchAll(placeholderRegex)]
-    /*placeholders[0][0] is the first matched instance - because you need to GET for each change
-    this should work each time - each placeholder should have 1 equivalent image in the same
-    order they appear throughout the document.*/
-    fullArtifactObj.Description = fullArtifactObj.Description.replace(placeholders[0][0], `<img alt=${image?.name} src=${imgLink}><br />`)
+    // now replace the placeholder in the description with relevant img tag
+    fullArtifactObj.Description = fullArtifactObj.Description.replace(placeholder, `<img alt=${image?.name} src=${imgLink}><br />`)
     //PUT artifact with new description (including img tags now)
-    let putArtifact = model.user.url + "/services/v6_0/RestService.svc/projects/" + pid +
-      `/test-cases?username=${model.user.username}&api-key=${model.user.api_key}`;
+    let putArtifact = model.user.url + params.apiComponents.apiBase + pid +
+      params.apiComponents.postOrPutTestCase + model.user.userCredentials;
     try {
       await axios.put(putArtifact, fullArtifactObj)
     }
@@ -1142,11 +1279,16 @@ const pushImage = async (Artifact, image, projectId, model, testCaseId, styles) 
   return true
 }
 
+//indentRequirement params:
+//apiCall: string - formatted URL for the initial POST creation call
+//RequirementId: string - RequirementId from spira of the created requirement
+//indent: int - change in indent level. If negative, outdents that many times. 
+
 /*indents requirements to the appropriate level, relative to the last requirement in the product
 before this add-on begins to add more. (No way to find out indent level of the last requirement
   in a product from the Spira API (i think))*/
-const indentRequirement = async (apiCall, id, indent) => {
-  apiCall = apiCall.replace("requirements", `requirements/${id}/${indent > 0 ? "indent" : "outdent"}`)
+const indentRequirement = async (apiCall, RequirementId, indent) => {
+  apiCall = apiCall.replace("requirements", `requirements/${RequirementId}/${indent > 0 ? "indent" : "outdent"}`)
   indent = Math.abs(indent);
   //loop for indenting/outdenting requirement
   for (let i = 0; i < indent; i++) {
@@ -1162,11 +1304,19 @@ const indentRequirement = async (apiCall, id, indent) => {
   return true
 }
 
+//apiUrl: string - formatted API call url for GETing /projects
+
+/*GETs /projects to validate credentials and returns the response object with the 
+users projects to populate dropdown*/
 const loginCall = async (apiUrl) => {
-  var response = await superagent.get(apiUrl).set('accept', 'application/json').set("Content-Type", "application/json")
+  var response = await superagent.get(apiUrl).set(
+    'accept', 'application/json').set("Content-Type", "application/json")
   return response
 }
 
+//DEPRECIATED -- was used for updating the users selection for various purposes.
+/*is still used for checking the styles used in the users document (to populate 
+  custom styles and place used styles at the top of their style selector)*/
 async function updateSelectionArray() {
   return Word.run(async (context) => {
     //check for highlighted text  
@@ -1188,4 +1338,16 @@ async function updateSelectionArray() {
     })
     return lines
   })
+}
+
+/*this function checks if test case folder descriptions have images within them.
+  if they do, it is removed from the images array to prevent images being populated out 
+  of order. Also removes the tags from the description of the test case folder*/
+const checkForImages = (testCase, images) => {
+  let imageTags = [...testCase.folderDescription.matchAll(params.regexs.imageRegex)]
+
+  for (let match of imageTags) {
+    images.shift()
+    testCase.folderDescription = testCase.folderDescription.replace(match[0], "")
+  }
 }

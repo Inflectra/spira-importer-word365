@@ -9,73 +9,106 @@
 Initialization Functions
 ***********************/
 
+export {
+  disableButton,
+  displayError,
+  clearErrors,
+  showProgressBar,
+  updateProgressBar,
+  hideProgressBar,
+  enableButton,
+  enableMainButtons,
+  disableMainButtons,
+  confirmSelectionPrompt
+}
 
-import { Data, params, templates, ERROR_MESSAGES } from './model'
+
+import { Data, params, templates, ERROR_MESSAGES, awaitConfirmationDataStore } from './model'
 import {
   parseArtifacts,
   loginCall,
   retrieveStyles,
-  updateSelectionArray
+  updateSelectionArray,
+  sendArtifacts
 } from './server'
-
-// Global selection array, used throughout
-/*This is a global variable because the word API call functions are unable to return
-values from within due to the required syntax of returning a Word.run((callback) =>{}) 
-function. */
+//model stores user data (login credentials and projects)
 var model = new Data();
-var SELECTION = [];
-var versionSupport;
-//setting a user object to maintain credentials when using other parts of the add-in
+//this will be used during the "confirm sending" step to store required parameters for sendArtifacts
+var confirmationDataStore;
 
+//boilerplate initialization with a few calls
 Office.onReady((info) => {
   if (info.host === Office.HostType.Word) {
     setDefaultDisplay();
     setEventListeners();
     document.body.classList.add('ms-office');
-    //This checks if a users Word versions supports WordApi 1.3, then sets this in a global variable
-    versionSupport = Office.context.requirements.isSetSupported("WordApi", "1.3")
     // this element doesn't currently exist
     // document.getElementById("help-connection-google").style.display = "none";
   }
 });
 
+//displays the login page / 'main' div after Office.onReady initialization
 const setDefaultDisplay = () => {
   document.getElementById("app-body").style.display = "flex";
 }
 
+//sets the event listeners of buttons 
 const setEventListeners = () => {
   let states = params.pageStates;
   document.getElementById('test').onclick = () => test();
   document.getElementById('btn-login').onclick = async () => await loginAttempt();
-  document.getElementById('dev-mode').onclick = () => goToState(states.dev);
+  // document.getElementById('dev-mode').onclick = () => goToState(states.dev);
   document.getElementById('send-to-spira-button').onclick = async () => await pushArtifacts();
   document.getElementById('log-out').onclick = () => goToState(states.authentication);
   document.getElementById("select-requirements").onclick = () => openStyleMappings("req-");
   document.getElementById("select-test-cases").onclick = () => openStyleMappings("test-");
   document.getElementById("confirm-req-style-mappings").onclick = () => confirmStyleMappings('req-');
   document.getElementById("confirm-test-style-mappings").onclick = () => confirmStyleMappings('test-');
-  document.getElementById('project-select').onchange = () => goToState(states.artifact);
+  document.getElementById('product-select').onchange = () => goToState(states.artifact);
   document.getElementById("pop-up-close").onclick = () => hideElement("pop-up");
   document.getElementById("pop-up-ok").onclick = () => hideElement('pop-up');
   document.getElementById("btn-help-login").onclick = () => goToState(states.helpLogin);
   document.getElementById("btn-help-main").onclick = () => goToState(states.helpMain);
+  document.getElementById('lnk-help-login').onclick = () => goToState(states.helpLink);
+  document.getElementById(params.buttonIds.helpLogin).onclick = () => openHelpSection(params.buttonIds.helpLogin);
+  document.getElementById(params.buttonIds.helpModes).onclick = () => openHelpSection(params.buttonIds.helpModes);
+  document.getElementById(params.buttonIds.helpVersions).onclick = () => openHelpSection(params.buttonIds.helpVersions);
+  document.getElementById("pop-up-cancel").onclick = () => { cancelSending(confirmationDataStore) }
+
+  // event listener for pressing enter before login. e = KeyboardEvent
+  addEventListener('keydown', async (e) => {
+    //this only does anything if the login page is viewable. 
+    if (e.code == "Enter" && !document.getElementById('panel-auth').classList.contains("hidden")) {
+      await loginAttempt()
+    }
+    return
+  })
 }
 
-/****************
-Testing Functions 
-*****************/
+/***************
+Testing Function 
+****************/
 //basic testing function for validating code snippet behaviour.
 async function test() {
-  let selection = await updateSelectionArray();
-  console.log(selection)
+  return Word.run(async (context) => {
+    console.log('called')
+    let body = context.document.body;
+    let lists = body.inlinePictures
+    context.load(body)
+    context.load(lists)
+    await context.sync();
+    console.log(lists.items)
+    for (let list of lists.items) {
+      console.log(list)
+    }
+  })
 }
 
 /**************
 Spira API calls
 **************/
 
-// REFACTOR IN PROGRESS 
-// Replaced USER_OBJ with the new model.user.(field) format
+//Attemps to 'log in' the user by making an api call to GET /projects
 const loginAttempt = async () => {
   /*disable the login button to prevent someone from pressing it multiple times, this can
   overpopulate the products selector with duplicate sets.*/
@@ -106,6 +139,7 @@ const loginAttempt = async () => {
       model.user.userCredentials = `?username=${username}&api-key=${rssToken}`;
       //populate the products dropdown & model object with the response body.
       populateProjects(response.body)
+      boldStep('product-select-text');
       //On successful login, hide error message if its visible
       clearErrors();
       return
@@ -117,13 +151,16 @@ const loginAttempt = async () => {
     document.getElementById("btn-login").disabled = false;
     return
   }
+  // Turn the header check box on here so that it won't get set just by navigating
+  // around the send to spira menu
+  document.getElementById('header-check').checked = true;
 }
 
 /********************
 HTML DOM Manipulation
 ********************/
 
-// these will be called for login and send to spira buttons
+// these should be self explanatory
 const disableButton = (htmlId) => {
   document.getElementById(htmlId).disabled = true
 }
@@ -132,24 +169,51 @@ const enableButton = (htmlId) => {
   document.getElementById(htmlId).disabled = false
 }
 
-const disableMainButtons = () => { // Disables all buttons on the main screen
+// disables all buttons on the main page
+const disableMainButtons = () => {
   let buttons = Object.values(params.buttonIds);
   for (let button of buttons) {
     disableButton(button);
   }
 }
 
-const enableMainButtons = () => { // Enables all buttons on the main screen
+// enables all buttons after sending succeeds or fails so the user do things again
+const enableMainButtons = () => {
   let buttons = Object.values(params.buttonIds);
   for (let button of buttons) {
     enableButton(button);
   }
 }
 
+// Same as disableMainButtons, but for dropdowns
+const disableDropdowns = () => {
+  for (let i = 1; i < 6; i++) {
+    // using disableButton but it works the same for dropdowns
+    disableButton(`test-style-select${i}`);
+  }
+  for (let i = 1; i < 6; i++) {
+    disableButton(`req-style-select${i}`);
+  }
+  disableButton('product-select');
+}
+
+// Same as enableMainButtons, but for dropdowns
+const enableDropdowns = () => {
+  for (let i = 1; i < 6; i++) {
+    // using enableButton but it works the same for dropdowns
+    enableButton(`test-style-select${i}`);
+  }
+  for (let i = 1; i < 6; i++) {
+    enableButton(`req-style-select${i}`);
+  }
+  enableButton('product-select');
+}
+
+//populates the products selector with the retrieved products
 const populateProjects = (projects) => {
   addDefaultProject();
   model.projects = projects
-  let dropdown = document.getElementById('project-select')
+  let dropdown = document.getElementById('product-select')
   projects.forEach((project) => {
     /*creates an option for each product which displays the name
      and has a value of its ProjectId for use in API calls*/
@@ -161,14 +225,8 @@ const populateProjects = (projects) => {
   return
 }
 
+//Reveals the style selectors after selecting an artifact.
 const openStyleMappings = async (pageTag) => {
-  //opens the requirements style mappings if requirements is the selected artifact type
-  /*all id's and internal word settings are now set using a "pageTag". This allows code 
-  to be re-used between testing and requirement style settings. The tags are req- for
-  requirements and test- for test cases.*/
-  /*hides the send button when they select an artifact type, so if they had completed
-  style mappings for one or the other then change the artifact type they are required to enter
-  their style mappings again.*/
   clearErrors();
   hideElement('send-to-spira');
   //checks the current selected artifact type then loads the appropriate menu
@@ -177,6 +235,7 @@ const openStyleMappings = async (pageTag) => {
     document.getElementById("select-test-cases").classList.remove("activated");
     showElement('req-style-mappings');
     hideElement('test-style-mappings');
+    boldStep('req-styles-text');
   }
   //opens the test cases style mappings if test mappings is the selected artifact type
   else {
@@ -184,6 +243,7 @@ const openStyleMappings = async (pageTag) => {
     document.getElementById("select-requirements").classList.remove("activated");
     hideElement('req-style-mappings');
     showElement('test-style-mappings');
+    boldStep('test-styles-text');
   }
   //wont populate styles for requirements if it is already populated
   if (document.getElementById("req-style-select1").childElementCount && pageTag == "req-") {
@@ -221,9 +281,8 @@ const openStyleMappings = async (pageTag) => {
   })
 }
 
-//closes the style mapping page taking in a boolean 'result'
-//pageTag is req or test depending on which page is currently open
-
+/* validates the users styles are valid from a parsing standpoint - not that it 
+is valid for the particular document being used*/
 const confirmStyleMappings = async (pageTag) => {
   //saves the users style preferences. this is document bound
   let styles = []
@@ -236,16 +295,18 @@ const confirmStyleMappings = async (pageTag) => {
       }
       //gives an error explaining they have duplicate style mappings and cannot proceed.
       else {
-        displayError(ERROR_MESSAGES.duplicateStyles, true)
+        displayError(ERROR_MESSAGES.duplicateStyles)
         //hides the final button if it is already displayed when a user inputs invalid styles.
         hideElement('send-to-spira');
+        boldStep(pageTag + 'styles-text');
         return
       }
       Office.context.document.settings.set(pageTag + 'style' + i.toString(), setting);
     }
     //gives an error explaining they have empty style mappings.
     else {
-      displayError(ERROR_MESSAGES.emptyStyles, true)
+      displayError(ERROR_MESSAGES.emptyStyles)
+      boldStep(pageTag + 'styles-text');
       return
     }
   }
@@ -255,6 +316,7 @@ const confirmStyleMappings = async (pageTag) => {
   Office.context.document.settings.saveAsync()
   //show the send to spira button after this is clicked and all style selectors are populated.
   showElement('send-to-spira');
+  boldStep('send-to-spira-text');
 }
 
 //Populates a passed in style-selector with the avaiable word styles
@@ -269,6 +331,7 @@ const populateStyles = (styles, element_id) => {
   })
 }
 
+//clears a passed in selector element by ID 
 const clearDropdownElement = (element_id) => {
   let dropdown = document.getElementById(element_id);
   while (dropdown.length > 0) {
@@ -276,31 +339,41 @@ const clearDropdownElement = (element_id) => {
   }
 }
 
+//updates the progress bar to visually demonstrate the progress of sending the document.
 const updateProgressBar = (current, total) => {
   let width = current / total * 100;
   let bar = document.getElementById("progress-bar-progress");
   bar.style.width = width + "%";
   if (current == total) {
-    document.getElementById('pop-up').classList.remove('sending');
-    document.getElementById('pop-up').classList.add('sent');
-    document.getElementById('pop-up-text').textContent = "Sent Artifacts!";
+    let popUp = document.getElementById('pop-up')
+    popUp.classList.add('sent')
+    popUp.classList.remove('sending');
+    document.getElementById('pop-up-text').textContent = `Sent ${total} 
+    ${document.getElementById('select-requirements').classList.contains('activated') ?
+        "Requirements" : "Test Cases"} successfully!`;
     enableButton('pop-up-ok');
   }
   else {
-    document.getElementById('pop-up-text').textContent = `Sending ${total} Artifacts!`;
+    document.getElementById('pop-up-text').textContent = `Sending ${total} 
+    ${document.getElementById('select-requirements').classList.contains('activated') ?
+        "Requirements!" : "Test Cases!"}`;
   }
   return true
 }
 
+//displays the progress bar, and removes any other errors that may have been displayed
 const showProgressBar = () => {
   disableButton('pop-up-ok');
   showElement('pop-up');
+  document.getElementById('pop-up').classList.remove('sent');
+  document.getElementById('pop-up').classList.remove('err');
   document.getElementById('pop-up').classList.add('sending');
   document.getElementById('pop-up-text').textContent = "Parsing Document..."
   document.getElementById("progress-bar-progress").style.width = "0%";
   document.getElementById("progress-bar").classList.remove("hidden");
 }
 
+//hides the progress bar when sending finishes, and resets the bar for next use
 const hideProgressBar = () => {
   document.getElementById('pop-up').classList.remove('sending');
   document.getElementById('pop-up').classList.remove('sent');
@@ -308,44 +381,50 @@ const hideProgressBar = () => {
   hideElement('progress-bar');
 }
 
+//displays an error, where the error is an object from model.js's ERROR_MESSAGES
 const displayError = (error, timeOut, failedArtifact) => {
-  //We may want to update this to pass in the full object for better readability
-  //rather than just passing in the key. (ie. instead of key, pass ERROR_MESSAGES['key'])
-  console.log('got called'
-  )
   let element = document.getElementById(error.htmlId);
   hideProgressBar();
   enableButton('pop-up-ok');
   document.getElementById('pop-up').classList.add('err');
   showElement('pop-up')
-  console.log("getting in")
   if (timeOut) {
     element.textContent = error.message;
     setTimeout(() => {
       clearErrors();
     }, ERROR_MESSAGES.stdTimeOut);
   }
+  //special error case for handling hierarchy errors 
+  else if (error.message.includes("hierarchy")) {
+    element.textContent = error.message.replace("{hierarchy-line}", failedArtifact.Name)
+  }
+  else if (error.message.includes("table")) {
+    //in this scenario (only happens once) i pass in the name directly instead of the artifact object
+    element.textContent = error.message.replace("{table-line}", failedArtifact)
+  }
   else if (failedArtifact) { // This is a special case error message for more descriptive errors when sending artifacts
     element.textContent =
       `The request to the API has failed on the Artifact: '${failedArtifact.Name}'. All, if any previous Artifacts should be in Spira.`;
-    setTimeout(() => {
-      clearErrors();
-    }, ERROR_MESSAGES.stdTimeOut);
   }
   else {
     element.textContent = error.message;
   }
 }
 
+//clears any errors currently being displayed
 const clearErrors = () => {
   hideElement('pop-up');
   document.getElementById('pop-up').classList.remove('err');
   document.getElementById('pop-up-text').textContent = "";
 }
 
+
+// Takes you to a specific page or UI setup within the taskpane
 const goToState = (state) => {
   let states = params.pageStates;
   switch (state) {
+
+    // Case for logging out (back to authentication page)
     case (states.authentication):
 
       // clear stored user data
@@ -359,13 +438,11 @@ const goToState = (state) => {
 
       // Show authentication page
       showElement('panel-auth');
-      clearDropdownElement('project-select');
+      clearDropdownElement('product-select');
 
       // Hides style mappings
       hideElement('req-style-mappings');
       hideElement('test-style-mappings');
-      // document.getElementById("req-style-mappings").style.display = 'none'
-      // document.getElementById("test-style-mappings").style.display = 'none'
 
       // Resets artifact button colors
       document.getElementById("select-requirements").classList.remove("activated");
@@ -384,18 +461,25 @@ const goToState = (state) => {
       // Clear any error messages that exist
       clearErrors();
       break;
-    case (states.projects):
+
+    // Currently used to get back to the sending screen from help
+    case (states.products):
       hideElement('panel-auth');
       showElement('main-screen');
       break;
+
+    // Case for after a user selects a product and now needs to select artifact type
     case (states.artifact):
       // Show artifact text and buttons
       showElement('artifact-select-text');
       showElement('select-requirements');
       showElement('select-test-cases');
+      boldStep('artifact-select-text');
 
-      // If the dropdown has a null value then clear it away
-      document.getElementById('project-select').remove('null')
+      // If the blank product is listed, remove it from the dropdown.            // seven spaces
+      if (document.getElementById('product-select').children.item(0).textContent == "       ") {
+        document.getElementById('product-select').childNodes.item(0).remove();
+      }
       break;
     case (states.dev):
       //moves us to the main interface without manually entering credentials
@@ -406,10 +490,43 @@ const goToState = (state) => {
       let devOption = document.createElement("option");
       devOption.text = "Test";
       devOption.value = null;
-      document.getElementById("project-select").add(devOption);
+      document.getElementById("product-select").add(devOption);
+      boldStep('product-select-text');
+
+      // Turn the header check box on here so that it won't get set just by navigating
+      // around the send to spira menu
+      document.getElementById('header-check').checked = true;
       break;
+
+    // moves us to the help screen and makes the back button take us to the login page
     case (states.helpLogin):
-      // moves us to the help screen and makes the back button take us to the login page
+      hideElement('panel-auth');
+      showElement('help-screen');
+      document.getElementById('btn-help-back').onclick = () => {
+        hideElement('help-screen');
+        goToState(states.authentication);
+      };
+
+      // Automatically shows the login section when pressing help on the login screen.
+      document.getElementById('btn-help-section-login').click();
+      break;
+
+    // moves us to the help screen and makes the back button take us to the project select page
+    case (states.helpMain):
+      hideElement('main-screen');
+      showElement('help-screen');
+      document.getElementById('btn-help-back').onclick = () => {
+        hideElement('help-screen');
+        goToState(states.products);
+      }
+
+      // Automatically shows the guide section when pressing help on the main screen.
+      document.getElementById('btn-help-section-guide').click();
+      break;
+
+
+    // Used by the link in the login page header
+    case (states.helpLink):
       hideElement('panel-auth');
       showElement('help-screen');
       document.getElementById('btn-help-back').onclick = () => {
@@ -417,39 +534,138 @@ const goToState = (state) => {
         goToState(states.authentication);
       };
       break;
-    case (states.helpMain):
-      // moves us to the help screen and makes the back button take us to the project select page
-      hideElement('main-screen');
-      showElement('help-screen');
-      document.getElementById('btn-help-back').onclick = () => {
-        hideElement('help-screen');
-        goToState(states.projects);
-      }
+    // takes the user back to the start of the sending process after pushing their artifacts.
+    case (states.postSend):
+
+      // add back null project and select it
+      addDefaultProject();
+      document.getElementById('product-select').value = null;
+
+      // Hides style mappings
+      hideElement('req-style-mappings');
+      hideElement('test-style-mappings');
+
+      // Resets artifact button colors
+      document.getElementById("select-requirements").classList.remove("activated");
+      document.getElementById("select-test-cases").classList.remove("activated");
+
+      // Hides artifact text and buttons
+      hideElement('artifact-select-text');
+      hideElement('select-requirements');
+      hideElement('select-test-cases');
+
+      // Hides send to spira menu and enables button
+      hideElement('send-to-spira');
+
+      // Bolds the step 1 text
+      boldStep('product-select-text');
       break;
+
   }
 }
 
+/*buttonId is the id of the button pressed on the help page
+ - this then opens the relevant help section */
+const openHelpSection = (buttonId) => {
+  for (let buttonId of params.collections.helpButtons) {
+    document.getElementById(buttonId).classList.remove('activated')
+  }
+  document.getElementById(buttonId).classList.add('activated')
+  let section = buttonId.replace("btn-", "")
+  //hides the help sections before showing the relevant one
+  for (let section of params.collections.helpSections) {
+    hideElement(section)
+  }
+  showElement(section)
+}
+
+/*adds an empty "null" option to the product selector so it doesnt default to
+the order Spira sends them in (prevents users from importing somewhere they 
+  didn't mean to)*/
 const addDefaultProject = () => {
   let nullProject = document.createElement("option");
   nullProject.text = "       ";
   nullProject.value = null;
-  document.getElementById("project-select").add(nullProject);
+  document.getElementById("product-select").add(nullProject, 0);
 }
 
-const hideElement = (element_id) => {
-  document.getElementById(element_id).classList.add('hidden');
+//helper function for hiding any HTML elemetn with .hidden
+const hideElement = (elementId) => {
+  document.getElementById(elementId).classList.add('hidden');
 }
 
-const showElement = (element_id) => {
-  document.getElementById(element_id).classList.remove('hidden');
+//helper function for revealing any HTML elemetn with .hidden
+const showElement = (elementId) => {
+  document.getElementById(elementId).classList.remove('hidden');
 }
 
+//bolds the current step the user is "on"
+const boldStep = (stepId) => {
+  for (let eachStep of params.collections.sendSteps) {
+    document.getElementById(eachStep).classList.remove('bold');
+  }
+  document.getElementById(stepId).classList.add('bold');
+}
+
+//params: these are mostly passthroughs to sendArtifacts - will explain relevant ones
+//ArtifactTypeId: ID of the artifact type from params.artifactEnums
+//Artifacts: array of artifact objects which are formatted for sending to spira
+
+//populates a confirmation prompt in the 'pop-up'
+const confirmSelectionPrompt = (ArtifactTypeId, images, Artifacts, projectId, model, styles, tableImages) => {
+  let artifactCount = (Artifacts.length).toString()
+  let artifactTypeName;
+  if (ArtifactTypeId == params.artifactEnums.requirements) {
+    artifactTypeName = "Requirement(s)"
+  }
+  else {
+    artifactTypeName = "Test Case(s)"
+  }
+  //makes this data global so the onclick action for the 'OK' button can have this information
+  confirmationDataStore = new awaitConfirmationDataStore(ArtifactTypeId, images, Artifacts, projectId, model, styles, tableImages)
+
+  showElement('pop-up')
+  showElement('pop-up-cancel')
+  hideProgressBar();
+  document.getElementById('pop-up').classList.remove("sent")
+  document.getElementById('pop-up').classList.add('sending')
+  //changes the onclick to confirm instead of simply closing the pop-up window
+  document.getElementById("pop-up-ok").onclick = async () => { await confirmSending(confirmationDataStore) }
+  document.getElementById('pop-up-text').innerText = `Do you want to create ${artifactCount} ${artifactTypeName} in SpiraPlan? If so, click OK.`
+  return
+  // sendArtifacts(ArtifactTypeId, images, Artifacts, projectId, model, styles, tableImages)
+}
+
+const cancelSending = (confirmationDataStore) => {
+  //clears the confirmation data store as the user has selected not to send it
+  confirmationDataStore = {}
+  //re-hides cancel button to not appear in other pop-up states
+  hideElement('pop-up-cancel')
+  //changes the onclick back to default function for the OK button
+  document.getElementById("pop-up-ok").onclick = () => { hideElement('pop-up'); }
+  document.getElementById('pop-up-text').innerText = "You have canceled sending. Please make the desired changes then try again."
+  //enables main screen buttons and dropdowns
+  enableMainButtons();
+  enableDropdowns();
+}
+
+const confirmSending = async (confirmationDataStore) => {
+  //changes the onclick back to default function for this button
+  hideElement('pop-up-cancel')
+  document.getElementById("pop-up-ok").onclick = () => { hideElement('pop-up'); }
+  //destructures the object so i dont have to type confirmationDataStore.property every time
+  let { ArtifactTypeId, images, Artifacts, projectId, model, styles, tableImages } = confirmationDataStore
+  let success = await sendArtifacts(ArtifactTypeId, images, Artifacts, projectId, model, styles, tableImages)
+  enableMainButtons();
+  enableDropdowns();
+  if (success) goToState(params.pageStates.postSend);
+}
 /*********************
 Pure data manipulation
 **********************/
 
-//This is the initialization call that determines the artifactType id based on user selection
-//before passing off to parseArtifacts() in server.js.
+/*determines whether you want to parse requirements or test cases then disables all
+buttons and dropdowns.*/
 const pushArtifacts = async () => {
   let active = document.getElementById("test-style-mappings").classList.contains('hidden')
   //if the requirements style mappings are visible that is the selected artifact.
@@ -458,8 +674,13 @@ const pushArtifacts = async () => {
     artifactType = params.artifactEnums.requirements
   }
   disableMainButtons();
-  await parseArtifacts(artifactType, model, versionSupport);
-  enableMainButtons();
+  disableDropdowns();
+
+  // Store a true/false value based on if parseArtifacts succeeded or threw an error. Only reset the menu if it succeeded.
+  let success = await parseArtifacts(artifactType, model);
+  // enableMainButtons();
+  // enableDropdowns();
+  // if (success) goToState(params.pageStates.postSend);
 }
 
 /* Returns an array with all of the styles intended to be used for the 
@@ -470,7 +691,8 @@ const getStyles = async () => {
   return allStyles;
 }
 
-/* Returns a new array by filtering out styles from the first set and adding them to the second set*/
+/* Returns a new array by filtering out styles from the first set and adding 
+them to the second set*/
 const trimStyles = async (styles, prevStyles) => {
   let newStyles = prevStyles;
   for (let i = 0; i < styles.length; i++) {
@@ -490,24 +712,12 @@ const trimStyles = async (styles, prevStyles) => {
 const usedStyles = async () => {
   let styles = [];
   //this is an old method, but makes sense to use here as this occurs before the user 
-  await updateSelectionArray();
-  for (let i = 0; i < SELECTION.length; i++) {
+  let selection = await updateSelectionArray();
+  for (let i = 0; i < selection.length; i++) {
     //normal is a reserved style for descriptions of requirements
-    if (!styles.includes(SELECTION[i].style) && SELECTION[i].style != "Normal") {
-      styles.push(SELECTION[i].style);
+    if (!styles.includes(selection[i].style) && selection[i].style != "Normal") {
+      styles.push(selection[i].style);
     }
   }
   return styles;
-}
-
-export {
-  disableButton,
-  displayError,
-  clearErrors,
-  showProgressBar,
-  updateProgressBar,
-  hideProgressBar,
-  enableButton,
-  enableMainButtons,
-  disableMainButtons
 }

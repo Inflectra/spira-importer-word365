@@ -31,20 +31,24 @@
     </header>
     <!-- error pop-up -->
     <div id="pop-up" class="pop-up hidden">
+        <!--This inner text is the X symbol-->
         <button type="button" id="pop-up-close" class="close">&#xD7;</button>
-        <p id="pop-up-text">pop!<br></p>
-        <div id="progress-bar" class="hidden mb-md">
+        <p id="pop-up-text"><br></p>
+        <div id="progress-bar" class="hidden mb-sm">
             <div id="progress-bar-progress"></div>
         </div>
-        <button type="button" id="pop-up-ok" class="ok ms-Button l">Confirm</button>
+        <button type="button" id="pop-up-ok" class="ok ms-Button l fade mt-sm">OK</button>
+        <button type="button" id="pop-up-cancel" class="ok ms-Button l fade mt-sm ml-sm hidden">Cancel</button>
     </div>
     <!--auth page-->
     <div id="panel-auth" class="panel">
         <p class="well">
-            Learn how to use this app via the <a id="lnk-help-login" href="#">mini help</a>, or read our <a
-                target="_blank"
-                href="https://spiradoc.inflectra.com/Unit-Testing-Integration/Using-Test-Runner-For-Excel/">full
-                documentation</a>.
+            If you are an existing SpiraTest/Team/Plan user, this add-in allows you to
+            import requirements or test cases from any Word document.
+            Learn how to use this app via the <a id="lnk-help-login" href="#">mini help</a>
+            , or read our <a target="_blank"
+                href="https://spiradoc.inflectra.com/Unit-Testing-Integration/Using-Test-Runner-For-Excel/">
+                full documentation</a>.
         </p>
         <h3 class="mt-md mb-0" id="login-prompt">Connect to your Spira app</h3>
         <p id="login-err" class="error-message"></p>
@@ -80,10 +84,7 @@
                 type="button">
                 Help
             </button>
-            <!--Remove this before deployment-->
-            <button class="ms-Button ms-Button--default fade" id="dev-mode" title="View help screens" type="button">
-                DevMode
-            </button>
+            <button type="button" id="test">test</button>
         </div>
         <p class="mt-md mb-0">
             <small>
@@ -95,11 +96,10 @@
 
     <!--Main screen-->
     <div id="main-screen" class="hidden">
-
         <div id="app-body" class="ms-welcome__main" style="display: none;">
-            <button type="button" id="test">test</button>
-            <p style="left: 0; margin-left: 0">1. Select the product you wish to import to:</p>
-            <select id="project-select" class="selectors"></select>
+            <p id="product-select-text" style="left: 0; margin-left: 0" class="bold">1. Select the product you wish to
+                import to:</p>
+            <select id="product-select" class="selectors"></select>
             <!--Turn this into radio buttons of some sort which fit the theming instead of dd-->
             <p id="artifact-select-text" class="mt-md hidden">2. Select the artifact type you want to import:</p>
             <div id="artifact-select" class="mt-0">
@@ -116,7 +116,7 @@
         It looks perfect after you confirm the styles (and they are valid) and the send to
         spira button appears, but before that it behaves oddly. Unsure how to fix.-->
         <div id="req-style-mappings" class="styles-block mt-md hidden">
-            <p class="style-prompt">3. Select the styles to use for Requirements:</p>
+            <p id="req-styles-text" class="style-prompt">3. Select the styles to use for Requirements:</p>
             <label for="req-style-select1" class="style-labels">Indent Level 1:</label>
             <select title="req-style-select1" id="req-style-select1" class="style-selector mb-sm"></select>
             <label for="req-style-select2" class="style-labels">Indent Level 2:</label>
@@ -135,7 +135,7 @@
             </div>
         </div>
         <div id="test-style-mappings" class="styles-block mt-md hidden">
-            <p class="style-prompt">3. Select the styles to use for Test Cases:</p>
+            <p id="test-styles-text" class="style-prompt">3. Select the styles to use for Test Cases:</p>
             <h4 style="margin-top: 1em; margin-bottom: 0;">Test Cases:</h4>
             <label for="test-style-select1" class="style-labels">Folder Name:</label>
             <select title="test-style-select1" id="test-style-select1" class="style-selector"></select>
@@ -164,7 +164,7 @@
         </div>
         <div id="send-to-spira" class="hidden">
             <p id="send-err" class="error-message"></p>
-            <p>4. Check your selection, then send to spira:</p>
+            <p id="send-to-spira-text" class="bold">4. Check your selection, then send to spira:</p>
             <button class="action ms-Button ms-Button--primary fade" id="send-to-spira-button" title="Send-to-spira"
                 type="button">
                 Send to Spira
@@ -181,25 +181,142 @@
     </div>
     <!-- Help Screen -->
     <div id="help-screen" class="hidden">
-        <button class="ms-Button ms-Button--default flex" id="btn-help-back" type="button">
+        <button class="ms-Button ms-Button--default flex fade" id="btn-help-back" type="button">
             Back
         </button>
         <h3>Quick Help Guide</h3>
         <p class="mt-0">For more information see our
             <a target="https://spiradoc.inflectra.com/Migration-and-Integration/Importing-from-Microsoft-Word/">
-                documentation. This add-in is for Word 2016+.
+                documentation. This add-in is for Word 2019+.
             </a>
         </p>
         <div id="help-buttons" class="flex">
-            <button class="btn-help ms-Button ms-Button--default " id="btn-help-section-login" title="Help with the login screen" type="button">
+            <button class="btn-help ms-Button ms-Button--default fade" id="btn-help-section-login"
+                title="Help with the login screen" type="button">
                 Login
-            </button> 
-            <button class="btn-help ms-Button ms-Button--default" id="btn-help-section-modes" title="Which mode of the add-in is right for you" type="button">
-                Modes
-            </button> 
-            <button class="btn-help ms-Button ms-Button--default" id="btn-help-section-versions" title="Help with working with using different versions of the add-in" type="button">
-                Issues
             </button>
+            <button class="btn-help ms-Button ms-Button--default fade" id="btn-help-section-guide"
+                title="How to use the importer tool" type="button">
+                Guide
+            </button>
+            <button class="btn-help ms-Button ms-Button--default fade" id="btn-help-section-issues"
+                title="Frequently encountered issues" type="button">
+                FAQ
+            </button>
+        </div>
+        <div id="help-section-login" class="help-section hidden">
+            <p>If you are having trouble logging in, try these steps.</p>
+            <h4>1. Connect to your Spira app</h4>
+            <p id="help-connection-google">You can use this add-on with SpiraTest®, SpiraTeam®, or SpiraPlan®. It works
+                with any cloud Spira app. Any on premise Spira needs to be accessible over the internet.</p>
+            <p id="help-connection-excel">You can use this add-on with SpiraTest®, SpiraTeam®, or SpiraPlan®. If you are
+                using Excel in the browser, your Spira app needs to be accessible over the internet.</p>
+            <ol class="list">
+                <li>
+                    <p><b>Enter your SpiraTeam URL</b></p>
+                    <small>Use the web address you use to access Spira in your browser. This is usually of the form
+                        'http://(company).spiraservice.net'. Make sure you remove any suffixes from the address (e.g.
+                        Default.aspx or "/")</small>
+                </li>
+                <li>
+                    <p><b>Enter your username</b></p>
+                    <small>
+                        This is the exact same username you use to log in to Spira. (Not Case Sensitive)
+                    </small>
+                </li>
+                <li>
+                    <p><b>Enter your RSS token</b></p>
+                    <small>You can find or generate this from your user profile page inside Spira - <a
+                            href="http://spiradoc.inflectra.com/HowTo-Guides/Users-profile-management/#how-to-get-or-make-your-rss-token-or-api-key">read
+                            how to do so here</a>. Make sure to include
+                        the curly braces - {ExampleRSS}</small>
+                </li>
+            </ol>
+        </div>
+        <div id="help-section-guide" class="help-section hidden">
+            <p>Read over these four steps to learn how to use this Importer.</p>
+            <h4>1. Select the project you wish to import to</h4>
+            <h4>2. Select the desired artifact type</h4>
+            <p>You can import both Requirements and Test Cases to SpiraTest®, SpiraTeam®, or SpiraPlan® from this tool.
+                The expected formatting of your document will vary depending on the selected Artifact.
+            </p>
+            <h4>3. Select the styles used within your document</h4>
+            <p>The styles selected should represent the styles used for the purposes described below.</p>
+            <ol>
+                <li>
+                    <p><b>Requirements:</b></p>
+                    <small>Each style represents a deeper level of indentation within spira, and a
+                        parent child relationship between them. For a more in depth explanation of this, check out the
+                        <a
+                            href="https://spiradoc.inflectra.com/Spira-User-Manual/Requirements-Management/#requirements-list">SpiraDocs</a>.</small>
+                </li>
+                <li>
+                    <p><b>Test Cases:</b></p>
+                    <small>For test cases, there are 2 sections of selectors. The first one is the styles used to
+                        represent the name of the folder that test cases are in, and the name of the test cases
+                        themselves.
+                        The second one determines how tables will be turned into test steps for the appropriate test
+                        case.
+                        Any text that is not any of the configured styles or within a table will be
+                        put as the description of the previously named test case.
+                    </small>
+                </li>
+            </ol>
+            <p>After these styles have been set, click the "validate styles" button to check for any empty styles or
+                duplicate style use.</p>
+            <p><b>4. Select the portion of your document you wish to send, then click the "Send to Spira" button.</b>
+            </p>
+            <p>This import tool can either parse a full document or the selected portion of your document. If you wish
+                to parse
+                the full document, simply make sure you do not have any text selected in Word.
+            </p>
+        </div>
+        <div id="help-section-issues" class="help-section hidden">
+            <p>In case you run get confused while using this addin, review the
+                listed here.
+            </p>
+            <h4>Functionality of Sending Requirements</h4>
+            <ul class="list">
+                <li>
+                    <p>
+                        If you are sending multiple requirements in one selection, you must make
+                        sure that the first requirement has a style that is set to Indent level 1
+                        and follows your Spira products hierarchy rules. To learn more, check out
+                        the <a
+                            href="https://spiradoc.inflectra.com/Spira-User-Manual/Requirements-Management/#requirements-list">SpiraDocs</a>
+
+                    </p>
+                </li>
+                <li>
+                    <p>
+                        If you don't have any text selected, then the importer will attempt to send
+                        your entire document according to your style mappings selection.
+                    </p>
+                </li>
+                <li>
+                    <p>
+                        If you select only a single requirement, it will be sent as maximally outdented
+                        as long as its style fits one of the style mapping indent levels. This may be
+                        useful if you miss a requirement and want to send it alone.
+                    </p>
+                </li>
+            </ul>
+            <h4>Functionality of Sending Test Cases</h4>
+            <ul class="list">
+                <li>
+                    <p>
+                        Tables which do not contain any text in any cell within the allocated
+                        “description” column will throw a table error. This is because the add-in
+                        recognizes Tables of test steps based on text in the description column.
+                    </p>
+                </li>
+                <li>
+                    <p>
+                        Empty cells or non existent cells for the other 2 properties work as you would expect, the
+                        add-in populates an empty string for those fields.
+                    </p>
+                </li>
+            </ul>
         </div>
     </div>
     <!-- footer -->

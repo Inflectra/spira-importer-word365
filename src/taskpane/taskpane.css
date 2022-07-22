@@ -3,6 +3,11 @@
  * See LICENSE in the project root for license information.
  */
 
+/*Variables*/
+:root {
+    --button-default: #f4f4f4;
+}
+
 /*UTILITY CLASSES*/
 * {
     box-sizing: border-box;
@@ -80,6 +85,10 @@
     margin-right: 0.75rem;
 }
 
+.ml-sm {
+    margin-left: 0.75rem !important;
+}
+
 html,
 body {
     font-family: Arial;
@@ -87,10 +96,9 @@ body {
     height: 100%;
     margin: 0;
     padding: 0;
-    overflow: hidden;
 }
 
-ul {
+ul.form {
     margin: 0;
     padding: 0;
 }
@@ -102,13 +110,16 @@ ul {
 /*PAGE PARTS*/
 
 .header {
-    position: absolute;
+    position: fixed;
+    width: 100%;
+    background-color: white;
     height: 50px;
     top: 0;
     left: 0;
     align-items: center;
     display: flex;
     padding: 10px 5px;
+    z-index: 1;
 }
 
 .header-heading {
@@ -165,24 +176,26 @@ ul {
     position: fixed;
     align-self: center;
     z-index: 1;
-    padding: .5rem;
+    padding: .75rem;
     color: black;
-    border: 1px solid #aaaaaa;
-    margin: 0;
-    width: 100%;
-    margin-top: 50px;
+    border: 1px solid #eeeeee;
+    border-radius: 0.5rem;
+    width: calc(100% - 1.5rem);
+    margin: 0 0.75rem;
+    /*match homepage */
+    box-shadow: 3px 5px 5px rgba(0, 0, 0, 0.05);
 }
 
 .pop-up .close {
-    margin-top: -0.5rem;
-    margin-right: -0.5rem;
+    /* margin-top: -0.5rem; */
     padding: 0 0 0.25rem;
     font-size: 1.5rem;
     color: black;
     line-height: 0.85rem;
-    float:right;
-    border: solid #aaaaaa 1.5px;
-    background-color: #ff8888;
+    float: right;
+    border: none;
+    background: none;
+    cursor: pointer;
 }
 
 .pop-up .r {
@@ -196,8 +209,8 @@ ul {
 }
 
 .pop-up .ok.ms-Button {
-    margin-bottom: -0.5rem;
     min-width: 0;
+    border: solid 1px rgba(0, 0, 0, 0.067);
 }
 
 .pop-up .ok.ms-Button.r {
@@ -205,19 +218,22 @@ ul {
 }
 
 .pop-up .ok.ms-Button.l {
-    margin-left: -0.5rem;
+    margin-left: 0;
 }
 
-.pop-up.err{
-    background-color: #fccccc;
+.pop-up.err {
+    background-color: #feeeee;
+    border-color: #fddddd;
 }
 
 .pop-up.sending {
-    background-color: #fcfccc;
+    background-color: #fefeee;
+    border-color: #e7e7cc;
 }
 
 .pop-up.sent {
-    background-color: #ccfccc;
+    background-color: #f7fff7;
+    border-color: #cceecc;
 }
 
 .error-message {
@@ -288,26 +304,27 @@ ul {
     justify-content: start;
     flex-direction: column;
     text-align: left;
-    margin-top: 50px;
-    overflow-y: auto;
-    /* padding: 1rem; */
+    margin: 50px 0;
+    padding: 1rem;
 }
+
 #progress-bar {
-    margin-left: auto;
-    margin-right: auto;
-    outline: 1px solid black;
-    width: 80%;
-    background-color: rgb(218, 218, 218);
+    width: 100%;
+    background-color: #eeeeee;
+    border-radius: 0.25rem;
+    overflow: hidden;
 }
 
 #progress-bar-progress {
     width: 1%;
-    height: 12px;
-    background-color:rgb(96, 236, 96);
+    height: 15px;
+    background-color: rgb(96, 236, 96);
+    transition: 0.5s;
 }
 
-#bottom-buttons, #artifact-select {
-    width: 95%;
+#bottom-buttons,
+#artifact-select {
+    width: 100%;
     align-self: center;
     align-items: start;
     text-align: start;
@@ -316,10 +333,24 @@ ul {
     position: relative;
 }
 
+#bottom-buttons {
+    padding-bottom: 50px;
+}
+
+#help-buttons {
+    width: 100%;
+    align-self: center;
+    align-items: start;
+    text-align: start;
+    justify-content: start;
+    flex-direction: row;
+    position: relative;
+    display: inline-block;
+}
+
 .styles-block {
     /*display:flex is assigned when the block is shown, display:none when hidden*/
-    width: 95%;
-    align-self: center;
+    align-self: left;
     align-items: start;
     text-align: start;
     justify-content: start;
@@ -348,11 +379,11 @@ ul {
 
 #artifact-select {
     width: 100%;
+    margin-bottom: 0.75rem;
 }
 
 #send-to-spira {
     display: inline-block;
-    margin-left: 2.5%;
     margin-top: 5%;
     margin-bottom: 3%;
 }
@@ -377,68 +408,73 @@ ul {
     cursor: help;
 }
 
-.tooltip::before, .tooltip::after {
+.tooltip::before,
+.tooltip::after {
     position: absolute;
     left: 50%;
     opacity: 0;
 }
+
 .tooltip::before {
     content: "";
-    border-width: 8px 6.25px 0 6.25px;
+    border-width: 0.5rem 0.4rem 0 0.4rem;
     border-style: solid;
-    border-color: #aaaaaa transparent transparent transparent;
-    margin-left: -7px;
-    top: -8px;
+    border-color: #dedede transparent transparent transparent;
+    margin-top: -0.1rem;
+    margin-left: -0.42rem;
+    top: -0.5rem;
 }
+
 .tooltip::after {
     font-size: 10pt;
     border-style: solid;
     border-width: 1px;
-    border-color: #aaaaaa;
-    border-radius: 12px;
-    background-color: #f8f8f8;
+    border-color: #dedede;
+    background-color: white;
     padding: 10px;
     width: 150px;
     margin-left: -75px;
-    top: -136px;
+    bottom: 1.7rem;
 }
 
-.tooltip:hover::before, .tooltip:hover::after {
+.tooltip:hover::before,
+.tooltip:hover::after {
     opacity: 1;
 }
 
-.tooltip:hover::after { /* Must be separated so it only appears on hovering the small part */
+.tooltip:hover::after {
+    /* Must be separated so it only appears on hovering the small part */
     content: attr(tooltip);
 }
 
 .artifact-button {
-    box-sizing:border-box;
-    font-family:Segoe UI WestEuropean,Segoe UI,-apple-system,BlinkMacSystemFont,Roboto,Helvetica Neue,sans-serif;
-    -webkit-font-smoothing:antialiased;
-    color:#333;
-    font-size:14px;
-    font-weight:600;
-    background-color:#f4f4f4;
-    border:1px solid #f4f4f4;
-    cursor:pointer;
-    display:inline-block;
-    height:32px;
-    min-width:80px;
-    padding:4px 20px 6px;
+    box-sizing: border-box;
+    font-family: Segoe UI WestEuropean, Segoe UI, -apple-system, BlinkMacSystemFont, Roboto, Helvetica Neue, sans-serif;
+    -webkit-font-smoothing: antialiased;
+    color: #333;
+    font-size: 14px;
+    font-weight: 600;
+    background-color: var(--button-default);
+    border: 1px solid var(--button-default);
+    cursor: pointer;
+    display: inline-block;
+    height: 32px;
+    min-width: 80px;
+    padding: 4px 20px 6px;
 }
 
 .artifact-button:disabled {
-    background-color: #f4f4f4;
+    background-color: var(--button-default);
     color: #a6a6a6;
 }
 
-.artifact-button:disabled.activated{
+.artifact-button:disabled.activated {
     background-color: #abd3f3;
 }
 
-.artifact-button:hover{
-    background-color:#eaeaea;
-    color:black;
+.artifact-button:hover {
+    background-color: #eaeaea;
+    color: black;
 }
 
 .ms-Button--default.activated,
@@ -454,6 +490,13 @@ ul {
     font-weight: 600;
 }
 
+.ms-Button:active {
+    color: white;
+}
+
+.bold {
+    font-weight: bold;
+}
 
 /*MS DEFAULT CLASSES*/
 .ms-welcome__header {
@@ -472,8 +515,7 @@ ul {
     display: flex;
     -webkit-flex-direction: column;
     flex-direction: column;
-    align-self: center;
-    width: 95%;
+    align-self: left;
 }
 
 .ms-welcome__main>h2 {
