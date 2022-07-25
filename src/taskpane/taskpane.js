@@ -55,7 +55,7 @@ const setDefaultDisplay = () => {
 //sets the event listeners of buttons 
 const setEventListeners = () => {
   let states = params.pageStates;
-  document.getElementById('test').onclick = () => test();
+  // document.getElementById('test').onclick = () => test();
   document.getElementById('btn-login').onclick = async () => await loginAttempt();
   // document.getElementById('dev-mode').onclick = () => goToState(states.dev);
   document.getElementById('send-to-spira-button').onclick = async () => await pushArtifacts();
@@ -121,9 +121,12 @@ const loginAttempt = async () => {
   if (url[url.length - 1] == "/") {
     //url cannot be changed as it is tied to the HTML DOM input object, so creates a new variable
     var finalUrl = url.substring(0, url.length - 1)
+    console.log(finalUrl)
   }
   //formatting the URL as it should be to populate products / validate user credentials
-  let validatingURL = finalUrl || url + params.apiComponents.loginCall + `?username=${username}&api-key=${rssToken}`;
+  let validatingURL = finalUrl  + params.apiComponents.loginCall + `?username=${username}&api-key=${rssToken}`
+   || url + params.apiComponents.loginCall + `?username=${username}&api-key=${rssToken}`;
+  console.log(validatingURL)
   try {
     //call the products API to populate relevant products
     var response = await loginCall(validatingURL);
