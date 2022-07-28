@@ -29,7 +29,8 @@ import {
   loginCall,
   retrieveStyles,
   updateSelectionArray,
-  sendArtifacts
+  sendArtifacts,
+  checkForInvalidCustomProperties
 } from './server'
 //model stores user data (login credentials and projects)
 var model = new Data();
@@ -56,14 +57,14 @@ const setDefaultDisplay = () => {
 const setEventListeners = () => {
   let states = params.pageStates;
   // document.getElementById('test').onclick = () => test();
-  document.getElementById('btn-login').onclick = async () => await loginAttempt();
+  document.getElementById('btn-login').onclick = async () => await loginAttempt(model);
   // document.getElementById('dev-mode').onclick = () => goToState(states.dev);
   document.getElementById('send-to-spira-button').onclick = async () => await pushArtifacts();
   document.getElementById('log-out').onclick = () => goToState(states.authentication);
   document.getElementById("select-requirements").onclick = () => openStyleMappings("req-");
   document.getElementById("select-test-cases").onclick = () => openStyleMappings("test-");
-  document.getElementById("confirm-req-style-mappings").onclick = () => confirmStyleMappings('req-');
-  document.getElementById("confirm-test-style-mappings").onclick = () => confirmStyleMappings('test-');
+  document.getElementById("confirm-req-style-mappings").onclick = () => {if(confirmStyleMappings('req-')){ checkForInvalidCustomProperties("Requirement", model) }}
+  document.getElementById("confirm-test-style-mappings").onclick = () => {if(confirmStyleMappings('test-')){ checkForInvalidCustomProperties("testcase", model) }}
   document.getElementById('product-select').onchange = () => goToState(states.artifact);
   document.getElementById("pop-up-close").onclick = () => hideElement("pop-up");
   document.getElementById("pop-up-ok").onclick = () => hideElement('pop-up');
@@ -79,7 +80,7 @@ const setEventListeners = () => {
   addEventListener('keydown', async (e) => {
     //this only does anything if the login page is viewable. 
     if (e.code == "Enter" && !document.getElementById('panel-auth').classList.contains("hidden")) {
-      await loginAttempt()
+      await loginAttempt(model)
     }
     return
   })
@@ -109,7 +110,7 @@ Spira API calls
 **************/
 
 //Attemps to 'log in' the user by making an api call to GET /projects
-const loginAttempt = async () => {
+const loginAttempt = async (model) => {
   /*disable the login button to prevent someone from pressing it multiple times, this can
   overpopulate the products selector with duplicate sets.*/
   document.getElementById("btn-login").disabled = true
@@ -124,9 +125,12 @@ const loginAttempt = async () => {
     console.log(finalUrl)
   }
   //formatting the URL as it should be to populate products / validate user credentials
-  let validatingURL = finalUrl  + params.apiComponents.loginCall + `?username=${username}&api-key=${rssToken}`
-   || url + params.apiComponents.loginCall + `?username=${username}&api-key=${rssToken}`;
-  console.log(validatingURL)
+  if (finalUrl) {
+    var validatingURL = finalUrl + params.apiComponents.loginCall + `?username=${username}&api-key=${rssToken}`
+  }
+  else {
+    var validatingURL = url + params.apiComponents.loginCall + `?username=${username}&api-key=${rssToken}`;
+  }
   try {
     //call the products API to populate relevant products
     var response = await loginCall(validatingURL);
@@ -302,7 +306,7 @@ const confirmStyleMappings = async (pageTag) => {
         //hides the final button if it is already displayed when a user inputs invalid styles.
         hideElement('send-to-spira');
         boldStep(pageTag + 'styles-text');
-        return
+        return false
       }
       Office.context.document.settings.set(pageTag + 'style' + i.toString(), setting);
     }
@@ -310,7 +314,7 @@ const confirmStyleMappings = async (pageTag) => {
     else {
       displayError(ERROR_MESSAGES.emptyStyles)
       boldStep(pageTag + 'styles-text');
-      return
+      return false
     }
   }
   //hides error on successful confirm
@@ -320,6 +324,7 @@ const confirmStyleMappings = async (pageTag) => {
   //show the send to spira button after this is clicked and all style selectors are populated.
   showElement('send-to-spira');
   boldStep('send-to-spira-text');
+  return true
 }
 
 //Populates a passed in style-selector with the avaiable word styles
@@ -407,7 +412,7 @@ const displayError = (error, timeOut, failedArtifact) => {
   }
   else if (failedArtifact) { // This is a special case error message for more descriptive errors when sending artifacts
     element.textContent =
-      `The request to the API has failed on the Artifact: '${failedArtifact.Name}'. All, if any previous Artifacts should be in Spira.`;
+      `The request to the API has failed on the Artifact: '${failedArtifact.Name}'. All, if any previous Artifacts should be in Spira. This may be caused by the logged in user not having permissions to create this artifact type.`;
   }
   else {
     element.textContent = error.message;
