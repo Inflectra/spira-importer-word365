@@ -149,6 +149,8 @@ const loginAttempt = async (model) => {
       boldStep('product-select-text');
       //On successful login, hide error message if its visible
       clearErrors();
+      // check the header box here so it doesn't overwrite a user's preference without logging out and back in.
+      document.getElementById('header-check').checked = true;
       return
     }
   }

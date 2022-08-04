@@ -140,7 +140,6 @@ const parseArtifacts = async (ArtifactTypeId, model) => {
             //if there are no images and no text, the row is not valid
             if (!descriptionBody.inlinePictures.items[0] && !expectedResultBody.inlinePictures.items[0]
               && !sampleDataBody.inlinePictures.items[0]) {
-              console.log('found invalid row'); // DEBUG
               isValidRow = false
             }
           }
@@ -155,7 +154,6 @@ const parseArtifacts = async (ArtifactTypeId, model) => {
               (!usedColumns.includes(cellIndex) && cellBody.inlinePictures.items[0])) {
               for (let picture of cellBody.inlinePictures.items) {
                 invalidImages.push(picture)
-                console.log('found invalid image') // DEBUG
               }
             }
           }
@@ -533,7 +531,6 @@ const parseArtifacts = async (ArtifactTypeId, model) => {
             to be included in a table, but this guarantees that wont disrupt / damage the parsing of test steps
             while also allowing multiple tables to be parsed for 1 test case. */
             let rows = [...table.m_value.matchAll(params.regexs.tableRowRegex)]
-            console.log(rows); // DEBUG
             let formattedTable = []
             for (let row of rows) {
               let tableRow = []
@@ -582,7 +579,6 @@ const parseArtifacts = async (ArtifactTypeId, model) => {
               }
 
               testSteps.push(testStep)
-              console.log(testStep); // DEBUG
             }
             testCase.testSteps = [...testCase.testSteps, ...testSteps]
             //removes the table that has been processed from this functions local reference
@@ -801,16 +797,11 @@ const sendArtifacts = async (ArtifactTypeId, images, Artifacts, projectId, model
           let placeholders = [...testStep.Description.matchAll(imgRegex),
           ...testStep.SampleData.matchAll(imgRegex),
           ...testStep.ExpectedResult.matchAll(imgRegex)]
-          console.log(`Placeholders: ${placeholders}`) // DEBUG
           for (let placeholder of placeholders) {
-            console.log('Entering loop...') // DEBUG
             if (tableImages[0]) {
-              console.log('Passed into conditional') // DEBUG
               //this handles images for all 3 test step fields. 
               try {
-                console.log("sending image...") // DEBUG
                 await pushImage(step, tableImages[0], projectId, model, placeholder[0], testCaseArtifact.TestCaseId, styles);
-                console.log("... image sent!") // DEBUG
               }
               catch (err) {
                 console.log(err)
@@ -826,7 +817,6 @@ const sendArtifacts = async (ArtifactTypeId, images, Artifacts, projectId, model
               tableImages.shift();
             }
           }
-          console.log(`Table images: ${tableImages}`) // DEBUG
 
         }
         updateProgressBar(i + 1, testCases.length);
