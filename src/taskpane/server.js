@@ -96,6 +96,8 @@ const parseArtifacts = async (ArtifactTypeId, model) => {
       This slices the number from the end, and turns it into an int to be used for 
       reference later*/
       let descriptionColumn = parseInt(styles[2].slice(-1)) - 1
+      let expectedResultColumn = parseInt(styles[3].slice(-1)) - 1
+      let sampleDataColumn = parseInt(styles[4].slice(-1)) - 1
       //parses out the integer values of the column for each test step field
       //2 to styles.length is all the "column" selectors for test steps
       for (let i = 2; i < styles.length; i++) {
@@ -123,12 +125,22 @@ const parseArtifacts = async (ArtifactTypeId, model) => {
           /*this blurb checks if there is any text or an image 
           in the description column of a row. If there is not, it
           is not a "valid row" and all images from it will be discarded*/
-          else if (!cells.items[descriptionColumn].value.trim()) {
-            let descriptionBody = cells.items[descriptionColumn].body
+          // A row is invalid if there is no text or images in description, expected result, and sample data
+          else if (!cells.items[descriptionColumn].value.trim() && !cells.items[expectedResultColumn].value.trim() &&
+            !cells.items[sampleDataColumn].value.trim()) {
+            let descriptionBody = cells.items[descriptionColumn].body;
+            let expectedResultBody = cells.items[expectedResultColumn].body;
+            let sampleDataBody = cells.items[sampleDataColumn].body;
+
             context.load(descriptionBody, 'inlinePictures')
+            context.load(expectedResultBody, 'inlinePictures')
+            context.load(sampleDataBody, 'inlinePictures')
+
             await context.sync();
             //if there are no images and no text, the row is not valid
-            if (!descriptionBody.inlinePictures.items[0]) {
+            if (!descriptionBody.inlinePictures.items[0] && !expectedResultBody.inlinePictures.items[0]
+              && !sampleDataBody.inlinePictures.items[0]) {
+              console.log('found invalid row'); // DEBUG
               isValidRow = false
             }
           }
@@ -143,6 +155,7 @@ const parseArtifacts = async (ArtifactTypeId, model) => {
               (!usedColumns.includes(cellIndex) && cellBody.inlinePictures.items[0])) {
               for (let picture of cellBody.inlinePictures.items) {
                 invalidImages.push(picture)
+                console.log('found invalid image') // DEBUG
               }
             }
           }
@@ -520,6 +533,7 @@ const parseArtifacts = async (ArtifactTypeId, model) => {
             to be included in a table, but this guarantees that wont disrupt / damage the parsing of test steps
             while also allowing multiple tables to be parsed for 1 test case. */
             let rows = [...table.m_value.matchAll(params.regexs.tableRowRegex)]
+            console.log(rows); // DEBUG
             let formattedTable = []
             for (let row of rows) {
               let tableRow = []
@@ -542,12 +556,19 @@ const parseArtifacts = async (ArtifactTypeId, model) => {
             }
             //take testStepTable and put into test steps
             for (let row of testStepTable) {
-              //skips lines with empty descriptions to prevent pushing empty steps (returns null if no match)
+              //skips lines with empty descriptions, expected result, and sample data to prevent pushing empty steps (returns null if no match)
               let emptyStepRegex = params.regexs.emptyParagraphRegex
 
-              if (row[parseInt(styles[2].slice(-1)) - 1].match(emptyStepRegex)) {
+              // First check if all fields are empty, if so then skip this test step.
+              if (row[parseInt(styles[2].slice(-1)) - 1].match(emptyStepRegex) &&
+                row[parseInt(styles[3].slice(-1)) - 1].match(emptyStepRegex) &&
+                row[parseInt(styles[4].slice(-1)) - 1].match(emptyStepRegex)) {
                 continue
               }
+              // Next check if just description is empty, and save the result.
+              let emptyDescription = row[parseInt(styles[2].slice(-1)) - 1].match(emptyStepRegex);
+              console.log(`Match here:\n ${emptyDescription}`);
+
               testStep = { Description: row[parseInt(styles[2].slice(-1)) - 1], ExpectedResult: row[parseInt(styles[3].slice(-1)) - 1], SampleData: row[parseInt(styles[4].slice(-1)) - 1] }
               for (let [property, value] of Object.entries(testStep)) {
                 //this handles tables in which the expected result or sample data columns dont exist.
@@ -555,7 +576,13 @@ const parseArtifacts = async (ArtifactTypeId, model) => {
                   testStep[property] = ""
                 }
               }
+
+              if (emptyDescription) {
+                testStep.Description = "Description";
+              }
+
               testSteps.push(testStep)
+              console.log(testStep); // DEBUG
             }
             testCase.testSteps = [...testCase.testSteps, ...testSteps]
             //removes the table that has been processed from this functions local reference
@@ -755,7 +782,7 @@ const sendArtifacts = async (ArtifactTypeId, images, Artifacts, projectId, model
         }
         for (let testStep of testCase.testSteps) {
           try {
-            let step = await sendTestStep(testCaseArtifact.TestCaseId, testStep, model, projectId);
+            var step = await sendTestStep(testCaseArtifact.TestCaseId, testStep, model, projectId);
           }
           catch (err) {
             console.log(err)
@@ -769,15 +796,21 @@ const sendArtifacts = async (ArtifactTypeId, images, Artifacts, projectId, model
 
             return false
           }
+          console.log(step);
           //these are the <img> 'placeholders' for all 3 testStep fields
           let placeholders = [...testStep.Description.matchAll(imgRegex),
           ...testStep.SampleData.matchAll(imgRegex),
           ...testStep.ExpectedResult.matchAll(imgRegex)]
+          console.log(`Placeholders: ${placeholders}`) // DEBUG
           for (let placeholder of placeholders) {
+            console.log('Entering loop...') // DEBUG
             if (tableImages[0]) {
+              console.log('Passed into conditional') // DEBUG
               //this handles images for all 3 test step fields. 
               try {
+                console.log("sending image...") // DEBUG
                 await pushImage(step, tableImages[0], projectId, model, placeholder[0], testCaseArtifact.TestCaseId, styles);
+                console.log("... image sent!") // DEBUG
               }
               catch (err) {
                 console.log(err)
@@ -793,6 +826,7 @@ const sendArtifacts = async (ArtifactTypeId, images, Artifacts, projectId, model
               tableImages.shift();
             }
           }
+          console.log(`Table images: ${tableImages}`) // DEBUG
 
         }
         updateProgressBar(i + 1, testCases.length);
