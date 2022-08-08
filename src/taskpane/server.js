@@ -1194,6 +1194,7 @@ const pushImage = async (Artifact, image, projectId, model, placeholder, testCas
   let imageApiCall = model.user.url + params.apiComponents.apiBase
     + pid + params.apiComponents.postImage + model.user.userCredentials
   let attachment;
+  let customPropFlag;
   if (Artifact.RequirementId) {
     attachment = [{ ArtifactId: Artifact.RequirementId, ArtifactTypeId: params.artifactEnums.requirements }]
   }
