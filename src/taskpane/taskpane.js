@@ -360,7 +360,7 @@ const updateProgressBar = (current, total) => {
     popUp.classList.remove('sending');
     document.getElementById('pop-up-text').textContent = `Sent ${total} 
     ${document.getElementById('select-requirements').classList.contains('activated') ?
-        "Requirements" : "Test Cases"} successfully!`;
+        "Requirement" : "Test Case"}${ total > 1 ? "s" : ""} successfully!`;
     enableButton('pop-up-ok');
   }
   else {
@@ -626,10 +626,10 @@ const confirmSelectionPrompt = (ArtifactTypeId, images, Artifacts, projectId, mo
   let artifactCount = (Artifacts.length).toString()
   let artifactTypeName;
   if (ArtifactTypeId == params.artifactEnums.requirements) {
-    artifactTypeName = "Requirement(s)"
+    artifactTypeName = "Requirement"
   }
   else {
-    artifactTypeName = "Test Case(s)"
+    artifactTypeName = "Test Case"
   }
   //makes this data global so the onclick action for the 'OK' button can have this information
   confirmationDataStore = new awaitConfirmationDataStore(ArtifactTypeId, images, Artifacts, projectId, model, styles, tableImages)
@@ -641,7 +641,7 @@ const confirmSelectionPrompt = (ArtifactTypeId, images, Artifacts, projectId, mo
   document.getElementById('pop-up').classList.add('sending')
   //changes the onclick to confirm instead of simply closing the pop-up window
   document.getElementById("pop-up-ok").onclick = async () => { await confirmSending(confirmationDataStore) }
-  document.getElementById('pop-up-text').innerText = `Do you want to create ${artifactCount} ${artifactTypeName} in SpiraPlan? If so, click OK.`
+  document.getElementById('pop-up-text').innerText = `Do you want to create ${artifactCount} ${artifactTypeName}${artifactCount > 1 ? "s" : ""} in SpiraPlan? If so, click OK.`
   return
   // sendArtifacts(ArtifactTypeId, images, Artifacts, projectId, model, styles, tableImages)
 }
