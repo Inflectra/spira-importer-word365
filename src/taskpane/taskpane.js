@@ -67,7 +67,7 @@ const setEventListeners = () => {
   document.getElementById("confirm-test-style-mappings").onclick = () => {if(confirmStyleMappings('test-')){ checkForInvalidCustomProperties("testcase", model) }}
   document.getElementById('product-select').onchange = () => goToState(states.artifact);
   document.getElementById("pop-up-close").onclick = () => hideElement("pop-up");
-  document.getElementById("pop-up-ok").onclick = () => hideElement('pop-up');
+  document.getElementById("pop-up-ok").onclick = () => {hideElement('pop-up'); enableMainButtons(); enableDropdowns();};
   document.getElementById("btn-help-login").onclick = () => goToState(states.helpLogin);
   document.getElementById("btn-help-main").onclick = () => goToState(states.helpMain);
   document.getElementById('lnk-help-login').onclick = () => goToState(states.helpLink);
