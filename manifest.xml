@@ -9,7 +9,7 @@ xmlns:bt="http://schemas.microsoft.com/office/officeappbasictypes/1.0"
   <ProviderName>Inflectra</ProviderName>
   <DefaultLocale>en-US</DefaultLocale>
 
-  <DisplayName DefaultValue="SpiraPlan Importer"/>
+  <DisplayName DefaultValue="SpiraPlan Document Importer"/>
   <Description DefaultValue="Tool for importing artifacts to SpiraPlan"/>
 
   <IconUrl DefaultValue="http://localhost:3000/dist/assets/icon-32.png"/>
@@ -96,13 +96,13 @@ xmlns:bt="http://schemas.microsoft.com/office/officeappbasictypes/1.0"
         <!-- <bt:Url id="Taskpane.Url" DefaultValue="//doctor/Data/SHARED/spira-word365/taskpane.html"/> -->
       </bt:Urls>
       <bt:ShortStrings>
-        <bt:String id="GetStarted.Title" DefaultValue="Get started with the SpiraPlan Importer"/>
-        <bt:String id="CommandsGroup.Label" DefaultValue="SpiraPlan Importer"/>
-        <bt:String id="TaskpaneButton.Label" DefaultValue="SpiraPlan Importer"/>
+        <bt:String id="GetStarted.Title" DefaultValue="Get started with the SpiraPlan Document Importer"/>
+        <bt:String id="CommandsGroup.Label" DefaultValue="SpiraPlan Document Importer"/>
+        <bt:String id="TaskpaneButton.Label" DefaultValue="SpiraPlan Document Importer"/>
       </bt:ShortStrings>
       <bt:LongStrings>
-        <bt:String id="GetStarted.Description" DefaultValue="SpiraPlan importer loaded successfully."/>
-        <bt:String id="TaskpaneButton.Tooltip" DefaultValue="Opens SpiraPlan Importer"/>
+        <bt:String id="GetStarted.Description" DefaultValue="SpiraPlan Document Importer loaded successfully."/>
+        <bt:String id="TaskpaneButton.Tooltip" DefaultValue="Opens SpiraPlan Document Importer"/>
       </bt:LongStrings>
     </Resources>
   </VersionOverrides>
