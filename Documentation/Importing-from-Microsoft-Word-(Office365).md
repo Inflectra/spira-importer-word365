@@ -19,7 +19,7 @@ To install the add-in:
 - Click on **"Get Add-ins"** and in the window that opens, navigate to the **store** tab
 - Search for **"Spira"** or **"SpiraPlan"**
 - When you see the correct add-in developed by Inflectra, click on its "Add" button 
-- You should now see the SpiraPlan icon labeled "SpiraPlan Importer" in your home tab. Click on it to begin.
+- You should now see the SpiraPlan icon labeled "SpiraPlan Document Importer" in your home tab. Click on it to begin.
 
 ## Prepare your document
 The add-in works with modern Word (docx) documents. The add-in has a number of settings to work flexibly with your existing Word files so that they can be imported into SpiraPlan without any changes. Please note that some preparation of the document may be required in some circumstances if the [styles configuration](#configure-the-styles) does not fully meet your needs.
@@ -28,7 +28,7 @@ The add-in works with modern Word (docx) documents. The add-in has a number of s
 
 You can use this add-in with SpiraTest®, SpiraTeam®, or SpiraPlan®. If you are using Word in the browser, make sure SpiraPlan is accessible over the internet.
 
-When you first open the add-in you will see the connection screen. Fill in the details and click "Log In" to connect the add-in to yuor SpiraPlan
+When you first open the add-in you will see the connection screen. Fill in the details and click "Log In" to connect the add-in to your SpiraPlan.
 
 ![Spira add-in login screen](img/word365-log-in-screen.png)
 
@@ -62,7 +62,7 @@ You can select up to 5 indent levels to represent the hierarchical relationship 
 - An "Indent Level 3" requirement is a child of the "Indent Level 2" requirement above it
 - And so on for "Indent Level 4" and "Indent Level 5"
 
-Your requirements document must only increase the indent level once per requirement (your document can't have an Indent Level 1 requirement immediately followed by an Indent Level 3 requirement). If the requirements to import to not meet this condition, the add-in will display a relevant error.
+Your requirements document must only increase the indent level once per requirement (your document can't have an Indent Level 1 requirement immediately followed by an Indent Level 3 requirement). If the requirements to import do not meet this condition, the add-in will display a relevant error.
 
 ![Add-in requirement styles selection screen](img/word365-requirement-styles.png)
 
@@ -89,9 +89,9 @@ Once the validation is complete you will be able to start the import process.
 ## Importing into SpiraPlan
 By default, the add-in imports your entire document into SpiraPlan, based on your setup as described above.
 
-If you want, you can also choose exactly what to import by selected just part of the document (discussed more below). 
+If you want, you can also choose exactly what to import by selecting just part of the document (discussed more below). 
 
-Once you have decided what to import, click the "Send to Spira" button. During the import process you will see a popup showing its progress. Note that closing this pop-up will not stop the import process - to do that you will need to close or refresh the add-in (note that this will not un-do any already sent artifacts).
+Once you have decided what to import, click the "Send to Spira" button. During the import process you will see a popup showing its progress. Note that closing this pop-up will not stop the import process - to do that you will need to press the cancel button, or close or refresh the add-in (note that this will not un-do any already sent artifacts).
 
 !!! info "Selecting part of a document"
     To send only part of a document:
