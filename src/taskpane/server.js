@@ -662,8 +662,6 @@ const sendArtifacts = async (ArtifactTypeId, images, Artifacts, projectId, model
         let firstCall = await axios.post(outdentCall, requirements[0])
 
         let placeholders = [...requirements[0].Description.matchAll(imgRegex)]
-        console.log(placeholders); // DEBUG
-        console.log(`Num images: ${images.length}\nNum placeholders: ${placeholders.length}`); // DEBUG
         for (let placeholder of placeholders) {
           if (placeholder[0].includes("id=\"Picture")) {
             await pushImage(firstCall.data, images[0], projectId, model, placeholder[0])
@@ -694,8 +692,6 @@ const sendArtifacts = async (ArtifactTypeId, images, Artifacts, projectId, model
           lastIndent = req.IndentLevel;
           let placeholders = [...req.Description.matchAll(imgRegex)]
           //the 'p' itemization of placeholders isnt needed - just needs to happen once per placeholder
-          console.log(placeholders); // DEBUG
-          console.log(`Num images: ${images.length}\nNum placeholders: ${placeholders.length}`); // DEBUG
           for (let placeholder of placeholders) {
             if (placeholder[0].includes("id=\"Picture")) {
               await pushImage(call.data, images[0], projectId, model, placeholder[0])
@@ -1224,11 +1220,9 @@ const pushImage = async (Artifact, image, projectId, model, placeholder, testCas
       AttachedArtifacts: attachment
     })
     imgLink = model.user.url + params.apiComponents.imageSrc.replace("{project-id}", pid).replace("{AttachmentId}", imageCall.data.AttachmentId)
-    console.log("Succeeded on image for Requirement: " + Artifact.Name) // DEBUG
   }
   catch (err) {
     console.log(err)
-    console.log("Failed on image for Requirement: " + Artifact.Name); // DEBUG
     return
   }
   let fullArtifactObj;

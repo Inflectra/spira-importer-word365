@@ -38,10 +38,10 @@ var params = {
     tableRegex: /<table(.|\n|\r)*?\/table>/g,
     tableRowRegex: /<tr(.|\n|\r)*?\/tr>/g,
     tableDataRegex: /<td(.|\n|\r)*?\/td>/g,
-    //this parses out the entire body and its contents
-    bodyRegex: /<body(.|\n|\r|\s)*?<\/body>/gu,
+    //this parses out the entire body and its contents (case insensitive needed b/c word online uses caps for BODY tags)
+    bodyRegex: /<body(.|\n|\r|\s)*?<\/body>/gui,
     //this parses out the body tags for removal
-    bodyTagRegex: /<(\/)??body(.|\n|\r|\s)*?>/gu,
+    bodyTagRegex: /<(\/)??body(.|\n|\r|\s)*?>/gui,
     paragraphRegex: /(<p )(.|\n|\s|\r)*?(<\/p>)/gu,
     pTagRegex: /<\/??p(.|\n|\r|\s)*?>/g,
     emptyParagraphRegex: /<p(.)*?>\&nbsp\;<\/p>/g,
