@@ -559,4 +559,5 @@ b {
 .is-internal-text {
     font-size: .75rem;
     opacity: 25%;
+    padding-left: revert;
 }
