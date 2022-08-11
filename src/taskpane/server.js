@@ -663,8 +663,10 @@ const sendArtifacts = async (ArtifactTypeId, images, Artifacts, projectId, model
 
         let placeholders = [...requirements[0].Description.matchAll(imgRegex)]
         for (let placeholder of placeholders) {
-          await pushImage(firstCall.data, images[0], projectId, model, placeholder[0])
-          images.shift();
+          if (placeholder[0].includes("id=\"Picture")) {
+            await pushImage(firstCall.data, images[0], projectId, model, placeholder[0])
+            images.shift();
+          }
         }
         updateProgressBar(1, requirements.length)
         //removes the first requirement to save on checking in the for..of function after this
@@ -691,8 +693,10 @@ const sendArtifacts = async (ArtifactTypeId, images, Artifacts, projectId, model
           let placeholders = [...req.Description.matchAll(imgRegex)]
           //the 'p' itemization of placeholders isnt needed - just needs to happen once per placeholder
           for (let placeholder of placeholders) {
-            await pushImage(call.data, images[0], projectId, model, placeholder[0])
-            images.shift();
+            if (placeholder[0].includes("id=\"Picture")) {
+              await pushImage(call.data, images[0], projectId, model, placeholder[0])
+              images.shift();
+            }
           }
           updateProgressBar(i + 2, requirements.length + 1);
         }
@@ -762,7 +766,9 @@ const sendArtifacts = async (ArtifactTypeId, images, Artifacts, projectId, model
         //p isnt needed but I do need to iterate through the placeholders(this is shorter syntax)
         for (let placeholder of placeholders) {
           try {
-            await pushImage(testCaseArtifact, images[0], projectId, model, placeholder[0])
+            if (placeholder[0].includes("id=\"Picture")) {
+              await pushImage(testCaseArtifact, images[0], projectId, model, placeholder[0])
+            }
           }
           catch (err) {
             console.log(err)
@@ -801,7 +807,9 @@ const sendArtifacts = async (ArtifactTypeId, images, Artifacts, projectId, model
             if (tableImages[0]) {
               //this handles images for all 3 test step fields. 
               try {
-                await pushImage(step, tableImages[0], projectId, model, placeholder[0], testCaseArtifact.TestCaseId, styles);
+                if (placeholder[0].includes("id=\"Picture")) {
+                  await pushImage(step, tableImages[0], projectId, model, placeholder[0], testCaseArtifact.TestCaseId, styles);
+                }
               }
               catch (err) {
                 console.log(err)
