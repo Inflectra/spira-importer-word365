@@ -555,3 +555,8 @@ ul.form {
 b {
     font-weight: bold;
 }
+
+.is-internal-text {
+    font-size: .75rem;
+    opacity: 25%;
+}
