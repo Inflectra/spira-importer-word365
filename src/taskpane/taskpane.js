@@ -29,7 +29,8 @@ import {
   loginCall,
   retrieveStyles,
   updateSelectionArray,
-  sendArtifacts
+  sendArtifacts,
+  checkForInvalidCustomProperties
 } from './server'
 //model stores user data (login credentials and projects)
 var model = new Data();
@@ -55,18 +56,18 @@ const setDefaultDisplay = () => {
 //sets the event listeners of buttons 
 const setEventListeners = () => {
   let states = params.pageStates;
-  document.getElementById('test').onclick = () => test();
-  document.getElementById('btn-login').onclick = async () => await loginAttempt();
+  // document.getElementById('test').onclick = () => test();
+  document.getElementById('btn-login').onclick = async () => await loginAttempt(model);
   // document.getElementById('dev-mode').onclick = () => goToState(states.dev);
   document.getElementById('send-to-spira-button').onclick = async () => await pushArtifacts();
   document.getElementById('log-out').onclick = () => goToState(states.authentication);
   document.getElementById("select-requirements").onclick = () => openStyleMappings("req-");
   document.getElementById("select-test-cases").onclick = () => openStyleMappings("test-");
-  document.getElementById("confirm-req-style-mappings").onclick = () => confirmStyleMappings('req-');
-  document.getElementById("confirm-test-style-mappings").onclick = () => confirmStyleMappings('test-');
+  document.getElementById("confirm-req-style-mappings").onclick = () => {if(confirmStyleMappings('req-')){ checkForInvalidCustomProperties("Requirement", model) }}
+  document.getElementById("confirm-test-style-mappings").onclick = () => {if(confirmStyleMappings('test-')){ checkForInvalidCustomProperties("testcase", model) }}
   document.getElementById('product-select').onchange = () => goToState(states.artifact);
   document.getElementById("pop-up-close").onclick = () => hideElement("pop-up");
-  document.getElementById("pop-up-ok").onclick = () => hideElement('pop-up');
+  document.getElementById("pop-up-ok").onclick = () => {hideElement('pop-up'); enableMainButtons(); enableDropdowns();};
   document.getElementById("btn-help-login").onclick = () => goToState(states.helpLogin);
   document.getElementById("btn-help-main").onclick = () => goToState(states.helpMain);
   document.getElementById('lnk-help-login').onclick = () => goToState(states.helpLink);
@@ -79,7 +80,7 @@ const setEventListeners = () => {
   addEventListener('keydown', async (e) => {
     //this only does anything if the login page is viewable. 
     if (e.code == "Enter" && !document.getElementById('panel-auth').classList.contains("hidden")) {
-      await loginAttempt()
+      await loginAttempt(model)
     }
     return
   })
@@ -109,7 +110,7 @@ Spira API calls
 **************/
 
 //Attemps to 'log in' the user by making an api call to GET /projects
-const loginAttempt = async () => {
+const loginAttempt = async (model) => {
   /*disable the login button to prevent someone from pressing it multiple times, this can
   overpopulate the products selector with duplicate sets.*/
   document.getElementById("btn-login").disabled = true
@@ -121,9 +122,15 @@ const loginAttempt = async () => {
   if (url[url.length - 1] == "/") {
     //url cannot be changed as it is tied to the HTML DOM input object, so creates a new variable
     var finalUrl = url.substring(0, url.length - 1)
+    console.log(finalUrl)
   }
   //formatting the URL as it should be to populate products / validate user credentials
-  let validatingURL = finalUrl || url + params.apiComponents.loginCall + `?username=${username}&api-key=${rssToken}`;
+  if (finalUrl) {
+    var validatingURL = finalUrl + params.apiComponents.loginCall + `?username=${username}&api-key=${rssToken}`
+  }
+  else {
+    var validatingURL = url + params.apiComponents.loginCall + `?username=${username}&api-key=${rssToken}`;
+  }
   try {
     //call the products API to populate relevant products
     var response = await loginCall(validatingURL);
@@ -142,6 +149,8 @@ const loginAttempt = async () => {
       boldStep('product-select-text');
       //On successful login, hide error message if its visible
       clearErrors();
+      // check the header box here so it doesn't overwrite a user's preference without logging out and back in.
+      document.getElementById('header-check').checked = true;
       return
     }
   }
@@ -299,7 +308,7 @@ const confirmStyleMappings = async (pageTag) => {
         //hides the final button if it is already displayed when a user inputs invalid styles.
         hideElement('send-to-spira');
         boldStep(pageTag + 'styles-text');
-        return
+        return false
       }
       Office.context.document.settings.set(pageTag + 'style' + i.toString(), setting);
     }
@@ -307,7 +316,7 @@ const confirmStyleMappings = async (pageTag) => {
     else {
       displayError(ERROR_MESSAGES.emptyStyles)
       boldStep(pageTag + 'styles-text');
-      return
+      return false
     }
   }
   //hides error on successful confirm
@@ -317,6 +326,7 @@ const confirmStyleMappings = async (pageTag) => {
   //show the send to spira button after this is clicked and all style selectors are populated.
   showElement('send-to-spira');
   boldStep('send-to-spira-text');
+  return true
 }
 
 //Populates a passed in style-selector with the avaiable word styles
@@ -350,7 +360,7 @@ const updateProgressBar = (current, total) => {
     popUp.classList.remove('sending');
     document.getElementById('pop-up-text').textContent = `Sent ${total} 
     ${document.getElementById('select-requirements').classList.contains('activated') ?
-        "Requirements" : "Test Cases"} successfully!`;
+        "Requirement" : "Test Case"}${ total > 1 ? "s" : ""} successfully!`;
     enableButton('pop-up-ok');
   }
   else {
@@ -404,7 +414,7 @@ const displayError = (error, timeOut, failedArtifact) => {
   }
   else if (failedArtifact) { // This is a special case error message for more descriptive errors when sending artifacts
     element.textContent =
-      `The request to the API has failed on the Artifact: '${failedArtifact.Name}'. All, if any previous Artifacts should be in Spira.`;
+      `The request to the API has failed on the Artifact: '${failedArtifact.Name}'. All, if any previous Artifacts should be in Spira. This may be caused by the logged in user not having permissions to create this artifact type.`;
   }
   else {
     element.textContent = error.message;
@@ -616,10 +626,10 @@ const confirmSelectionPrompt = (ArtifactTypeId, images, Artifacts, projectId, mo
   let artifactCount = (Artifacts.length).toString()
   let artifactTypeName;
   if (ArtifactTypeId == params.artifactEnums.requirements) {
-    artifactTypeName = "Requirement(s)"
+    artifactTypeName = "Requirement"
   }
   else {
-    artifactTypeName = "Test Case(s)"
+    artifactTypeName = "Test Case"
   }
   //makes this data global so the onclick action for the 'OK' button can have this information
   confirmationDataStore = new awaitConfirmationDataStore(ArtifactTypeId, images, Artifacts, projectId, model, styles, tableImages)
@@ -631,7 +641,7 @@ const confirmSelectionPrompt = (ArtifactTypeId, images, Artifacts, projectId, mo
   document.getElementById('pop-up').classList.add('sending')
   //changes the onclick to confirm instead of simply closing the pop-up window
   document.getElementById("pop-up-ok").onclick = async () => { await confirmSending(confirmationDataStore) }
-  document.getElementById('pop-up-text').innerText = `Do you want to create ${artifactCount} ${artifactTypeName} in SpiraPlan? If so, click OK.`
+  document.getElementById('pop-up-text').innerText = `Do you want to create ${artifactCount} ${artifactTypeName}${artifactCount > 1 ? "s" : ""} in SpiraPlan? If so, click OK.`
   return
   // sendArtifacts(ArtifactTypeId, images, Artifacts, projectId, model, styles, tableImages)
 }

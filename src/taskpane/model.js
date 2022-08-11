@@ -26,9 +26,10 @@ var params = {
     imageSrc: "/{project-id}/Attachment/{AttachmentId}.aspx",
     //this is the initial outdent value for the first requirement sent (-20)
     initialOutdent: "/indent/-20",
-    //have to replace {project-id} with tempDataStore.currentProjectId
     outdentCall: "/requirements/{requirement-id}/outdent",
     indentCall: "/requirements/{requirement-id}/indent",
+    templateBase: "/services/v6_0/RestService.svc/project-templates/",
+    customProperties: "/custom-properties/"
   },
   regexs: {
     //this detects multiple whitespace characters that are not new lines in a row
@@ -37,10 +38,10 @@ var params = {
     tableRegex: /<table(.|\n|\r)*?\/table>/g,
     tableRowRegex: /<tr(.|\n|\r)*?\/tr>/g,
     tableDataRegex: /<td(.|\n|\r)*?\/td>/g,
-    //this parses out the entire body and its contents
-    bodyRegex: /<body(.|\n|\r|\s)*?<\/body>/gu,
+    //this parses out the entire body and its contents (case insensitive needed b/c word online uses caps for BODY tags)
+    bodyRegex: /<body(.|\n|\r|\s)*?<\/body>/gui,
     //this parses out the body tags for removal
-    bodyTagRegex: /<(\/)??body(.|\n|\r|\s)*?>/gu,
+    bodyTagRegex: /<(\/)??body(.|\n|\r|\s)*?>/gui,
     paragraphRegex: /(<p )(.|\n|\s|\r)*?(<\/p>)/gu,
     pTagRegex: /<\/??p(.|\n|\r|\s)*?>/g,
     emptyParagraphRegex: /<p(.)*?>\&nbsp\;<\/p>/g,
@@ -116,7 +117,6 @@ var templates = {
   Requirement: function () {
     this.Name = "";
     this.Description = "";
-    this.RequirementTypeId = 2; // This is the requirement typeId we use when sending to Spira
     this.IndentLevel = 0;
   },
 
@@ -197,7 +197,9 @@ var ERROR_MESSAGES = {
   failedReq: { htmlId: "pop-up-text", message: "" },
   duplicateStyles: { htmlId: "pop-up-text", message: "You currently have multiple mappings set to the same style. Please only use each style once." },
   emptyStyles: { htmlId: "pop-up-text", message: "You currently have unselected styles. Please provide a style for all provided inputs." },
-  testCaseFolders: { htmlId: "pop-up-text", message: "Loading or retriving test case folders failed. If retrieving failed, you may still have your test cases imported in a new folder as this error is not fatal. Importing will continue in the background." }
+  testCaseFolders: { htmlId: "pop-up-text", message: "Loading or retriving test case folders failed. If retrieving failed, you may still have your test cases imported in a new folder as this error is not fatal. Importing will continue in the background." },
+  customProperties: { htmlId: "pop-up-text", message: "The product you are trying to import to contains custom properties for the selected artifact type which cannot be empty. This tool does not support populating those fields, and images will not be able to be placed in your spira artifacts descriptions - they will still be uploaded and attached."},
+  noPermissions: { htmlId: "pop-up-text", message: "It appears you do not have permission to create this type of artifact. Please contact your system administrator to recieve further permissions."}
 }
 
 /*this stores the data that is passed into sendArtifacts so it can be referenced in

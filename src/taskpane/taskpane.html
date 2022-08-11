@@ -8,7 +8,7 @@
     <meta charset="UTF-8" />
     <meta http-equiv="X-UA-Compatible" content="IE=Edge" />
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>SpiraPlan Importer</title>
+    <title>SpiraPlan Document Importer</title>
 
     <!-- Office JavaScript API -->
     <script type="text/javascript" src="https://appsforoffice.microsoft.com/lib/1.1/hosted/office.js"></script>
@@ -27,7 +27,7 @@
     <header class="header">
         <!--We don't have the image asset file as it stands now-->
         <img alt="Spira Logo" src="/assets/inf-icon-80.png" class="header-logo" />
-        <h3 class="header-heading">SpiraPlan Importer<br></h3>
+        <h3 class="header-heading">SpiraPlan Document Importer<br></h3>
     </header>
     <!-- error pop-up -->
     <div id="pop-up" class="pop-up hidden">
@@ -84,7 +84,6 @@
                 type="button">
                 Help
             </button>
-            <button type="button" id="test">test</button>
         </div>
         <p class="mt-md mb-0">
             <small>
@@ -305,19 +304,21 @@
             <ul class="list">
                 <li>
                     <p>
-                        Tables which do not contain any text in any cell within the allocated
-                        “description” column will throw a table error. This is because the add-in
-                        recognizes Tables of test steps based on text in the description column.
+                        Test step table rows with an empty description will get a default description added,
+                         and empty rows are ignored. If the table cannot be properly parsed to import into
+                          SpiraPlan an error will be shown. This can happen, for example, if a table does
+                           not have a description column at all, or the description column is completely blank, or the whole table is empty.
                     </p>
                 </li>
                 <li>
                     <p>
-                        Empty cells or non existent cells for the other 2 properties work as you would expect, the
-                        add-in populates an empty string for those fields.
+                        Empty cells or non existent cells for expected result and sample data will be added
+                        with empty text.
                     </p>
                 </li>
             </ul>
         </div>
+        <p class="is-internal-text">v1.3</p>
     </div>
     <!-- footer -->
     <footer class="footer">

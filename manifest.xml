@@ -9,17 +9,19 @@ xmlns:bt="http://schemas.microsoft.com/office/officeappbasictypes/1.0"
   <ProviderName>Inflectra</ProviderName>
   <DefaultLocale>en-US</DefaultLocale>
 
-  <DisplayName DefaultValue="SpiraPlan Importer"/>
+  <DisplayName DefaultValue="SpiraPlan Document Importer"/>
   <Description DefaultValue="Tool for importing artifacts to SpiraPlan"/>
 
-  <IconUrl DefaultValue="https://files.inflectra.com/office365/word/assets/icon-32.png"/>
-  <HighResolutionIconUrl DefaultValue="https://files.inflectra.com/office365/word/assets/icon-80.png"/>
+  <IconUrl DefaultValue="http://localhost:3000/dist/assets/icon-32.png"/>
+  <!-- <IconUrl DefaultValue="//doctor/Data/SHARED/spira-word365/assets/icon-32.png"/> -->
+  <HighResolutionIconUrl DefaultValue="http://localhost:3000/dist/assets/icon-80.png"/>
+  <!-- <HighResolutionIconUrl DefaultValue="//doctor/Data/SHARED/spira-word365/assets/icon-80.png"/> -->
   <!--This is assuming the title of the url for Word365 will be the same as excel-->
-  <SupportUrl DefaultValue='https://spiradoc.inflectra.com/Migration-and-Integration/Importing-from-Microsoft-Word-%28Office365%29/'>
+  <SupportUrl DefaultValue='https://spiradoc.inflectra.com/Migration-and-Integration/Importing-from-Microsoft-Word-%28Office365%29/'/>
 
   <AppDomains>
-    <AppDomain>inflectra.com</AppDomain> 
-    <AppDomain>https://www.inflectra.com</AppDomain> 
+    <AppDomain>inflectra.com</AppDomain>
+    <AppDomain>https://www.inflectra.com</AppDomain>
   </AppDomains>
   
   <Hosts>
@@ -34,8 +36,8 @@ xmlns:bt="http://schemas.microsoft.com/office/officeappbasictypes/1.0"
   </Requirements>
 
   <DefaultSettings>
-    <!-- <SourceLocation DefaultValue="https://localhost:3000/taskpane.html"/> -->
-    <SourceLocation DefaultValue="https://files.inflectra.com/office365/word/taskpane.html"/>
+    <SourceLocation DefaultValue="https://localhost:3000/taskpane.html"/>
+    <!-- <SourceLocation DefaultValue="//doctor/Data/SHARED/spira-word365/taskpane.html"/> -->
   </DefaultSettings>
 
   <Permissions>ReadWriteDocument</Permissions>
@@ -82,25 +84,25 @@ xmlns:bt="http://schemas.microsoft.com/office/officeappbasictypes/1.0"
     </Hosts>
     <Resources>
       <bt:Images>
-        <bt:Image id="Icon.16x16" DefaultValue="https://files.inflectra.com/office365/word/assets/icon-16.png"/>
-        <bt:Image id="Icon.32x32" DefaultValue="https://files.inflectra.com/office365/word/assets/icon-32.png"/>
-        <bt:Image id="Icon.80x80" DefaultValue="https://files.inflectra.com/office365/word/assets/icon-80.png"/>
+        <bt:Image id="Icon.16x16" DefaultValue="//doctor/Data/SHARED/spira-word365/assets/icon-16.png"/>
+        <bt:Image id="Icon.32x32" DefaultValue="//doctor/Data/SHARED/spira-word365/assets/icon-32.png"/>
+        <bt:Image id="Icon.80x80" DefaultValue="//doctor/Data/SHARED/spira-word365/assets/icon-80.png"/>
       </bt:Images>
       <bt:Urls>
         <bt:Url id="GetStarted.LearnMoreUrl" DefaultValue="https://go.microsoft.com/fwlink/?LinkId=276812"/>
-        <!-- <bt:Url id="Commands.Url" DefaultValue="https://localhost:3000/commands.html"/> -->
-        <!-- <bt:Url id="Taskpane.Url" DefaultValue="https://localhost:3000/taskpane.html"/> -->
-        <bt:Url id="Commands.Url" DefaultValue="https://files.inflectra.com/office365/word/commands.html"/>
-        <bt:Url id="Taskpane.Url" DefaultValue="https://files.inflectra.com/office365/word/taskpane.html"/>
+        <bt:Url id="Commands.Url" DefaultValue="https://localhost:3000/commands.html"/>
+        <bt:Url id="Taskpane.Url" DefaultValue="https://localhost:3000/taskpane.html"/>
+        <!-- <bt:Url id="Commands.Url" DefaultValue="//doctor/Data/SHARED/spira-word365/commands.html"/> -->
+        <!-- <bt:Url id="Taskpane.Url" DefaultValue="//doctor/Data/SHARED/spira-word365/taskpane.html"/> -->
       </bt:Urls>
       <bt:ShortStrings>
-        <bt:String id="GetStarted.Title" DefaultValue="Get started with the SpiraPlan Importer"/>
-        <bt:String id="CommandsGroup.Label" DefaultValue="SpiraPlan Importer"/>
-        <bt:String id="TaskpaneButton.Label" DefaultValue="SpiraPlan Importer"/>
+        <bt:String id="GetStarted.Title" DefaultValue="Get started with the SpiraPlan Document Importer"/>
+        <bt:String id="CommandsGroup.Label" DefaultValue="SpiraPlan Document Importer"/>
+        <bt:String id="TaskpaneButton.Label" DefaultValue="SpiraPlan Document Importer"/>
       </bt:ShortStrings>
       <bt:LongStrings>
-        <bt:String id="GetStarted.Description" DefaultValue="SpiraPlan importer loaded successfully."/>
-        <bt:String id="TaskpaneButton.Tooltip" DefaultValue="Opens SpiraPlan Importer"/>
+        <bt:String id="GetStarted.Description" DefaultValue="SpiraPlan Document Importer loaded successfully."/>
+        <bt:String id="TaskpaneButton.Tooltip" DefaultValue="Opens SpiraPlan Document Importer"/>
       </bt:LongStrings>
     </Resources>
   </VersionOverrides>

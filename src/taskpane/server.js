@@ -10,7 +10,8 @@ export {
   loginCall,
   retrieveStyles,
   updateSelectionArray,
-  sendArtifacts
+  sendArtifacts,
+  checkForInvalidCustomProperties
 }
 
 import { Data, ERROR_MESSAGES, params, templates } from './model.js'
@@ -95,6 +96,8 @@ const parseArtifacts = async (ArtifactTypeId, model) => {
       This slices the number from the end, and turns it into an int to be used for 
       reference later*/
       let descriptionColumn = parseInt(styles[2].slice(-1)) - 1
+      let expectedResultColumn = parseInt(styles[3].slice(-1)) - 1
+      let sampleDataColumn = parseInt(styles[4].slice(-1)) - 1
       //parses out the integer values of the column for each test step field
       //2 to styles.length is all the "column" selectors for test steps
       for (let i = 2; i < styles.length; i++) {
@@ -122,12 +125,21 @@ const parseArtifacts = async (ArtifactTypeId, model) => {
           /*this blurb checks if there is any text or an image 
           in the description column of a row. If there is not, it
           is not a "valid row" and all images from it will be discarded*/
-          else if (!cells.items[descriptionColumn].value.trim()) {
-            let descriptionBody = cells.items[descriptionColumn].body
+          // A row is invalid if there is no text or images in description, expected result, and sample data
+          else if (!cells.items[descriptionColumn].value.trim() && !cells.items[expectedResultColumn].value.trim() &&
+            !cells.items[sampleDataColumn].value.trim()) {
+            let descriptionBody = cells.items[descriptionColumn].body;
+            let expectedResultBody = cells.items[expectedResultColumn].body;
+            let sampleDataBody = cells.items[sampleDataColumn].body;
+
             context.load(descriptionBody, 'inlinePictures')
+            context.load(expectedResultBody, 'inlinePictures')
+            context.load(sampleDataBody, 'inlinePictures')
+
             await context.sync();
             //if there are no images and no text, the row is not valid
-            if (!descriptionBody.inlinePictures.items[0]) {
+            if (!descriptionBody.inlinePictures.items[0] && !expectedResultBody.inlinePictures.items[0]
+              && !sampleDataBody.inlinePictures.items[0]) {
               isValidRow = false
             }
           }
@@ -541,12 +553,19 @@ const parseArtifacts = async (ArtifactTypeId, model) => {
             }
             //take testStepTable and put into test steps
             for (let row of testStepTable) {
-              //skips lines with empty descriptions to prevent pushing empty steps (returns null if no match)
+              //skips lines with empty descriptions, expected result, and sample data to prevent pushing empty steps (returns null if no match)
               let emptyStepRegex = params.regexs.emptyParagraphRegex
 
-              if (row[parseInt(styles[2].slice(-1)) - 1].match(emptyStepRegex)) {
+              // First check if all fields are empty, if so then skip this test step.
+              if (row[parseInt(styles[2].slice(-1)) - 1].match(emptyStepRegex) &&
+                row[parseInt(styles[3].slice(-1)) - 1].match(emptyStepRegex) &&
+                row[parseInt(styles[4].slice(-1)) - 1].match(emptyStepRegex)) {
                 continue
               }
+              // Next check if just description is empty, and save the result.
+              let emptyDescription = row[parseInt(styles[2].slice(-1)) - 1].match(emptyStepRegex);
+              console.log(`Match here:\n ${emptyDescription}`);
+
               testStep = { Description: row[parseInt(styles[2].slice(-1)) - 1], ExpectedResult: row[parseInt(styles[3].slice(-1)) - 1], SampleData: row[parseInt(styles[4].slice(-1)) - 1] }
               for (let [property, value] of Object.entries(testStep)) {
                 //this handles tables in which the expected result or sample data columns dont exist.
@@ -554,6 +573,11 @@ const parseArtifacts = async (ArtifactTypeId, model) => {
                   testStep[property] = ""
                 }
               }
+
+              if (emptyDescription) {
+                testStep.Description = "Description";
+              }
+
               testSteps.push(testStep)
             }
             testCase.testSteps = [...testCase.testSteps, ...testSteps]
@@ -587,7 +611,7 @@ const parseArtifacts = async (ArtifactTypeId, model) => {
               testCases.push(testCase)
             }
             //this is reached when a user has the last line in their selection as a folder name
-            else{
+            else {
               //do nothing
             }
           }
@@ -639,15 +663,25 @@ const sendArtifacts = async (ArtifactTypeId, images, Artifacts, projectId, model
 
         let placeholders = [...requirements[0].Description.matchAll(imgRegex)]
         for (let placeholder of placeholders) {
-          await pushImage(firstCall.data, images[0], projectId, model, placeholder[0])
-          images.shift();
+          if (placeholder[0].includes("id=\"Picture")) {
+            await pushImage(firstCall.data, images[0], projectId, model, placeholder[0])
+            images.shift();
+          }
         }
         updateProgressBar(1, requirements.length)
         //removes the first requirement to save on checking in the for..of function after this
         requirements.shift()
       }
       catch (err) {
-        displayError(ERROR_MESSAGES.failedReq, false, item);
+        console.log(err)
+        //401 is the status code for invalid credentials. 
+        if (err?.response?.status == 401) {
+          displayError(ERROR_MESSAGES.noPermissions, false)
+        }
+        else {
+          displayError(ERROR_MESSAGES.failedReq, false, requirements[0]);
+        }
+        return false
       }
       const apiUrl = model.user.url + params.apiComponents.apiBase + projectId +
         params.apiComponents.postOrPutRequirement + model.user.userCredentials
@@ -659,13 +693,22 @@ const sendArtifacts = async (ArtifactTypeId, images, Artifacts, projectId, model
           let placeholders = [...req.Description.matchAll(imgRegex)]
           //the 'p' itemization of placeholders isnt needed - just needs to happen once per placeholder
           for (let placeholder of placeholders) {
-            await pushImage(call.data, images[0], projectId, model, placeholder[0])
-            images.shift();
+            if (placeholder[0].includes("id=\"Picture")) {
+              await pushImage(call.data, images[0], projectId, model, placeholder[0])
+              images.shift();
+            }
           }
           updateProgressBar(i + 2, requirements.length + 1);
         }
         catch (err) {
-          displayError(ERROR_MESSAGES.failedReq, false, req)
+          console.log(err)
+          //401 is the status code for invalid credentials. 
+          if (err?.response?.status == 401) {
+            displayError(ERROR_MESSAGES.noPermissions, false)
+          }
+          else {
+            displayError(ERROR_MESSAGES.failedReq, false, req);
+          }
         }
       }
       updateProgressBar(requirements.length + 1, requirements.length + 1);
@@ -686,7 +729,13 @@ const sendArtifacts = async (ArtifactTypeId, images, Artifacts, projectId, model
           newFolder.TestCaseFolderId = await createTestCaseFolder(testCase.folderName,
             testCase.folderDescription, projectId, model);
           if (!newFolder.TestCaseFolderId) {
-            displayError(ERROR_MESSAGES.failedReq, false, testCase)
+            //401 is the status code for invalid credentials. 
+            if (err?.response?.status == 401) {
+              displayError(ERROR_MESSAGES.noPermissions, false)
+            }
+            else {
+              displayError(ERROR_MESSAGES.failedReq, false, testCase);
+            }
             return false
           }
           newFolder.Name = testCase.folderName;
@@ -702,7 +751,14 @@ const sendArtifacts = async (ArtifactTypeId, images, Artifacts, projectId, model
         let testCaseArtifact = await sendTestCase(testCase.Name, testCase.testCaseDescription,
           folder.TestCaseFolderId, projectId, model)
         if (!testCaseArtifact) {
-          displayError(ERROR_MESSAGES.failedReq, false, testCase)
+          console.log(err)
+          //401 is the status code for invalid credentials. 
+          if (err?.response?.status == 401) {
+            displayError(ERROR_MESSAGES.noPermissions, false)
+          }
+          else {
+            displayError(ERROR_MESSAGES.failedReq, false, testCase);
+          }
           return false
         }
         //imgRegex defined at the top of the sendArtifacts function
@@ -710,20 +766,39 @@ const sendArtifacts = async (ArtifactTypeId, images, Artifacts, projectId, model
         //p isnt needed but I do need to iterate through the placeholders(this is shorter syntax)
         for (let placeholder of placeholders) {
           try {
-            await pushImage(testCaseArtifact, images[0], projectId, model, placeholder[0])
+            if (placeholder[0].includes("id=\"Picture")) {
+              await pushImage(testCaseArtifact, images[0], projectId, model, placeholder[0])
+            }
           }
           catch (err) {
             console.log(err)
-            displayError(ERROR_MESSAGES.failedReq, false, testCase)
+            //401 is the status code for invalid credentials. 
+            if (err?.response?.status == 401) {
+              displayError(ERROR_MESSAGES.noPermissions, false)
+            }
+            else {
+              displayError(ERROR_MESSAGES.failedReq, false, testCase);
+            }
           }
           images.shift();
         }
         for (let testStep of testCase.testSteps) {
-          let step = await sendTestStep(testCaseArtifact.TestCaseId, testStep, model, projectId);
-          if (!step) {
-            displayError(ERROR_MESSAGES.failedReq, false, testCase)
+          try {
+            var step = await sendTestStep(testCaseArtifact.TestCaseId, testStep, model, projectId);
+          }
+          catch (err) {
+            console.log(err)
+            //401 is the status code for invalid credentials. 
+            if (err?.response?.status == 401) {
+              displayError(ERROR_MESSAGES.noPermissions, false)
+            }
+            else {
+              displayError(ERROR_MESSAGES.failedReq, false, testCase);
+            }
+
             return false
           }
+          console.log(step);
           //these are the <img> 'placeholders' for all 3 testStep fields
           let placeholders = [...testStep.Description.matchAll(imgRegex),
           ...testStep.SampleData.matchAll(imgRegex),
@@ -732,10 +807,19 @@ const sendArtifacts = async (ArtifactTypeId, images, Artifacts, projectId, model
             if (tableImages[0]) {
               //this handles images for all 3 test step fields. 
               try {
-                await pushImage(step, tableImages[0], projectId, model, placeholder[0], testCaseArtifact.TestCaseId, styles);
+                if (placeholder[0].includes("id=\"Picture")) {
+                  await pushImage(step, tableImages[0], projectId, model, placeholder[0], testCaseArtifact.TestCaseId, styles);
+                }
               }
               catch (err) {
-                displayError(ERROR_MESSAGES.failedReq, false, testCase)
+                console.log(err)
+                //401 is the status code for invalid credentials. 
+                if (err?.response?.status == 401) {
+                  displayError(ERROR_MESSAGES.noPermissions, false)
+                }
+                else {
+                  displayError(ERROR_MESSAGES.failedReq, false, testCase);
+                }
                 return false
               }
               tableImages.shift();
@@ -935,7 +1019,10 @@ const formatDescriptionLists = (description, lists, singleItemLists) => {
     let orderTest = replacementArea.match(params.regexs.orderedListRegex)?.index
     //(orderTest) here is a conditional as it determines whether a list is considered a ol or ul
     let listHtml = listConstructor((orderTest), targetList)
-    description = description.replace(replacementArea, listHtml)
+    //if there isnt a list, listHtml will be an empty string (we dont want to replace in this)
+    if (listHtml) {
+      description = description.replace(replacementArea, listHtml)
+    }
   }
   //Deletes the relevant lists and singleItemLists from their arrays.
   /*easier to do this tacked on than to re-write the core of this function to 
@@ -1115,6 +1202,7 @@ const pushImage = async (Artifact, image, projectId, model, placeholder, testCas
   let imageApiCall = model.user.url + params.apiComponents.apiBase
     + pid + params.apiComponents.postImage + model.user.userCredentials
   let attachment;
+  let customPropFlag;
   if (Artifact.RequirementId) {
     attachment = [{ ArtifactId: Artifact.RequirementId, ArtifactTypeId: params.artifactEnums.requirements }]
   }
@@ -1161,7 +1249,7 @@ const pushImage = async (Artifact, image, projectId, model, placeholder, testCas
       await axios.put(putArtifact, fullArtifactObj)
     }
     catch (err) {
-      //do nothing
+      customPropFlag = true
       console.log(err)
       return
     }
@@ -1240,7 +1328,7 @@ const pushImage = async (Artifact, image, projectId, model, placeholder, testCas
       await axios.put(putArtifact, fullArtifactObj)
     }
     catch (err) {
-      //do nothing
+      customPropFlag = true
       console.log(err)
       return
     }
@@ -1271,7 +1359,7 @@ const pushImage = async (Artifact, image, projectId, model, placeholder, testCas
       await axios.put(putArtifact, fullArtifactObj)
     }
     catch (err) {
-      //do nothing
+      customPropFlag = true
       console.log(err)
       return false
     }
@@ -1350,4 +1438,42 @@ const checkForImages = (testCase, images) => {
     images.shift()
     testCase.folderDescription = testCase.folderDescription.replace(match[0], "")
   }
+}
+
+// @params model: Data() object with all project objects and user object
+// @params artifactTypeString: the string that will go on the end of the custom property URL
+//this function checks if a user has invalid custom properties 
+const checkForInvalidCustomProperties = async (artifactTypeString, model) => {
+  //the values of the options in this selector are the product IDs
+  let selectedProjectId = document.getElementById("product-select").value
+  let currentProjectObject = model.projects.find(project => project.ProjectId == selectedProjectId)
+  let currentProjectTemplate = currentProjectObject.ProjectTemplateId
+  let customPropsUrl = model.user.url + params.apiComponents.templateBase
+    + currentProjectTemplate + params.apiComponents.customProperties +
+    artifactTypeString + model.user.userCredentials
+  let customProperties = await superagent.get(customPropsUrl).set("accept", "application/json").set("Content-Type", "application/json")
+  customProperties = customProperties.body
+  //for test cases we need to check for test steps as well
+  if (artifactTypeString == "testcase") {
+    let testStepPropsUrl = customPropsUrl.replace("testcase", "teststep")
+    let testStepCustomProperties = await superagent.get(testStepPropsUrl).set("accept", "application/json").set("Content-Type", "application/json")
+    //destructures the existing customProperties and test step ones into 1 array
+    customProperties = [...customProperties, ...testStepCustomProperties.body]
+  }
+  for (let customProperty of customProperties) {
+    //not all custom properties have options, default is that it is null
+    if (customProperty.Options) {
+      //searches for the correct custom property object which represents null-ability
+      let search = customProperty.Options.find(option => option?.CustomPropertyOptionId == 1)
+      //if it is not nullable (Must be defined) return false
+      if (search?.Value == "N") {
+        //this needs to be modified to display an "info" error
+        //it should also take second prio after the selection errors for users
+        displayError(ERROR_MESSAGES.customProperties, false)
+        return false
+      }
+    }
+  }
+  //if there are no non-nullable custom properties, do nothing 
+  return true
 }
