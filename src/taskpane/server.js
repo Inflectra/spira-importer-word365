@@ -729,13 +729,7 @@ const sendArtifacts = async (ArtifactTypeId, images, Artifacts, projectId, model
           newFolder.TestCaseFolderId = await createTestCaseFolder(testCase.folderName,
             testCase.folderDescription, projectId, model);
           if (!newFolder.TestCaseFolderId) {
-            //401 is the status code for invalid credentials. 
-            if (err?.response?.status == 401) {
-              displayError(ERROR_MESSAGES.noPermissions, false)
-            }
-            else {
-              displayError(ERROR_MESSAGES.failedReq, false, testCase);
-            }
+            displayError(ERROR_MESSAGES.failedReq, false, testCase);
             return false
           }
           newFolder.Name = testCase.folderName;
@@ -751,14 +745,8 @@ const sendArtifacts = async (ArtifactTypeId, images, Artifacts, projectId, model
         let testCaseArtifact = await sendTestCase(testCase.Name, testCase.testCaseDescription,
           folder.TestCaseFolderId, projectId, model)
         if (!testCaseArtifact) {
-          console.log(err)
-          //401 is the status code for invalid credentials. 
-          if (err?.response?.status == 401) {
-            displayError(ERROR_MESSAGES.noPermissions, false)
-          }
-          else {
-            displayError(ERROR_MESSAGES.failedReq, false, testCase);
-          }
+          console.log("The user does not have permissions or there was a network error.")
+          displayError(ERROR_MESSAGES.failedReq, false, testCase);
           return false
         }
         //imgRegex defined at the top of the sendArtifacts function
