@@ -33,9 +33,7 @@ xmlns:bt="http://schemas.microsoft.com/office/officeappbasictypes/1.0"
   </Requirements>
 
   <DefaultSettings>
-    <SourceLocation DefaultValue="//doctor/Data/SHARED/spira-word365/taskpane.html"/>
-    <!-- <SourceLocation DefaultValue="https://localhost:3000/taskpane.html"/> -->
-    <!-- <SourceLocation DefaultValue="https://files.inflectra.com/office365/Word-Importer/taskpane.html"/> -->
+    <SourceLocation DefaultValue="https://files.inflectra.com/office365/Word-Importer/taskpane.html"/>
   </DefaultSettings>
 
   <Permissions>ReadWriteDocument</Permissions>
@@ -88,10 +86,8 @@ xmlns:bt="http://schemas.microsoft.com/office/officeappbasictypes/1.0"
       </bt:Images>
       <bt:Urls>
         <bt:Url id="GetStarted.LearnMoreUrl" DefaultValue="https://go.microsoft.com/fwlink/?LinkId=276812"/>
-        <bt:Url id="Commands.Url" DefaultValue="//doctor/Data/SHARED/spira-word365/commands.html"/>
-        <bt:Url id="Taskpane.Url" DefaultValue="//doctor/Data/SHARED/spira-word365/taskpane.html"/>
-        <!-- <bt:Url id="Commands.Url" DefaultValue="https://files.inflectra.com/office365/Word-Importer/commands.html"/>
-        <bt:Url id="Taskpane.Url" DefaultValue="https://files.inflectra.com/office365/Word-Importer/taskpane.html"/> -->
+        <bt:Url id="Commands.Url" DefaultValue="https://files.inflectra.com/office365/Word-Importer/commands.html"/>
+        <bt:Url id="Taskpane.Url" DefaultValue="https://files.inflectra.com/office365/Word-Importer/taskpane.html"/>
       </bt:Urls>
       <bt:ShortStrings>
         <bt:String id="GetStarted.Title" DefaultValue="Get started with the SpiraPlan Document Importer"/>
