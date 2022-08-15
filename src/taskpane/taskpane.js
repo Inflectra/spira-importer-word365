@@ -29,8 +29,7 @@ import {
   loginCall,
   retrieveStyles,
   updateSelectionArray,
-  sendArtifacts,
-  checkForInvalidCustomProperties
+  sendArtifacts
 } from './server'
 //model stores user data (login credentials and projects)
 var model = new Data();
@@ -63,8 +62,8 @@ const setEventListeners = () => {
   document.getElementById('log-out').onclick = () => goToState(states.authentication);
   document.getElementById("select-requirements").onclick = () => openStyleMappings("req-");
   document.getElementById("select-test-cases").onclick = () => openStyleMappings("test-");
-  document.getElementById("confirm-req-style-mappings").onclick = () => {if(confirmStyleMappings('req-')){ checkForInvalidCustomProperties("Requirement", model) }}
-  document.getElementById("confirm-test-style-mappings").onclick = () => {if(confirmStyleMappings('test-')){ checkForInvalidCustomProperties("testcase", model) }}
+  document.getElementById("confirm-test-style-mappings").onclick = () => {confirmStyleMappings('test-')}
+  document.getElementById("confirm-req-style-mappings").onclick = () => {confirmStyleMappings('req-')}
   document.getElementById('product-select').onchange = () => goToState(states.artifact);
   document.getElementById("pop-up-close").onclick = () => hideElement("pop-up");
   document.getElementById("pop-up-ok").onclick = () => {hideElement('pop-up'); enableMainButtons(); enableDropdowns();};

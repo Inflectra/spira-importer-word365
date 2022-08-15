@@ -10,8 +10,7 @@ export {
   loginCall,
   retrieveStyles,
   updateSelectionArray,
-  sendArtifacts,
-  checkForInvalidCustomProperties
+  sendArtifacts
 }
 
 import { Data, ERROR_MESSAGES, params, templates } from './model.js'
@@ -564,7 +563,6 @@ const parseArtifacts = async (ArtifactTypeId, model) => {
               }
               // Next check if just description is empty, and save the result.
               let emptyDescription = row[parseInt(styles[2].slice(-1)) - 1].match(emptyStepRegex);
-              console.log(`Match here:\n ${emptyDescription}`);
 
               testStep = { Description: row[parseInt(styles[2].slice(-1)) - 1], ExpectedResult: row[parseInt(styles[3].slice(-1)) - 1], SampleData: row[parseInt(styles[4].slice(-1)) - 1] }
               for (let [property, value] of Object.entries(testStep)) {
@@ -1233,6 +1231,10 @@ const pushImage = async (Artifact, image, projectId, model, placeholder, testCas
     //PUT artifact with new description (including img tags now)
     let putArtifact = model.user.url + params.apiComponents.apiBase + pid +
       params.apiComponents.postOrPutRequirement + model.user.userCredentials;
+    //this handles custom properties without needing to check if there are any non-nullable ones
+    if (fullArtifactObj.CustomProperties) {
+      delete fullArtifactObj.CustomProperties
+    }
     try {
       await axios.put(putArtifact, fullArtifactObj)
     }
@@ -1312,6 +1314,10 @@ const pushImage = async (Artifact, image, projectId, model, placeholder, testCas
     let putArtifact = model.user.url + params.apiComponents.apiBase + pid +
       params.apiComponents.getTestCase + fullArtifactObj.TestCaseId +
       params.apiComponents.postOrPutTestStep + model.user.userCredentials;
+    //this handles custom properties without needing to check if there are any non-nullable ones
+    if (fullArtifactObj.CustomProperties) {
+      delete fullArtifactObj.CustomProperties
+    }
     try {
       await axios.put(putArtifact, fullArtifactObj)
     }
@@ -1343,6 +1349,10 @@ const pushImage = async (Artifact, image, projectId, model, placeholder, testCas
     //PUT artifact with new description (including img tags now)
     let putArtifact = model.user.url + params.apiComponents.apiBase + pid +
       params.apiComponents.postOrPutTestCase + model.user.userCredentials;
+    //this handles custom properties without needing to check if there are any non-nullable ones
+    if (fullArtifactObj.CustomProperties) {
+      delete fullArtifactObj.CustomProperties
+    }
     try {
       await axios.put(putArtifact, fullArtifactObj)
     }
@@ -1430,38 +1440,39 @@ const checkForImages = (testCase, images) => {
 
 // @params model: Data() object with all project objects and user object
 // @params artifactTypeString: the string that will go on the end of the custom property URL
-//this function checks if a user has invalid custom properties 
-const checkForInvalidCustomProperties = async (artifactTypeString, model) => {
-  //the values of the options in this selector are the product IDs
-  let selectedProjectId = document.getElementById("product-select").value
-  let currentProjectObject = model.projects.find(project => project.ProjectId == selectedProjectId)
-  let currentProjectTemplate = currentProjectObject.ProjectTemplateId
-  let customPropsUrl = model.user.url + params.apiComponents.templateBase
-    + currentProjectTemplate + params.apiComponents.customProperties +
-    artifactTypeString + model.user.userCredentials
-  let customProperties = await superagent.get(customPropsUrl).set("accept", "application/json").set("Content-Type", "application/json")
-  customProperties = customProperties.body
-  //for test cases we need to check for test steps as well
-  if (artifactTypeString == "testcase") {
-    let testStepPropsUrl = customPropsUrl.replace("testcase", "teststep")
-    let testStepCustomProperties = await superagent.get(testStepPropsUrl).set("accept", "application/json").set("Content-Type", "application/json")
-    //destructures the existing customProperties and test step ones into 1 array
-    customProperties = [...customProperties, ...testStepCustomProperties.body]
-  }
-  for (let customProperty of customProperties) {
-    //not all custom properties have options, default is that it is null
-    if (customProperty.Options) {
-      //searches for the correct custom property object which represents null-ability
-      let search = customProperty.Options.find(option => option?.CustomPropertyOptionId == 1)
-      //if it is not nullable (Must be defined) return false
-      if (search?.Value == "N") {
-        //this needs to be modified to display an "info" error
-        //it should also take second prio after the selection errors for users
-        displayError(ERROR_MESSAGES.customProperties, false)
-        return false
-      }
-    }
-  }
-  //if there are no non-nullable custom properties, do nothing 
-  return true
-}
+/*this function checks if a user has invalid custom properties - commented out as
+we now use a better approach to handle these.*/
+// const checkForInvalidCustomProperties = async (artifactTypeString, model) => {
+//   //the values of the options in this selector are the product IDs
+//   let selectedProjectId = document.getElementById("product-select").value
+//   let currentProjectObject = model.projects.find(project => project.ProjectId == selectedProjectId)
+//   let currentProjectTemplate = currentProjectObject.ProjectTemplateId
+//   let customPropsUrl = model.user.url + params.apiComponents.templateBase
+//     + currentProjectTemplate + params.apiComponents.customProperties +
+//     artifactTypeString + model.user.userCredentials
+//   let customProperties = await superagent.get(customPropsUrl).set("accept", "application/json").set("Content-Type", "application/json")
+//   customProperties = customProperties.body
+//   //for test cases we need to check for test steps as well
+//   if (artifactTypeString == "testcase") {
+//     let testStepPropsUrl = customPropsUrl.replace("testcase", "teststep")
+//     let testStepCustomProperties = await superagent.get(testStepPropsUrl).set("accept", "application/json").set("Content-Type", "application/json")
+//     //destructures the existing customProperties and test step ones into 1 array
+//     customProperties = [...customProperties, ...testStepCustomProperties.body]
+//   }
+//   for (let customProperty of customProperties) {
+//     //not all custom properties have options, default is that it is null
+//     if (customProperty.Options) {
+//       //searches for the correct custom property object which represents null-ability
+//       let search = customProperty.Options.find(option => option?.CustomPropertyOptionId == 1)
+//       //if it is not nullable (Must be defined) return false
+//       if (search?.Value == "N") {
+//         //this needs to be modified to display an "info" error
+//         //it should also take second prio after the selection errors for users
+//         displayError(ERROR_MESSAGES.customProperties, false)
+//         return false
+//       }
+//     }
+//   }
+//   //if there are no non-nullable custom properties, do nothing 
+//   return true
+// }
