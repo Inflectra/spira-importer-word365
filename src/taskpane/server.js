@@ -930,6 +930,7 @@ const filterDescription = (description, isTestCase, lists, singleItemLists) => {
   let htmlBody = description.slice(bodyTagMatches[0].index, bodyTagMatches[1].index)
   //this removes the first body tag, and then trims whitespace
   htmlBody = htmlBody.replace(bodyTagMatches[0][0], "").trim()
+  htmlBody = htmlBody.replaceAll(/(?<=<span[^>]*)color:black;?(?=[^>]*>)/g, "")
   htmlBody = formatDescriptionLists(htmlBody.replaceAll("\r", "").replaceAll("\t", ""), lists, singleItemLists)
   //this trims excess spaces sometimes brought in by lists
   let whitespaceMatch = [...htmlBody.matchAll(params.regexs.whitespaceRegex)]
